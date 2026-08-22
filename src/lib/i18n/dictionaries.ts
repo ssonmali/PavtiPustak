@@ -188,6 +188,7 @@ const en = {
   "report.grandTotal": "Grand total",
   "report.print": "Print / Save as PDF",
   "report.back": "Back to dashboard",
+  "chart.range": "{from} — {to}",
   "chart.busiestDay": "Busiest day",
   "chart.dailyAverage": "Daily average",
 } as const;
@@ -360,6 +361,7 @@ const mr: Record<MessageKey, string> = {
   "report.grandTotal": "एकूण रक्कम",
   "report.print": "छपाई / PDF म्हणून जतन करा",
   "report.back": "डॅशबोर्डवर परत",
+  "chart.range": "{from} — {to}",
   "chart.busiestDay": "सर्वाधिक जमा",
   "chart.dailyAverage": "दैनिक सरासरी",
 };

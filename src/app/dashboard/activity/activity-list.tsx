@@ -96,7 +96,7 @@ export function ActivityList({ entries }: { entries: AuditEntry[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+        <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
           {t("activity.title")}
         </h1>
         <p className="text-sm text-muted-foreground">{t("activity.subtitle")}</p>
@@ -163,7 +163,7 @@ export function ActivityList({ entries }: { entries: AuditEntry[] }) {
           {days.map(([day, dayEntries]) => (
             <section key={day} className="flex flex-col gap-2">
               <div className="flex items-baseline gap-2">
-                <h2 className="text-sm font-medium">
+                <h2 className="font-display text-base">
                   {formatDate(day, locale)}
                 </h2>
                 <span className="text-xs text-muted-foreground">
@@ -185,7 +185,7 @@ export function ActivityList({ entries }: { entries: AuditEntry[] }) {
                       : [];
 
                   return (
-                    <li key={entry.id} className="rounded-lg border bg-card p-3">
+                    <li key={entry.id} className="card-elevated rounded-xl border bg-card p-3">
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
                           <Icon

@@ -8,7 +8,7 @@ import {
   Users,
 } from "lucide-react";
 import type { DailyTotal, VolunteerTotal } from "@/lib/types";
-import { formatAmount, formatDate } from "@/lib/receipt-utils";
+import { formatAmount } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import {
   Card,
@@ -27,7 +27,7 @@ export function Overview({
   daily: DailyTotal[];
   volunteers: VolunteerTotal[];
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
 
   const visible = React.useMemo(() => {
@@ -43,12 +43,6 @@ export function Overview({
 
   const total = visible.reduce((s, d) => s + Number(d.total), 0);
   const count = visible.reduce((s, d) => s + d.receipt_count, 0);
-  // Per-day donor counts cannot be summed into a unique total, so this is the
-  // busiest single day's donor count — labelled as such rather than implied.
-  const busiest = visible.reduce<DailyTotal | null>(
-    (best, d) => (!best || Number(d.total) > Number(best.total) ? d : best),
-    null,
-  );
 
   const stats = [
     { label: t("stats.total"), value: formatAmount(total), icon: IndianRupee },
@@ -69,7 +63,7 @@ export function Overview({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="mr-auto">
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+          <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
             {t("nav.overview")}
           </h1>
           <p className="text-sm text-muted-foreground">{t("table.subtitle")}</p>
@@ -79,12 +73,15 @@ export function Overview({
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon }) => (
-          <Card key={label}>
+          <Card key={label} className="card-elevated accent-top">
             <CardHeader>
-              <CardDescription className="flex items-center gap-1.5">
-                <Icon className="size-3.5" /> {label}
+              <CardDescription className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <Icon className="size-3.5" />
+                </span>
+                {label}
               </CardDescription>
-              <CardTitle className="text-xl tabular-nums sm:text-2xl">
+              <CardTitle className="text-2xl font-semibold tabular-nums sm:text-3xl">
                 {value}
               </CardTitle>
             </CardHeader>
@@ -93,7 +90,7 @@ export function Overview({
       </div>
 
       {period !== 1 ? (
-        <Card>
+        <Card className="card-elevated">
           <CardHeader>
             <CardTitle>{t("chart.title")}</CardTitle>
             <CardDescription>{t("chart.subtitle")}</CardDescription>
@@ -105,7 +102,7 @@ export function Overview({
       ) : null}
 
       {volunteers.length > 0 ? (
-        <Card>
+        <Card className="card-elevated">
           <CardHeader>
             <CardTitle>{t("volunteers.title")}</CardTitle>
             <CardDescription>{t("volunteers.subtitle")}</CardDescription>
@@ -129,9 +126,9 @@ export function Overview({
                         {t("chart.receiptsCount", { count: v.receipt_count })}
                       </span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full rounded-full bg-primary"
+                        className="h-full rounded-full bg-[image:var(--brand-gradient)]"
                         style={{ width: `${share}%` }}
                       />
                     </div>
@@ -143,12 +140,6 @@ export function Overview({
         </Card>
       ) : null}
 
-      {busiest ? (
-        <p className="text-xs text-muted-foreground">
-          {t("chart.busiestDay")}: {formatDate(busiest.collection_date, locale)}{" "}
-          · {formatAmount(busiest.total)}
-        </p>
-      ) : null}
     </div>
   );
 }

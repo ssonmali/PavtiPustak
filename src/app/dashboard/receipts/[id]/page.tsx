@@ -39,7 +39,7 @@ export default async function ReceiptSlipPage({
 
       <article className="rounded-lg border bg-card p-5 text-card-foreground print:rounded-none print:border-2 print:p-6">
         <header className="border-b pb-3 text-center">
-          <h1 className="text-lg font-semibold">{mandalName}</h1>
+          <h1 className="font-display text-xl">{mandalName}</h1>
           <p className="text-xs tracking-wide text-muted-foreground uppercase">
             {t("slip.title")}
           </p>

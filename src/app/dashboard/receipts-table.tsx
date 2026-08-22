@@ -37,7 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -54,6 +53,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+/**
+ * Cash and UPI wear the same two hues as the chart series, so a volunteer
+ * learns one mapping rather than two. Tinted rather than solid: a badge is a
+ * label, not a data mark competing with the bars.
+ */
+function MethodBadge({
+  method,
+  label,
+}: {
+  method: "Cash" | "UPI";
+  label: string;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium"
+      style={{
+        borderColor: `color-mix(in oklab, ${method === "UPI" ? "#eb6834" : "#2a78d6"} 35%, transparent)`,
+        background: `color-mix(in oklab, ${method === "UPI" ? "#eb6834" : "#2a78d6"} 12%, transparent)`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="size-1.5 rounded-full"
+        style={{ background: method === "UPI" ? "#eb6834" : "#2a78d6" }}
+      />
+      {label}
+    </span>
+  );
+}
 
 type QueueFn = (
   entry: Omit<OutboxEntry, "localId" | "queuedAt" | "attempts">,
@@ -251,8 +280,8 @@ export function ReceiptsTable({
       </div>
 
       {/* Phones get the card list below; the table starts at sm. */}
-      <div className="hidden overflow-x-auto rounded-lg border sm:block">
-        <Table>
+      <div className="hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">
+        <Table className="table-zebra table-sticky">
           <TableHeader>
             <TableRow>
               <TableHead className="w-14">{t("table.no")}</TableHead>
@@ -296,13 +325,7 @@ export function ReceiptsTable({
                     {receipt.phone_number}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        receipt.payment_method === "UPI" ? "default" : "secondary"
-                      }
-                    >
-                      {t(`method.${receipt.payment_method}`)}
-                    </Badge>
+                    <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {formatDate(receipt.collection_date, locale)}
@@ -366,7 +389,7 @@ export function ReceiptsTable({
           </li>
         ) : (
           filtered.map((receipt) => (
-            <li key={receipt.id} className="rounded-lg border p-3">
+            <li key={receipt.id} className="card-elevated rounded-xl border bg-card p-3">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="wrap-anywhere font-medium">
@@ -390,16 +413,10 @@ export function ReceiptsTable({
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-base font-semibold tabular-nums">
+                  <span className="text-lg font-semibold tabular-nums">
                     {formatAmount(receipt.amount)}
                   </span>
-                  <Badge
-                    variant={
-                      receipt.payment_method === "UPI" ? "default" : "secondary"
-                    }
-                  >
-                    {t(`method.${receipt.payment_method}`)}
-                  </Badge>
+                  <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
                 </div>
               </div>
 

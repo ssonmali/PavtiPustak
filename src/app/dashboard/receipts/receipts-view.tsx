@@ -51,7 +51,7 @@ export function ReceiptsView({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="mr-auto">
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+          <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
             {t("table.title")}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -63,7 +63,7 @@ export function ReceiptsView({
 
       <OfflineBadge online={online} pending={pending} syncing={syncing} />
 
-      <Card>
+      <Card className="card-elevated">
         <CardContent>
           <ReceiptsTable
             receipts={visible}

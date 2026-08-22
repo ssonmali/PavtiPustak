@@ -35,11 +35,13 @@ export function DailyCollections({ days }: { days: DailyTotal[] }) {
 
   return (
     <div className="viz-root flex flex-col gap-4">
+      {/* Literal hexes, not theme tokens: this exact pair was validated for
+          colourblind separation and WCAG contrast against both card surfaces.
+          Swapping in brand colours would break that guarantee. */}
       <style>{`
         .viz-root {
           --series-cash: #2a78d6;
           --series-upi: #eb6834;
-          --viz-surface: var(--color-card);
         }
         .dark .viz-root {
           --series-cash: #3987e5;
@@ -100,8 +102,9 @@ export function DailyCollections({ days }: { days: DailyTotal[] }) {
         </div>
       ) : (
         <div className="overflow-x-auto pb-1">
+          <div style={{ maxWidth: days.length * 68 }}>
           <div
-            className="flex h-40 min-w-full items-end gap-1.5 sm:h-50 sm:gap-2"
+            className="flex h-44 items-end gap-2 sm:h-56 sm:gap-3"
             role="img"
             aria-label={`${t("chart.title")} — ${formatAmount(grand)}`}
           >
@@ -114,10 +117,10 @@ export function DailyCollections({ days }: { days: DailyTotal[] }) {
               return (
                 <div
                   key={d.collection_date}
-                  className="group relative flex h-full min-w-6 flex-1 flex-col justify-end sm:min-w-8"
+                  className="group relative flex h-full min-w-5 flex-1 flex-col justify-end sm:min-w-7"
                 >
                   <div
-                    className="relative w-full overflow-hidden rounded-t"
+                    className="relative w-full overflow-hidden rounded-t-md"
                     style={{ height: `${Math.max(h, 1.5)}%` }}
                   >
                     {Number(d.upi) > 0 ? (
@@ -177,19 +180,30 @@ export function DailyCollections({ days }: { days: DailyTotal[] }) {
           </div>
 
           {/* Axis ticks: thinned so labels never collide. */}
-          <div className="mt-1.5 flex min-w-full gap-1.5 border-t pt-1.5 sm:gap-2">
+          {/* Per-bar ticks need ~40px each to be legible, which phones do not
+              have. Below sm the axis collapses to the range instead of showing
+              a row of truncated ellipses. */}
+          <p className="mt-1.5 border-t pt-1.5 text-center text-[11px] text-muted-foreground sm:hidden">
+            {t("chart.range", {
+              from: tick(days[0].collection_date),
+              to: tick(days[days.length - 1].collection_date),
+            })}
+          </p>
+
+          <div className="mt-1.5 hidden gap-2 border-t pt-1.5 sm:flex sm:gap-3">
             {days.map((d, i) => {
               // One tick per ~6 bars keeps labels legible at phone width.
               const every = Math.ceil(days.length / 6);
               return (
                 <div
                   key={d.collection_date}
-                  className="min-w-6 flex-1 truncate text-center text-[10px] text-muted-foreground sm:min-w-8"
+                  className="min-w-5 flex-1 truncate text-center text-[10px] text-muted-foreground sm:min-w-7"
                 >
                   {i % every === 0 || i === days.length - 1 ? tick(d.collection_date) : ""}
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       )}

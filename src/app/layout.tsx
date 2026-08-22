@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Tiro_Devanagari_Marathi } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -11,6 +12,18 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+/**
+ * Display face for headings and the mandal's name. Chosen because it covers
+ * Devanagari properly — most display fonts do not, and Marathi headings fall
+ * back to a mismatched system face.
+ */
+const tiro = Tiro_Devanagari_Marathi({
+  variable: "--font-display",
+  weight: "400",
+  subsets: ["devanagari", "latin"],
+  display: "swap",
 });
 
 /** Zoom stays enabled — pinch-to-zoom is an accessibility affordance. */
@@ -40,11 +53,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${tiro.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {children}
-        <Toaster position="top-center" />
+      <body className="app-surface flex min-h-full flex-col">
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-center" />
+        </ThemeProvider>
       </body>
     </html>
   );

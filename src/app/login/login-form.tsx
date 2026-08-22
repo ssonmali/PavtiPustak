@@ -66,7 +66,7 @@ function Fields({ next }: { next?: string }) {
         {t("reset.forgot")}
       </a>
 
-      <Button type="submit" disabled={pending} className="mt-2">
+      <Button type="submit" size="lg" disabled={pending} className="mt-2 w-full">
         {pending ? (
           <>
             <Loader2 className="animate-spin" /> {t("auth.submitting")}

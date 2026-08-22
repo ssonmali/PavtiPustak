@@ -57,7 +57,7 @@ export default async function ReportPage({
 
       <article className="overflow-x-auto rounded-lg border bg-card p-4 text-card-foreground sm:p-6 print:overflow-visible print:rounded-none print:border-0 print:p-0">
         <header className="border-b pb-4 text-center">
-          <h1 className="text-xl font-semibold">{mandalName}</h1>
+          <h1 className="font-display text-2xl">{mandalName}</h1>
           <p className="text-sm text-muted-foreground">{t("report.title")}</p>
         </header>
 
