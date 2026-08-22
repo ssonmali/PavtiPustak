@@ -1,0 +1,276 @@
+"use client";
+
+import * as React from "react";
+import {
+  Download,
+  MessageCircle,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { deleteReceipt } from "@/app/actions/receipts";
+import type { Receipt } from "@/lib/types";
+import {
+  formatAmount,
+  formatDate,
+  receiptsToCsv,
+  whatsappUrl,
+} from "@/lib/receipt-utils";
+import { useI18n } from "@/lib/i18n/client";
+import { ReceiptDialog } from "./receipt-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+export function ReceiptsTable({
+  receipts,
+  mandalName,
+}: {
+  receipts: Receipt[];
+  mandalName: string;
+}) {
+  const { t } = useI18n();
+  const [query, setQuery] = React.useState("");
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<Receipt | undefined>();
+  const [toDelete, setToDelete] = React.useState<Receipt | undefined>();
+  const [deleting, setDeleting] = React.useState(false);
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return receipts;
+    return receipts.filter(
+      (r) =>
+        r.donor_name.toLowerCase().includes(q) ||
+        r.phone_number.includes(q) ||
+        String(r.receipt_number) === q,
+    );
+  }, [receipts, query]);
+
+  function openCreate() {
+    setEditing(undefined);
+    setDialogOpen(true);
+  }
+
+  function openEdit(receipt: Receipt) {
+    setEditing(receipt);
+    setDialogOpen(true);
+  }
+
+  function sendWhatsApp(receipt: Receipt) {
+    window.open(whatsappUrl(receipt, mandalName), "_blank", "noopener");
+  }
+
+  function exportCsv() {
+    if (!filtered.length) {
+      toast.error(t("toast.nothingToExport"));
+      return;
+    }
+    const blob = new Blob([receiptsToCsv(filtered)], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pavti-pustak-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(t("toast.exported", { count: filtered.length }));
+  }
+
+  async function confirmDelete() {
+    if (!toDelete) return;
+    setDeleting(true);
+    const result = await deleteReceipt(toDelete.id);
+    setDeleting(false);
+
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(t("toast.deleted", { number: toDelete.receipt_number }));
+    setToDelete(undefined);
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative sm:max-w-xs sm:flex-1">
+          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("table.search")}
+            className="pl-8"
+          />
+        </div>
+        <div className="flex gap-2 sm:ml-auto">
+          <Button variant="outline" onClick={exportCsv}>
+            <Download /> {t("table.export")}
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus /> {t("table.new")}
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-14">{t("table.no")}</TableHead>
+              <TableHead>{t("table.donor")}</TableHead>
+              <TableHead className="text-right">{t("table.amount")}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t("table.mobile")}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t("table.method")}</TableHead>
+              <TableHead>{t("table.date")}</TableHead>
+              <TableHead className="w-24 text-right">{t("table.actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="h-28 text-center text-sm text-muted-foreground"
+                >
+                  {receipts.length === 0 ? t("table.empty") : t("table.noMatch")}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((receipt) => (
+                <TableRow key={receipt.id}>
+                  <TableCell className="text-muted-foreground tabular-nums">
+                    {receipt.receipt_number}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {receipt.donor_name}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatAmount(receipt.amount)}
+                  </TableCell>
+                  <TableCell className="hidden tabular-nums sm:table-cell">
+                    {receipt.phone_number}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <Badge
+                      variant={
+                        receipt.payment_method === "UPI" ? "default" : "secondary"
+                      }
+                    >
+                      {t(`method.${receipt.payment_method}`)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {formatDate(receipt.collection_date)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => sendWhatsApp(receipt)}
+                        title={t("table.sendTitle", { name: receipt.donor_name })}
+                      >
+                        <MessageCircle /> {t("table.send")}
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button size="icon" variant="ghost" title="More">
+                              <MoreHorizontal />
+                            </Button>
+                          }
+                        />
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(receipt)}>
+                            <Pencil /> {t("table.edit")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => setToDelete(receipt)}
+                          >
+                            <Trash2 /> {t("table.delete")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {filtered.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {t("table.showing", { shown: filtered.length, total: receipts.length })}
+        </p>
+      ) : null}
+
+      <ReceiptDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        receipt={editing}
+      />
+
+      <AlertDialog
+        open={Boolean(toDelete)}
+        onOpenChange={(open) => {
+          if (!open) setToDelete(undefined);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("delete.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("delete.body", {
+                number: toDelete?.receipt_number ?? "",
+                name: toDelete?.donor_name ?? "",
+                amount: toDelete ? formatAmount(toDelete.amount) : "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t("form.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? t("delete.deleting") : t("delete.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
