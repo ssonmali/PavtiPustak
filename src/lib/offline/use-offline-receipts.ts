@@ -115,15 +115,20 @@ export function useOfflineReceipts({ serverRows, onFlush }: Options) {
     return mergeOutbox(base, outbox);
   }, [online, serverRows, cached, outbox]);
 
-  /** Queues a write for later; used when the device is offline. */
+  /**
+   * Queues a write for later. Throws if local storage is unavailable, so the
+   * caller shows an error instead of a false "saved".
+   */
   const queue = React.useCallback(
     async (entry: Omit<OutboxEntry, "localId" | "queuedAt" | "attempts">) => {
-      await enqueue({
+      const stored = await enqueue({
         ...entry,
         localId: makeLocalId(),
         queuedAt: new Date().toISOString(),
         attempts: 0,
       });
+
+      if (!stored) throw new Error("offline-storage-unavailable");
       await refreshOutbox();
     },
     [refreshOutbox],

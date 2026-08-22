@@ -160,10 +160,10 @@ function ReceiptDialogBody({
     };
   }
 
-  async function submit(formData: FormData) {
-    // Offline: store it on the device and let the outbox replay it later. The
-    // duplicate prompt is skipped because there is no server to ask.
-    if (!online && queue) {
+  /** Stores the write on the device for the outbox to replay later. */
+  async function queueLocally(formData: FormData) {
+    if (!queue) return false;
+    try {
       await queue(
         receipt && receipt.pending !== "create"
           ? {
@@ -176,13 +176,32 @@ function ReceiptDialogBody({
       );
       toast.success(t("offline.queued"));
       onOpenChange(false);
-      return;
+      return true;
+    } catch {
+      toast.error(t("offline.storageBlocked"));
+      return true; // handled: an error was shown
     }
+  }
+
+  async function submit(formData: FormData) {
+    // Known offline: do not even attempt the request.
+    if (!online && (await queueLocally(formData))) return;
 
     setPending(true);
-    const result = receipt
-      ? await updateReceipt(receipt.id, formData)
-      : await createReceipt(formData);
+    let result;
+    try {
+      result = receipt
+        ? await updateReceipt(receipt.id, formData)
+        : await createReceipt(formData);
+    } catch {
+      // navigator.onLine lies — a captive portal or a dropped connection looks
+      // online right up until the request fails. Falling back here is what
+      // makes saving reliable, rather than the flag being correct.
+      setPending(false);
+      if (await queueLocally(formData)) return;
+      toast.error(t("error.body"));
+      return;
+    }
     setPending(false);
 
     if (result.ok) {

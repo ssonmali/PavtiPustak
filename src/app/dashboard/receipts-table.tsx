@@ -170,24 +170,37 @@ export function ReceiptsTable({
     toast.success(t("toast.exported", { count: filtered.length }));
   }
 
+  /** Queues the delete on the device; returns false if it could not be stored. */
+  async function queueDelete(receipt: LocalReceipt) {
+    if (!queue) return false;
+    try {
+      await queue({ kind: "delete", receiptId: receipt.id });
+      setToDelete(undefined);
+      toast.success(t("offline.queued"));
+      return true;
+    } catch {
+      toast.error(t("offline.storageBlocked"));
+      return true; // handled
+    }
+  }
+
   async function confirmDelete() {
     if (!toDelete) return;
 
-    // Offline, or the row itself has never reached the server.
-    if ((!online || toDelete.pending === "create") && queue) {
-      if (toDelete.pending === "create") {
-        // Nothing to delete on the server; drop the queued create instead.
-        await queue({ kind: "delete", receiptId: toDelete.id });
-      } else {
-        await queue({ kind: "delete", receiptId: toDelete.id });
-      }
-      setToDelete(undefined);
-      toast.success(t("offline.queued"));
+    // Offline, or the row has never reached the server in the first place.
+    if ((!online || toDelete.pending === "create") && (await queueDelete(toDelete)))
       return;
-    }
 
     setDeleting(true);
-    const result = await deleteReceipt(toDelete.id);
+    let result;
+    try {
+      result = await deleteReceipt(toDelete.id);
+    } catch {
+      setDeleting(false);
+      if (await queueDelete(toDelete)) return;
+      toast.error(t("error.body"));
+      return;
+    }
     setDeleting(false);
 
     if (!result.ok) {

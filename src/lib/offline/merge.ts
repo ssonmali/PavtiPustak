@@ -5,9 +5,20 @@ import type { OutboxEntry } from "./db";
 export type PendingState = "create" | "update" | "delete";
 export type LocalReceipt = Receipt & { pending?: PendingState };
 
-/** Stable placeholder id for a receipt that has never reached the server. */
+/**
+ * Stable placeholder id for a receipt that has never reached the server.
+ *
+ * `crypto.randomUUID` is secure-context only, so it is missing over plain http
+ * — which is exactly how the app gets tested from a phone on the LAN. Uniqueness
+ * here only has to hold within one device's queue.
+ */
 export function localId() {
-  return `local-${crypto.randomUUID()}`;
+  const uuid =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+  return `local-${uuid}`;
 }
 
 /**

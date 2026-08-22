@@ -116,8 +116,15 @@ export async function readCachedReceipts(): Promise<Receipt[]> {
 
 // --- Outbox ----------------------------------------------------------
 
-export async function enqueue(entry: OutboxEntry) {
-  await tx(STORE_OUTBOX, "readwrite", (s) => s.put(entry));
+/**
+ * Returns false when the write did not land — private browsing and some
+ * embedded webviews block IndexedDB outright. The caller must surface that
+ * rather than telling the volunteer their receipt is safe.
+ */
+export async function enqueue(entry: OutboxEntry): Promise<boolean> {
+  if (!isAvailable()) return false;
+  const result = await tx(STORE_OUTBOX, "readwrite", (s) => s.put(entry));
+  return result !== undefined;
 }
 
 export async function readOutbox(): Promise<OutboxEntry[]> {

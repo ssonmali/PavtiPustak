@@ -41,6 +41,7 @@ const en = {
   "offline.failed": "{count} queued change(s) could not be saved.",
   "offline.showingSaved": "Showing the copy saved on this device.",
   "offline.noSend": "Send the receipt once it has synced.",
+  "offline.storageBlocked": "This browser is blocking local storage, so the receipt could not be saved offline. Try again once you have signal, or turn off private browsing.",
   "loading": "Loading…",
 
   "realtime.live": "Live — synced across devices",
@@ -224,6 +225,7 @@ const mr: Record<MessageKey, string> = {
   "offline.failed": "{count} बदल जतन होऊ शकले नाहीत.",
   "offline.showingSaved": "या उपकरणावर जतन केलेली प्रत दाखवत आहे.",
   "offline.noSend": "पावती पाठवण्यासाठी ती आधी सिंक होणे आवश्यक.",
+  "offline.storageBlocked": "हा ब्राउझर स्थानिक साठा अडवत आहे, त्यामुळे पावती ऑफलाइन जतन झाली नाही. नेटवर्क आल्यावर पुन्हा प्रयत्न करा.",
   "loading": "लोड होत आहे…",
 
   "realtime.live": "थेट — सर्व उपकरणांवर अद्ययावत",

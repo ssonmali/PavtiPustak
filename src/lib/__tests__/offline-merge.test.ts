@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { mergeOutbox } from "@/lib/offline/merge";
+import { describe, expect, it, vi } from "vitest";
+import { localId, mergeOutbox } from "@/lib/offline/merge";
 import type { OutboxEntry } from "@/lib/offline/db";
 import type { Receipt } from "@/lib/types";
 
@@ -118,5 +118,25 @@ describe("mergeOutbox", () => {
       [],
     );
     expect(merged.map((r) => r.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("localId", () => {
+  it("is prefixed so a local row is distinguishable from a server uuid", () => {
+    expect(localId().startsWith("local-")).toBe(true);
+  });
+
+  it("works without crypto.randomUUID (plain http has no secure context)", () => {
+    // How the app is actually tested from a phone: http://192.168.x.x, where
+    // randomUUID is undefined and the old code threw.
+    vi.stubGlobal("crypto", {});
+    try {
+      const first = localId();
+      expect(first.startsWith("local-")).toBe(true);
+      expect(first.length).toBeGreaterThan(10);
+      expect(localId()).not.toBe(first);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
