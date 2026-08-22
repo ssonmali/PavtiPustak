@@ -294,6 +294,21 @@
 }
 
 @layer base {
+  /*
+   * Belt and braces against mobile "shrink to fit": if anything ever overflows
+   * horizontally — a portalled menu near the right edge, a toast wider than a
+   * narrow screen, a long unbroken string — the browser zooms the whole page
+   * out to accommodate it, and everything suddenly looks tiny.
+   *
+   * `clip` rather than `hidden` on purpose: `hidden` would make the body a
+   * scroll container and break `position: sticky` on the header and bottom nav.
+   */
+  html,
+  body {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
   /* Focus rings pick up the brand colour instead of a grey halo. */
   :focus-visible {
     outline: 2px solid var(--ring);

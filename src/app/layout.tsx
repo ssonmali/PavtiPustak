@@ -59,7 +59,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="app-surface flex min-h-full flex-col">
         <ThemeProvider>
           {children}
-          <Toaster position="top-center" />
+          <Toaster
+            position="top-center"
+            // Default is a fixed 356px, which overflows a 320px screen.
+            style={{ ["--width" as string]: "min(356px, calc(100vw - 1.5rem))" }}
+          />
         </ThemeProvider>
       </body>
     </html>
