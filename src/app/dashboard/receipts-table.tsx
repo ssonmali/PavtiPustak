@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteReceipt } from "@/app/actions/receipts";
+import { exportReceiptsToExcel } from "@/lib/export-excel";
+import { dictionaries } from "@/lib/i18n/dictionaries";
 import type { Receipt } from "@/lib/types";
 import {
   formatAmount,
@@ -19,6 +21,7 @@ import {
   receiptsToCsv,
   whatsappUrl,
 } from "@/lib/receipt-utils";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { ReceiptDialog } from "./receipt-dialog";
 import {
@@ -52,11 +55,14 @@ import {
 export function ReceiptsTable({
   receipts,
   mandalName,
+  periodDays = 0,
 }: {
   receipts: Receipt[];
   mandalName: string;
+  /** Mirrors the dashboard period so the PDF report covers the same window. */
+  periodDays?: number;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [query, setQuery] = React.useState("");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Receipt | undefined>();
@@ -86,6 +92,20 @@ export function ReceiptsTable({
 
   function sendWhatsApp(receipt: Receipt) {
     window.open(whatsappUrl(receipt, mandalName), "_blank", "noopener");
+  }
+
+  async function exportExcel() {
+    if (!filtered.length) {
+      toast.error(t("toast.nothingToExport"));
+      return;
+    }
+    await exportReceiptsToExcel(filtered, dictionaries[locale], mandalName);
+    toast.success(t("toast.exported", { count: filtered.length }));
+  }
+
+  /** Opens the print-ready report; the browser's dialog saves it as PDF. */
+  function openPdf() {
+    window.open(`/dashboard/report?days=${periodDays}`, "_blank", "noopener");
   }
 
   function exportCsv() {
@@ -131,25 +151,43 @@ export function ReceiptsTable({
             className="pl-8"
           />
         </div>
-        <div className="flex gap-2 sm:ml-auto">
-          <Button variant="outline" onClick={exportCsv}>
-            <Download /> {t("table.export")}
-          </Button>
-          <Button onClick={openCreate}>
+        <div className="flex gap-2 sm:ml-auto [&>*]:flex-1 sm:[&>*]:flex-none">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" className="w-full sm:w-auto">
+                  <Download /> {t("table.export")}
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportExcel}>
+                <FileSpreadsheet /> {t("export.excel")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={openPdf}>
+                <FileText /> {t("export.pdf")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportCsv}>
+                <Download /> {t("export.csv")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={openCreate} className="w-full sm:w-auto">
             <Plus /> {t("table.new")}
           </Button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      {/* Phones get the card list below; the table starts at sm. */}
+      <div className="hidden overflow-x-auto rounded-lg border sm:block">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-14">{t("table.no")}</TableHead>
               <TableHead>{t("table.donor")}</TableHead>
               <TableHead className="text-right">{t("table.amount")}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t("table.mobile")}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t("table.method")}</TableHead>
+              <TableHead>{t("table.mobile")}</TableHead>
+              <TableHead>{t("table.method")}</TableHead>
               <TableHead>{t("table.date")}</TableHead>
               <TableHead className="w-24 text-right">{t("table.actions")}</TableHead>
             </TableRow>
@@ -176,10 +214,10 @@ export function ReceiptsTable({
                   <TableCell className="text-right tabular-nums">
                     {formatAmount(receipt.amount)}
                   </TableCell>
-                  <TableCell className="hidden tabular-nums sm:table-cell">
+                  <TableCell className="tabular-nums">
                     {receipt.phone_number}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">
+                  <TableCell>
                     <Badge
                       variant={
                         receipt.payment_method === "UPI" ? "default" : "secondary"
@@ -229,6 +267,70 @@ export function ReceiptsTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* Mobile: one card per receipt — no horizontal scrolling, thumb-sized
+          actions, and the amount is the most prominent thing on the row. */}
+      <ul className="flex flex-col gap-2 sm:hidden">
+        {filtered.length === 0 ? (
+          <li className="rounded-lg border py-10 text-center text-sm text-muted-foreground">
+            {receipts.length === 0 ? t("table.empty") : t("table.noMatch")}
+          </li>
+        ) : (
+          filtered.map((receipt) => (
+            <li key={receipt.id} className="rounded-lg border p-3">
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="wrap-anywhere font-medium">
+                    {receipt.donor_name}
+                  </p>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    <span className="tabular-nums">
+                      #{receipt.receipt_number}
+                    </span>
+                    <span aria-hidden>·</span>
+                    <span className="tabular-nums">{receipt.phone_number}</span>
+                    <span aria-hidden>·</span>
+                    <span>{formatDate(receipt.collection_date)}</span>
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-base font-semibold tabular-nums">
+                    {formatAmount(receipt.amount)}
+                  </span>
+                  <Badge
+                    variant={
+                      receipt.payment_method === "UPI" ? "default" : "secondary"
+                    }
+                  >
+                    {t(`method.${receipt.payment_method}`)}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => sendWhatsApp(receipt)}
+                >
+                  <MessageCircle /> {t("table.send")}
+                </Button>
+                <Button variant="ghost" onClick={() => openEdit(receipt)}>
+                  <Pencil /> {t("table.edit")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("table.delete")}
+                  onClick={() => setToDelete(receipt)}
+                >
+                  <Trash2 className="text-destructive" />
+                </Button>
+              </div>
+            </li>
+          ))
+        )}
+      </ul>
 
       {filtered.length > 0 ? (
         <p className="text-xs text-muted-foreground">

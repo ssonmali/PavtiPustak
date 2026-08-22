@@ -23,10 +23,7 @@ type DayTotal = {
   count: number;
 };
 
-const RANGES = [7, 30, 0] as const;
-type Range = (typeof RANGES)[number];
-
-function aggregate(receipts: Receipt[], range: Range): DayTotal[] {
+function aggregate(receipts: Receipt[]): DayTotal[] {
   const byDate = new Map<string, DayTotal>();
 
   for (const r of receipts) {
@@ -42,25 +39,21 @@ function aggregate(receipts: Receipt[], range: Range): DayTotal[] {
   }
 
   // Oldest → newest so the bars read left-to-right as time.
-  const days = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
-  return range === 0 ? days : days.slice(-range);
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
   const { t, locale } = useI18n();
-  const [range, setRange] = React.useState<Range>(30);
   const [asTable, setAsTable] = React.useState(false);
 
-  const days = React.useMemo(() => aggregate(receipts, range), [receipts, range]);
+  // The period filter lives on the dashboard; receipts arrive pre-filtered.
+  const days = React.useMemo(() => aggregate(receipts), [receipts]);
   const max = Math.max(...days.map((d) => d.total), 1);
   const grand = days.reduce((s, d) => s + d.total, 0);
   const busiest = days.reduce<DayTotal | null>(
     (best, d) => (!best || d.total > best.total ? d : best),
     null,
   );
-
-  const rangeLabel = (r: Range) =>
-    r === 0 ? t("chart.range.all") : r === 7 ? t("chart.range.7") : t("chart.range.30");
 
   /** Short axis tick: `22 Aug` / `२२ ऑग`. */
   const tick = (iso: string) => {
@@ -85,21 +78,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
         }
       `}</style>
 
-      {/* Filters in one row above the chart. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 rounded-lg border p-0.5">
-          {RANGES.map((r) => (
-            <Button
-              key={r}
-              size="sm"
-              variant={range === r ? "secondary" : "ghost"}
-              onClick={() => setRange(r)}
-            >
-              {rangeLabel(r)}
-            </Button>
-          ))}
-        </div>
-
+      <div className="flex items-center">
         <Button
           size="sm"
           variant="outline"
@@ -153,8 +132,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
       ) : (
         <div className="overflow-x-auto pb-1">
           <div
-            className="flex min-w-full items-end gap-2"
-            style={{ height: 200 }}
+            className="flex h-40 min-w-full items-end gap-1.5 sm:h-50 sm:gap-2"
             role="img"
             aria-label={`${t("chart.title")} — ${formatAmount(grand)}`}
           >
@@ -165,8 +143,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
               return (
                 <div
                   key={d.date}
-                  className="group relative flex min-w-8 flex-1 flex-col justify-end"
-                  style={{ height: "100%" }}
+                  className="group relative flex h-full min-w-6 flex-1 flex-col justify-end sm:min-w-8"
                 >
                   <div
                     className="relative w-full overflow-hidden rounded-t"
@@ -229,13 +206,14 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
           </div>
 
           {/* Axis ticks: thinned so labels never collide. */}
-          <div className="mt-1.5 flex min-w-full gap-2 border-t pt-1.5">
+          <div className="mt-1.5 flex min-w-full gap-1.5 border-t pt-1.5 sm:gap-2">
             {days.map((d, i) => {
-              const every = Math.ceil(days.length / 10);
+              // One tick per ~6 bars keeps labels legible at phone width.
+              const every = Math.ceil(days.length / 6);
               return (
                 <div
                   key={d.date}
-                  className="min-w-8 flex-1 truncate text-center text-[10px] text-muted-foreground"
+                  className="min-w-6 flex-1 truncate text-center text-[10px] text-muted-foreground sm:min-w-8"
                 >
                   {i % every === 0 || i === days.length - 1 ? tick(d.date) : ""}
                 </div>

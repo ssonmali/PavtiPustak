@@ -22,7 +22,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-full flex-1 flex-col bg-muted/40">
       <header className="sticky top-0 z-10 border-b bg-background">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <ReceiptText className="size-4" />
           </div>
@@ -44,7 +44,7 @@ export default async function DashboardLayout({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 p-4">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 p-3 sm:p-4">{children}</main>
     </div>
   );
 }

@@ -128,3 +128,58 @@
     @apply font-sans;
   }
 }
+/* Printable report: white ground, repeat table headers across pages. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  /* Keep rows intact and repeat the header on every page. */
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  img {
+    break-inside: avoid;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile-first baselines. Volunteers use this one-handed, outdoors, on a
+   phone — these are the rules that make that workable.
+   --------------------------------------------------------------------------- */
+
+/* iOS zooms the viewport when a focused input's text is under 16px. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch devices get 44px tap targets regardless of the visual button size. */
+@media (pointer: coarse) {
+  [data-slot="button"],
+  [data-slot="select-trigger"],
+  [data-slot="dropdown-menu-item"],
+  [data-slot="select-item"] {
+    min-height: 2.75rem;
+  }
+
+  [data-slot="input"] {
+    min-height: 2.75rem;
+  }
+}
+
+/* Let long Marathi donor names wrap instead of forcing a horizontal scroll. */
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+}

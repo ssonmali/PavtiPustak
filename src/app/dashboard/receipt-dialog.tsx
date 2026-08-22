@@ -88,7 +88,7 @@ function ReceiptDialogBody({
   }
 
   return (
-    <DialogContent className="sm:max-w-md">
+    <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
       <DialogHeader>
         <DialogTitle>
           {isEdit ? t("form.editTitle") : t("form.newTitle")}
@@ -113,7 +113,7 @@ function ReceiptDialogBody({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <Label htmlFor="amount">{t("form.amount")}</Label>
             <Input
@@ -143,7 +143,7 @@ function ReceiptDialogBody({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <Label>{t("form.method")}</Label>
             {/* Base UI Select is controlled; mirror it into a hidden input. */}
@@ -198,7 +198,7 @@ function ReceiptDialogBody({
           </div>
         </div>
 
-        <DialogFooter className="mt-2">
+        <DialogFooter className="mt-2 [&>*]:flex-1 sm:[&>*]:flex-none">
           <Button
             type="button"
             variant="outline"
