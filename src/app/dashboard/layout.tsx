@@ -7,6 +7,7 @@ import { getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/client";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BottomNav, SidebarNav } from "./sidebar-nav";
+import { RealtimeRefresh } from "./realtime-refresh";
 
 export default async function DashboardLayout({
   children,
@@ -37,6 +38,7 @@ export default async function DashboardLayout({
                 {user.email}
               </p>
             </div>
+            <RealtimeRefresh />
             <LanguageToggle locale={locale} />
             <form action={logout}>
               <Button type="submit" variant="outline" size="sm">

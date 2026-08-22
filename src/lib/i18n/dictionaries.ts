@@ -24,6 +24,8 @@ const en = {
   "nav.activity": "Activity",
   "nav.report": "Print report",
   "nav.menu": "Menu",
+  "realtime.live": "Live — synced across devices",
+  "realtime.off": "Offline — pull to refresh",
 
   // Activity log
   "activity.title": "Activity log",
@@ -147,6 +149,8 @@ const mr: Record<MessageKey, string> = {
   "nav.activity": "बदल इतिहास",
   "nav.report": "अहवाल छापा",
   "nav.menu": "मेनू",
+  "realtime.live": "थेट — सर्व उपकरणांवर अद्ययावत",
+  "realtime.off": "ऑफलाइन — रिफ्रेश करा",
 
   "activity.title": "बदल इतिहास",
   "activity.subtitle": "नोंदवहीतील प्रत्येक बदल, नवीन प्रथम.",
