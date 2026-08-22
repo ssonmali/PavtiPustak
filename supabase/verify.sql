@@ -9,3 +9,22 @@ from pg_trigger
 where tgname = 'receipts_audit_trigger';
 
 select 'audit rows' as check, count(*) as entries from public.receipt_audit;
+
+-- Is realtime actually publishing receipts? Must return one row.
+-- If this is empty, migration 03 did not run and no cross-device updates
+-- will ever arrive.
+select 'realtime publication' as check, pubname, tablename
+from pg_publication_tables
+where pubname = 'supabase_realtime' and tablename = 'receipts';
+
+-- DELETE events need the full old row for RLS to be evaluated.
+-- relreplident must be 'f' (full), not 'd' (default).
+select 'replica identity' as check, relname, relreplident
+from pg_class
+where relname = 'receipts';
+
+-- Views and updated_at from migration 04.
+select 'views' as check, table_name
+from information_schema.views
+where table_schema = 'public'
+order by table_name;

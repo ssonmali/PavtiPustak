@@ -13,7 +13,7 @@ export function RealtimeRefresh() {
   const { t } = useI18n();
 
   const live = status === "live";
-  const label = live ? t("realtime.live") : t("realtime.off");
+  const label = live ? t("realtime.live") : t("realtime.polling");
 
   return (
     <span

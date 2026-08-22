@@ -45,7 +45,7 @@ const en = {
   "loading": "Loading…",
 
   "realtime.live": "Live — synced across devices",
-  "realtime.off": "Offline — pull to refresh",
+  "realtime.polling": "Updating periodically — live sync unavailable",
 
   // Activity log
   "activity.title": "Activity log",
@@ -229,7 +229,7 @@ const mr: Record<MessageKey, string> = {
   "loading": "लोड होत आहे…",
 
   "realtime.live": "थेट — सर्व उपकरणांवर अद्ययावत",
-  "realtime.off": "ऑफलाइन — रिफ्रेश करा",
+  "realtime.polling": "अधून मधून अद्ययावत — थेट सिंक उपलब्ध नाही",
 
   "activity.title": "बदल इतिहास",
   "activity.subtitle": "नोंदवहीतील प्रत्येक बदल, नवीन प्रथम.",
