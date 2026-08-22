@@ -14,7 +14,7 @@ export function PrintBar({
   return (
     // print:hidden keeps the toolbar out of the PDF itself.
     <div className="flex items-center gap-2 print:hidden">
-      <Button variant="outline" size="sm" render={<Link href="/dashboard" />}>
+      <Button variant="outline" size="sm" render={<Link href="/dashboard/receipts" />}>
         <ArrowLeft /> {backLabel}
       </Button>
       <Button size="sm" onClick={() => window.print()}>

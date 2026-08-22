@@ -3,7 +3,11 @@
 import * as React from "react";
 import { BarChart3, CalendarRange, Table2, TrendingUp } from "lucide-react";
 import type { Receipt } from "@/lib/types";
-import { formatAmount, formatDate } from "@/lib/receipt-utils";
+import {
+  formatAmount,
+  formatDate,
+  formatDateShort,
+} from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,14 +59,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
     null,
   );
 
-  /** Short axis tick: `22 Aug` / `२२ ऑग`. */
-  const tick = (iso: string) => {
-    const [y, m, d] = iso.split("-").map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString(
-      locale === "mr" ? "mr-IN" : "en-IN",
-      { day: "numeric", month: "short" },
-    );
-  };
+  const tick = (iso: string) => formatDateShort(iso, locale);
 
   return (
     <div className="viz-root flex flex-col gap-4">
@@ -110,7 +107,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
               {[...days].reverse().map((d) => (
                 <TableRow key={d.date}>
                   <TableCell className="whitespace-nowrap">
-                    {formatDate(d.date)}
+                    {formatDate(d.date, locale)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {d.cash ? formatAmount(d.cash) : "—"}
@@ -176,7 +173,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
                     className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 hidden w-max -translate-x-1/2 rounded-md border bg-popover px-2 py-1.5 text-xs shadow-md group-hover:block"
                     role="tooltip"
                   >
-                    <p className="font-medium">{formatDate(d.date)}</p>
+                    <p className="font-medium">{formatDate(d.date, locale)}</p>
                     <p className="tabular-nums">{formatAmount(d.total)}</p>
                     <p className="text-muted-foreground">
                       {t("chart.receiptsCount", { count: d.count })}
@@ -244,7 +241,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
         {busiest ? (
           <span className="ml-auto flex items-center gap-1.5 text-muted-foreground">
             <TrendingUp className="size-3.5" />
-            {t("chart.busiestDay")}: {formatDate(busiest.date)} ·{" "}
+            {t("chart.busiestDay")}: {formatDate(busiest.date, locale)} ·{" "}
             <span className="tabular-nums">{formatAmount(busiest.total)}</span>
           </span>
         ) : null}

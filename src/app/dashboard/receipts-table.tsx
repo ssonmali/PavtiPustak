@@ -227,7 +227,7 @@ export function ReceiptsTable({
                     </Badge>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {formatDate(receipt.collection_date)}
+                    {formatDate(receipt.collection_date, locale)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -290,7 +290,7 @@ export function ReceiptsTable({
                     <span aria-hidden>·</span>
                     <span className="tabular-nums">{receipt.phone_number}</span>
                     <span aria-hidden>·</span>
-                    <span>{formatDate(receipt.collection_date)}</span>
+                    <span>{formatDate(receipt.collection_date, locale)}</span>
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">

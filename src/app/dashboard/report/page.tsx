@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Receipt } from "@/lib/types";
-import { formatAmount, formatDate, toDateValue } from "@/lib/receipt-utils";
+import {
+  formatAmount,
+  formatDate,
+  formatDateTime,
+  toDateValue,
+} from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { PrintBar } from "./print-button";
 
@@ -41,7 +46,7 @@ export default async function ReportPage({
   const total = receipts.reduce((sum, r) => sum + Number(r.amount), 0);
 
   const periodLabel = from
-    ? `${formatDate(from)} — ${formatDate(toDateValue(new Date()))}`
+    ? `${formatDate(from, locale)} — ${formatDate(toDateValue(new Date()), locale)}`
     : t("period.all");
 
   return (
@@ -70,7 +75,7 @@ export default async function ReportPage({
           <div>
             <dt className="text-muted-foreground">{t("report.generated")}</dt>
             <dd className="font-medium">
-              {new Date().toLocaleDateString(locale === "mr" ? "mr-IN" : "en-IN")}
+              {formatDateTime(new Date().toISOString(), locale)}
             </dd>
           </div>
         </dl>
@@ -94,7 +99,7 @@ export default async function ReportPage({
                 <td className="p-2 tabular-nums">{r.phone_number}</td>
                 <td className="p-2">{t(`method.${r.payment_method}`)}</td>
                 <td className="p-2 whitespace-nowrap">
-                  {formatDate(r.collection_date)}
+                  {formatDate(r.collection_date, locale)}
                 </td>
                 <td className="p-2 text-right tabular-nums">
                   {formatAmount(r.amount)}

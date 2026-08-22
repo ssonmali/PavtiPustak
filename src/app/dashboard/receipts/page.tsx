@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Receipt } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Overview } from "./overview";
+import { ReceiptsView } from "./receipts-view";
 
-export const metadata = { title: "Overview · Pavti Pustak" };
+export const metadata = { title: "Receipts · Pavti Pustak" };
 
-export default async function DashboardPage() {
+export default async function ReceiptsPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("receipts")
@@ -25,5 +25,10 @@ export default async function DashboardPage() {
     );
   }
 
-  return <Overview receipts={(data ?? []) as Receipt[]} />;
+  return (
+    <ReceiptsView
+      receipts={(data ?? []) as Receipt[]}
+      mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal"}
+    />
+  );
 }

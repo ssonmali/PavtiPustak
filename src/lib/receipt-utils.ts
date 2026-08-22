@@ -9,13 +9,64 @@ const inr = new Intl.NumberFormat("en-IN", {
 export const formatAmount = (amount: number | string) =>
   inr.format(Number(amount));
 
-/** `2026-08-22` -> `22 Aug 2026`, without timezone drift. */
-export function formatDate(isoDate: string) {
+/**
+ * `2026-08-22` -> `22 Aug 2026`.
+ *
+ * Built on Date.UTC and formatted in UTC on purpose: a date-only column has no
+ * timezone, and anything that reads the host's zone renders differently on the
+ * server than in the browser, which breaks hydration.
+ */
+export function formatDate(isoDate: string, locale: "mr" | "en" = "en") {
   const [y, m, d] = isoDate.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(
+    locale === "mr" ? "mr-IN" : "en-IN",
+    { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" },
+  );
+}
+
+/** Short axis/tick form: `22 Aug`. Same UTC discipline as formatDate. */
+export function formatDateShort(isoDate: string, locale: "mr" | "en" = "en") {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(
+    locale === "mr" ? "mr-IN" : "en-IN",
+    { day: "numeric", month: "short", timeZone: "UTC" },
+  );
+}
+
+/**
+ * The `YYYY-MM-DD` an instant falls on in the mandal's zone. `en-CA` is used
+ * because it formats as ISO, and the explicit zone keeps it deterministic.
+ */
+export function dayOf(iso: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** Just the clock time of an instant, for grouped lists that show the day once. */
+export function formatTime(iso: string, locale: "mr" | "en" = "en") {
+  return new Date(iso).toLocaleTimeString(locale === "mr" ? "mr-IN" : "en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata",
+  });
+}
+
+/**
+ * A `timestamptz` rendered in the mandal's own zone with an explicit locale, so
+ * the server and the browser produce identical text.
+ */
+export function formatDateTime(iso: string, locale: "mr" | "en" = "en") {
+  return new Date(iso).toLocaleString(locale === "mr" ? "mr-IN" : "en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata",
   });
 }
 
@@ -75,7 +126,7 @@ export function receiptsToCsv(receipts: Receipt[]) {
       r.phone_number,
       r.payment_method,
       r.collection_date,
-      new Date(r.created_at).toLocaleString("en-IN"),
+      formatDateTime(r.created_at),
     ]
       .map(csvCell)
       .join(","),
