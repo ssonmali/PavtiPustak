@@ -8,7 +8,8 @@ import {
   searchDonors,
   updateReceipt,
 } from "@/app/actions/receipts";
-import { PAYMENT_METHODS, type Donor, type Receipt } from "@/lib/types";
+import { PAYMENT_METHODS, type Donor, type PaymentMethod } from "@/lib/types";
+import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
 import { formatAmount, formatDate, toDateValue } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
@@ -42,11 +43,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type QueueFn = (
+  entry: Omit<OutboxEntry, "localId" | "queuedAt" | "attempts">,
+) => Promise<void>;
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Present when editing; absent when creating. */
-  receipt?: Receipt;
+  receipt?: LocalReceipt;
+  online?: boolean;
+  /** Present when writes should be queued instead of sent. */
+  queue?: QueueFn;
 };
 
 /** Parses a stored `YYYY-MM-DD` without the UTC shift `new Date(str)` causes. */
@@ -55,7 +63,13 @@ function parseDateValue(isoDate: string) {
   return new Date(y, m - 1, d);
 }
 
-export function ReceiptDialog({ open, onOpenChange, receipt }: Props) {
+export function ReceiptDialog({
+  open,
+  onOpenChange,
+  receipt,
+  online = true,
+  queue,
+}: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Remounting on the target row resets the form without an effect. */}
@@ -63,12 +77,19 @@ export function ReceiptDialog({ open, onOpenChange, receipt }: Props) {
         key={receipt?.id ?? "new"}
         onOpenChange={onOpenChange}
         receipt={receipt}
+        online={online}
+        queue={queue}
       />
     </Dialog>
   );
 }
 
-function ReceiptDialogBody({ onOpenChange, receipt }: Omit<Props, "open">) {
+function ReceiptDialogBody({
+  onOpenChange,
+  receipt,
+  online = true,
+  queue,
+}: Omit<Props, "open">) {
   const { t, locale } = useI18n();
   const isEdit = Boolean(receipt);
   const [pending, setPending] = React.useState(false);
@@ -126,7 +147,38 @@ function ReceiptDialogBody({ onOpenChange, receipt }: Omit<Props, "open">) {
     if (phoneRef.current) phoneRef.current.value = donor.phone_number;
   }
 
+  /** Reads the form into the shape the outbox stores. */
+  function fieldsFrom(formData: FormData) {
+    return {
+      donor_name: String(formData.get("donor_name") ?? "").trim(),
+      amount: Number(formData.get("amount") ?? 0),
+      phone_number: String(formData.get("phone_number") ?? "")
+        .replace(/[\s-]/g, "")
+        .replace(/^(\+91|91|0)/, ""),
+      payment_method: String(formData.get("payment_method") ?? "Cash") as PaymentMethod,
+      collection_date: String(formData.get("collection_date") ?? ""),
+    };
+  }
+
   async function submit(formData: FormData) {
+    // Offline: store it on the device and let the outbox replay it later. The
+    // duplicate prompt is skipped because there is no server to ask.
+    if (!online && queue) {
+      await queue(
+        receipt && receipt.pending !== "create"
+          ? {
+              kind: "update",
+              receiptId: receipt.id,
+              fields: fieldsFrom(formData),
+              expectedUpdatedAt: receipt.updated_at,
+            }
+          : { kind: "create", fields: fieldsFrom(formData) },
+      );
+      toast.success(t("offline.queued"));
+      onOpenChange(false);
+      return;
+    }
+
     setPending(true);
     const result = receipt
       ? await updateReceipt(receipt.id, formData)

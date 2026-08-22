@@ -1,26 +1,42 @@
 "use client";
 
-import { useOffline } from "next/offline";
-import { CloudOff } from "lucide-react";
+import { CloudOff, RefreshCw } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 
 /**
- * Server Actions survive a connectivity drop with experimental.useOffline, but
- * a pending save is indistinguishable from a slow one — this says which it is.
+ * Shown when the device is offline or still has queued writes, so "saved on
+ * this device" is never mistaken for "saved to the ledger".
  */
-export function OfflineBadge() {
-  const isOffline = useOffline();
+export function OfflineBadge({
+  online,
+  pending,
+  syncing,
+}: {
+  online: boolean;
+  pending: number;
+  syncing: boolean;
+}) {
   const { t } = useI18n();
 
-  if (!isOffline) return null;
+  if (online && pending === 0) return null;
+
+  const label = !online
+    ? t("offline.badge")
+    : syncing
+      ? t("offline.syncing")
+      : t("offline.pendingCount", { count: pending });
 
   return (
     <div
       role="status"
-      className="sticky top-14 z-20 flex items-center justify-center gap-2 bg-amber-500/15 px-3 py-1.5 text-center text-xs text-amber-900 dark:text-amber-200 print:hidden"
+      className="flex items-center justify-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-center text-xs text-amber-900 dark:text-amber-200 print:hidden"
     >
-      <CloudOff className="size-3.5 shrink-0" />
-      {t("offline.badge")}
+      {online ? (
+        <RefreshCw className={`size-3.5 shrink-0 ${syncing ? "animate-spin" : ""}`} />
+      ) : (
+        <CloudOff className="size-3.5 shrink-0" />
+      )}
+      {label}
     </div>
   );
 }

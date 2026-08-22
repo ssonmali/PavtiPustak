@@ -13,6 +13,8 @@ exports the ledger for accounting.
 - **Activity log** — every change, by whom, with a field-level diff
 - **Bilingual** — Marathi (default) and English
 - **Realtime** — every volunteer's device stays in sync
+- **Offline-first** — enter receipts with no signal; they queue on the device
+  and sync automatically on reconnect
 - **Mobile-first** — installable PWA, card layouts, 44px tap targets
 
 ## Stack

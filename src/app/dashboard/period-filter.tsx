@@ -25,7 +25,10 @@ export function startOf(period: Period) {
   return toDateValue(d);
 }
 
-export function filterByPeriod(receipts: Receipt[], period: Period) {
+export function filterByPeriod<T extends Pick<Receipt, "collection_date">>(
+  receipts: T[],
+  period: Period,
+): T[] {
   const from = startOf(period);
   if (!from) return receipts;
   return receipts.filter((r) => r.collection_date >= from);

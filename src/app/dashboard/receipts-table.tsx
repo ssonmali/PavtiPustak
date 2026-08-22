@@ -8,6 +8,7 @@ import {
   MoreHorizontal,
   Pencil,
   Printer,
+  CloudOff,
   Plus,
   Search,
   Trash2,
@@ -16,7 +17,7 @@ import { toast } from "sonner";
 import { deleteReceipt, fetchReceipts } from "@/app/actions/receipts";
 import { exportReceiptsToExcel } from "@/lib/export-excel";
 import { dictionaries } from "@/lib/i18n/dictionaries";
-import type { Receipt } from "@/lib/types";
+import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
 import {
   formatAmount,
   formatDate,
@@ -54,18 +55,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+type QueueFn = (
+  entry: Omit<OutboxEntry, "localId" | "queuedAt" | "attempts">,
+) => Promise<void>;
+
 export function ReceiptsTable({
   receipts,
   mandalName,
   periodDays = 0,
   total,
+  online = true,
+  queue,
 }: {
-  receipts: Receipt[];
+  receipts: LocalReceipt[];
   mandalName: string;
   /** Mirrors the dashboard period so the PDF report covers the same window. */
   periodDays?: number;
   /** Total rows on the server, when the list is paginated. */
   total?: number;
+  online?: boolean;
+  /** Present when writes should be queued instead of sent. */
+  queue?: QueueFn;
 }) {
   const { t, locale } = useI18n();
   const [query, setQuery] = React.useState("");
@@ -75,7 +85,7 @@ export function ReceiptsTable({
   // refresh replaces `receipts`, which changes the key and drops the stale
   // tail — derived rather than reset in an effect.
   const pageKey = `${receipts.length}:${receipts[0]?.id ?? ""}`;
-  const [tail, setTail] = React.useState<{ key: string; rows: Receipt[] }>({
+  const [tail, setTail] = React.useState<{ key: string; rows: LocalReceipt[] }>({
     key: pageKey,
     rows: [],
   });
@@ -95,8 +105,8 @@ export function ReceiptsTable({
     setLoadingMore(false);
   }
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<Receipt | undefined>();
-  const [toDelete, setToDelete] = React.useState<Receipt | undefined>();
+  const [editing, setEditing] = React.useState<LocalReceipt | undefined>();
+  const [toDelete, setToDelete] = React.useState<LocalReceipt | undefined>();
   const [deleting, setDeleting] = React.useState(false);
 
   const filtered = React.useMemo(() => {
@@ -115,12 +125,17 @@ export function ReceiptsTable({
     setDialogOpen(true);
   }
 
-  function openEdit(receipt: Receipt) {
+  function openEdit(receipt: LocalReceipt) {
     setEditing(receipt);
     setDialogOpen(true);
   }
 
-  function sendWhatsApp(receipt: Receipt) {
+  function sendWhatsApp(receipt: LocalReceipt) {
+    // The message quotes the receipt number, which the server assigns on sync.
+    if (receipt.pending === "create") {
+      toast.error(t("offline.noSend"));
+      return;
+    }
     window.open(whatsappUrl(receipt, mandalName), "_blank", "noopener");
   }
 
@@ -157,6 +172,20 @@ export function ReceiptsTable({
 
   async function confirmDelete() {
     if (!toDelete) return;
+
+    // Offline, or the row itself has never reached the server.
+    if ((!online || toDelete.pending === "create") && queue) {
+      if (toDelete.pending === "create") {
+        // Nothing to delete on the server; drop the queued create instead.
+        await queue({ kind: "delete", receiptId: toDelete.id });
+      } else {
+        await queue({ kind: "delete", receiptId: toDelete.id });
+      }
+      setToDelete(undefined);
+      toast.success(t("offline.queued"));
+      return;
+    }
+
     setDeleting(true);
     const result = await deleteReceipt(toDelete.id);
     setDeleting(false);
@@ -236,7 +265,13 @@ export function ReceiptsTable({
               filtered.map((receipt) => (
                 <TableRow key={receipt.id}>
                   <TableCell className="text-muted-foreground tabular-nums">
-                    {receipt.receipt_number}
+                    {receipt.pending === "create" ? (
+                      <span title={t("offline.pending")}>
+                        <CloudOff className="size-3.5 text-amber-600" />
+                      </span>
+                    ) : (
+                      receipt.receipt_number
+                    )}
                   </TableCell>
                   <TableCell className="font-medium">
                     {receipt.donor_name}
@@ -325,8 +360,15 @@ export function ReceiptsTable({
                     {receipt.donor_name}
                   </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                    <span className="tabular-nums">
-                      #{receipt.receipt_number}
+                    <span className="flex items-center gap-1 tabular-nums">
+                      {receipt.pending === "create" ? (
+                        <>
+                          <CloudOff className="size-3 text-amber-600" />
+                          {t("offline.pending")}
+                        </>
+                      ) : (
+                        `#${receipt.receipt_number}`
+                      )}
                     </span>
                     <span aria-hidden>·</span>
                     <span className="tabular-nums">{receipt.phone_number}</span>
@@ -409,6 +451,8 @@ export function ReceiptsTable({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         receipt={editing}
+        online={online}
+        queue={queue}
       />
 
       <AlertDialog

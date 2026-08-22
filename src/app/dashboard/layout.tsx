@@ -8,7 +8,7 @@ import { I18nProvider } from "@/lib/i18n/client";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BottomNav, SidebarNav } from "./sidebar-nav";
 import { RealtimeRefresh } from "./realtime-refresh";
-import { OfflineBadge } from "@/components/offline-badge";
+import { ServiceWorkerRegistrar } from "@/components/service-worker";
 
 export default async function DashboardLayout({
   children,
@@ -25,6 +25,7 @@ export default async function DashboardLayout({
 
   return (
     <I18nProvider locale={locale}>
+      <ServiceWorkerRegistrar />
       <div className="flex min-h-full flex-1 flex-col bg-muted/40">
         <header className="sticky top-0 z-20 border-b bg-background print:hidden">
           <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
@@ -49,8 +50,6 @@ export default async function DashboardLayout({
             </form>
           </div>
         </header>
-
-        <OfflineBadge />
 
         <div className="mx-auto flex w-full max-w-7xl flex-1">
           <SidebarNav />

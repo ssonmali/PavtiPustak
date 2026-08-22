@@ -69,9 +69,13 @@ setting, not application code, which is why it is not in the repo.
   uses this during Ganeshotsav, restore it from the dashboard beforehand.
 - **`receipt_number` can have gaps.** Sequences do not roll back, so a failed
   insert burns a number. Do not promise the treasurer a gapless series.
-- **Offline support is experimental.** `experimental.useOffline` keeps an
-  interrupted Server Action pending until the network returns. Test it on a real
-  phone in a dead zone before relying on it for a collection round.
+- **Offline support only runs in a production build.** The service worker is
+  not registered in `next dev`, so test it with `npm run build && npm start`, or
+  on the deployed URL. In DevTools use Application → Service Workers and the
+  Network throttling "Offline" preset.
+- **Offline caching stores pages on the device.** A volunteer's phone keeps the
+  last version of each page it opened, so treat a shared phone as it would be
+  treated with any other ledger. Signing out clears the cached pages.
 - **No error monitoring is wired up.** Errors go to the Vercel function logs
   with a digest shown to the user. If you want alerting, add Sentry — it needs
   an account and a DSN, so it was left out deliberately.
