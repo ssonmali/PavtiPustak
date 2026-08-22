@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# पावती पुस्तक · Pavti Pustak
 
-## Getting Started
+Vargani (donation) receipt management for a Ganesh Mandal. Volunteers record
+donations on their phones, WhatsApp a receipt to the donor, and the treasurer
+exports the ledger for accounting.
 
-First, run the development server:
+## Features
+
+- **Receipts** — create, edit, delete, with backdating for previous collections
+- **WhatsApp** — one tap sends a bilingual thank-you via the `wa.me` intent
+- **Exports** — Excel (.xlsx), a print-ready PDF report, per-donor slips, CSV
+- **Overview** — daily collection chart split by Cash/UPI, per-volunteer totals
+- **Activity log** — every change, by whom, with a field-level diff
+- **Bilingual** — Marathi (default) and English
+- **Realtime** — every volunteer's device stays in sync
+- **Mobile-first** — installable PWA, card layouts, 44px tap targets
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · Supabase
+(Postgres + Auth + Realtime + RLS) · Vercel
+
+## Local development
 
 ```bash
+npm install
+cp .env.example .env.local   # then fill in your Supabase values
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Apply the SQL in `supabase/` in numeric order first — see [DEPLOYMENT.md](DEPLOYMENT.md).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | |
+|---|---|
+| `npm run dev` | Dev server |
+| `npm run verify` | Lint + typecheck + tests |
+| `npm test` | Unit tests (vitest) |
+| `npm run build` | Production build |
 
-## Learn More
+Tests run under a non-IST timezone in CI on purpose: date handling must not
+depend on the host zone.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [DEPLOYMENT.md](DEPLOYMENT.md).

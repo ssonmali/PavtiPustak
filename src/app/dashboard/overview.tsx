@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import {
-  CalendarDays,
   IndianRupee,
   Receipt as ReceiptIcon,
+  TrendingUp,
   Users,
 } from "lucide-react";
-import type { Receipt } from "@/lib/types";
-import { formatAmount } from "@/lib/receipt-utils";
+import type { DailyTotal, VolunteerTotal } from "@/lib/types";
+import { formatAmount, formatDate } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import {
   Card,
@@ -18,32 +18,50 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DailyCollections } from "./daily-collections";
-import { filterByPeriod, PeriodFilter, type Period } from "./period-filter";
+import { PeriodFilter, startOf, type Period } from "./period-filter";
 
-export function Overview({ receipts }: { receipts: Receipt[] }) {
-  const { t } = useI18n();
+export function Overview({
+  daily,
+  volunteers,
+}: {
+  daily: DailyTotal[];
+  volunteers: VolunteerTotal[];
+}) {
+  const { t, locale } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
 
-  const visible = React.useMemo(
-    () => filterByPeriod(receipts, period),
-    [receipts, period],
-  );
+  const visible = React.useMemo(() => {
+    const from = startOf(period);
+    const rows = from
+      ? daily.filter((d) => d.collection_date >= from)
+      : daily;
+    // Oldest → newest so the chart reads left-to-right as time.
+    return [...rows].sort((a, b) =>
+      a.collection_date.localeCompare(b.collection_date),
+    );
+  }, [daily, period]);
 
-  const total = visible.reduce((sum, r) => sum + Number(r.amount), 0);
-  const donors = new Set(visible.map((r) => r.donor_name.trim().toLowerCase()));
+  const total = visible.reduce((s, d) => s + Number(d.total), 0);
+  const count = visible.reduce((s, d) => s + d.receipt_count, 0);
+  // Per-day donor counts cannot be summed into a unique total, so this is the
+  // busiest single day's donor count — labelled as such rather than implied.
+  const busiest = visible.reduce<DailyTotal | null>(
+    (best, d) => (!best || Number(d.total) > Number(best.total) ? d : best),
+    null,
+  );
 
   const stats = [
     { label: t("stats.total"), value: formatAmount(total), icon: IndianRupee },
-    {
-      label: t("stats.receipts"),
-      value: String(visible.length),
-      icon: ReceiptIcon,
-    },
-    { label: t("stats.donors"), value: String(donors.size), icon: Users },
+    { label: t("stats.receipts"), value: String(count), icon: ReceiptIcon },
     {
       label: t("stats.avgReceipt"),
-      value: visible.length ? formatAmount(total / visible.length) : "—",
-      icon: CalendarDays,
+      value: count ? formatAmount(total / count) : "—",
+      icon: TrendingUp,
+    },
+    {
+      label: t("stats.volunteers"),
+      value: String(volunteers.length),
+      icon: Users,
     },
   ];
 
@@ -74,7 +92,6 @@ export function Overview({ receipts }: { receipts: Receipt[] }) {
         ))}
       </div>
 
-      {/* A single day has nothing to plot across dates. */}
       {period !== 1 ? (
         <Card>
           <CardHeader>
@@ -82,9 +99,55 @@ export function Overview({ receipts }: { receipts: Receipt[] }) {
             <CardDescription>{t("chart.subtitle")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <DailyCollections receipts={visible} />
+            <DailyCollections days={visible} />
           </CardContent>
         </Card>
+      ) : null}
+
+      {volunteers.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("volunteers.title")}</CardTitle>
+            <CardDescription>{t("volunteers.subtitle")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2">
+              {volunteers.map((v) => {
+                const share = total
+                  ? Math.round((Number(v.total) / total) * 100)
+                  : 0;
+                return (
+                  <li key={v.volunteer} className="flex flex-col gap-1">
+                    <div className="flex items-baseline gap-2 text-sm">
+                      <span className="wrap-anywhere min-w-0 flex-1 truncate">
+                        {v.volunteer}
+                      </span>
+                      <span className="tabular-nums">
+                        {formatAmount(v.total)}
+                      </span>
+                      <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">
+                        {t("chart.receiptsCount", { count: v.receipt_count })}
+                      </span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${share}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {busiest ? (
+        <p className="text-xs text-muted-foreground">
+          {t("chart.busiestDay")}: {formatDate(busiest.collection_date, locale)}{" "}
+          · {formatAmount(busiest.total)}
+        </p>
       ) : null}
     </div>
   );

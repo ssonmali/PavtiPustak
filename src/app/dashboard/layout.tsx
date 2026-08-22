@@ -8,6 +8,7 @@ import { I18nProvider } from "@/lib/i18n/client";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BottomNav, SidebarNav } from "./sidebar-nav";
 import { RealtimeRefresh } from "./realtime-refresh";
+import { OfflineBadge } from "@/components/offline-badge";
 
 export default async function DashboardLayout({
   children,
@@ -48,6 +49,8 @@ export default async function DashboardLayout({
             </form>
           </div>
         </header>
+
+        <OfflineBadge />
 
         <div className="mx-auto flex w-full max-w-7xl flex-1">
           <SidebarNav />

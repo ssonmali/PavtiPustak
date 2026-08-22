@@ -1,14 +1,28 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon, Loader2, Save } from "lucide-react";
+import { CalendarIcon, Loader2, Save, TriangleAlert, User } from "lucide-react";
 import { toast } from "sonner";
-import { createReceipt, updateReceipt } from "@/app/actions/receipts";
-import { PAYMENT_METHODS, type Receipt } from "@/lib/types";
-import { formatDate, toDateValue } from "@/lib/receipt-utils";
+import {
+  createReceipt,
+  searchDonors,
+  updateReceipt,
+} from "@/app/actions/receipts";
+import { PAYMENT_METHODS, type Donor, type Receipt } from "@/lib/types";
+import { formatAmount, formatDate, toDateValue } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -54,11 +68,8 @@ export function ReceiptDialog({ open, onOpenChange, receipt }: Props) {
   );
 }
 
-function ReceiptDialogBody({
-  onOpenChange,
-  receipt,
-}: Omit<Props, "open">) {
-  const { t } = useI18n();
+function ReceiptDialogBody({ onOpenChange, receipt }: Omit<Props, "open">) {
+  const { t, locale } = useI18n();
   const isEdit = Boolean(receipt);
   const [pending, setPending] = React.useState(false);
   const [date, setDate] = React.useState<Date | undefined>(() =>
@@ -68,151 +79,295 @@ function ReceiptDialogBody({
     receipt?.payment_method ?? "Cash",
   );
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+  // Donor autocomplete
+  const [donorQuery, setDonorQuery] = React.useState(receipt?.donor_name ?? "");
+  const [matches, setMatches] = React.useState<Donor[]>([]);
+  const [showMatches, setShowMatches] = React.useState(false);
+  const phoneRef = React.useRef<HTMLInputElement>(null);
 
+  // Duplicate confirmation
+  const [dup, setDup] = React.useState<{
+    amount: number;
+    date: string;
+    who: string | null;
+    formData: FormData;
+  } | null>(null);
+
+  /** Looks up past donors as the volunteer types, debounced. */
+  function onDonorInput(value: string) {
+    setDonorQuery(value);
+    if (isEdit) return;
+    setShowMatches(true);
+  }
+
+  React.useEffect(() => {
+    if (isEdit || donorQuery.trim().length < 2) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const found = await searchDonors(donorQuery);
+      if (!cancelled) setMatches(found);
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [donorQuery, isEdit]);
+
+  // Derived, so a too-short query hides stale results without a setState.
+  const suggestions =
+    !isEdit && donorQuery.trim().length >= 2 && showMatches ? matches : [];
+
+  function pickDonor(donor: Donor) {
+    setDonorQuery(donor.donor_name);
+    setShowMatches(false);
+    // Auto-fill the number we already have for this donor.
+    if (phoneRef.current) phoneRef.current.value = donor.phone_number;
+  }
+
+  async function submit(formData: FormData) {
     setPending(true);
     const result = receipt
       ? await updateReceipt(receipt.id, formData)
       : await createReceipt(formData);
     setPending(false);
 
-    if (!result.ok) {
-      toast.error(result.error);
+    if (result.ok) {
+      toast.success(isEdit ? t("toast.updated") : t("toast.saved"));
+      onOpenChange(false);
       return;
     }
+    if ("duplicate" in result) {
+      setDup({ ...result.duplicate, formData });
+      return;
+    }
+    if ("conflict" in result) {
+      toast.error(t("toast.conflict"));
+      onOpenChange(false);
+      return;
+    }
+    toast.error(result.error);
+  }
 
-    toast.success(isEdit ? t("toast.updated") : t("toast.saved"));
-    onOpenChange(false);
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submit(new FormData(event.currentTarget));
+  }
+
+  async function saveAnyway() {
+    if (!dup) return;
+    const formData = dup.formData;
+    formData.set("confirm_duplicate", "1");
+    setDup(null);
+    await submit(formData);
   }
 
   return (
-    <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle>
-          {isEdit ? t("form.editTitle") : t("form.newTitle")}
-        </DialogTitle>
-        <DialogDescription>
-          {isEdit
-            ? t("form.editSubtitle", { number: receipt?.receipt_number ?? "" })
-            : t("form.newSubtitle")}
-        </DialogDescription>
-      </DialogHeader>
+    <>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit ? t("form.editTitle") : t("form.newTitle")}
+          </DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? t("form.editSubtitle", { number: receipt?.receipt_number ?? "" })
+              : t("form.newSubtitle")}
+          </DialogDescription>
+        </DialogHeader>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="donor_name">{t("form.donorName")}</Label>
-          <Input
-            id="donor_name"
-            name="donor_name"
-            defaultValue={receipt?.donor_name ?? ""}
-            placeholder={t("form.donorPlaceholder")}
-            autoComplete="off"
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="amount">{t("form.amount")}</Label>
-            <Input
-              id="amount"
-              name="amount"
-              type="number"
-              min="1"
-              step="1"
-              inputMode="numeric"
-              defaultValue={receipt ? String(Number(receipt.amount)) : ""}
-              placeholder="501"
-              required
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="phone_number">{t("form.mobile")}</Label>
-            <Input
-              id="phone_number"
-              name="phone_number"
-              type="tel"
-              inputMode="numeric"
-              defaultValue={receipt?.phone_number ?? ""}
-              placeholder="9876543210"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label>{t("form.method")}</Label>
-            {/* Base UI Select is controlled; mirror it into a hidden input. */}
-            <input type="hidden" name="payment_method" value={method} />
-            <Select value={method} onValueChange={(v) => setMethod(String(v))}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {t(`method.${m}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label>{t("form.date")}</Label>
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+          {/* Optimistic locking token: whoever saves second is told, not ignored. */}
+          {receipt ? (
             <input
               type="hidden"
-              name="collection_date"
-              value={date ? toDateValue(date) : ""}
+              name="expected_updated_at"
+              value={receipt.updated_at}
             />
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start font-normal"
-                  >
-                    <CalendarIcon />
-                    {date ? formatDate(toDateValue(date)) : t("form.pickDate")}
-                  </Button>
-                }
-              />
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  defaultMonth={date}
-                  captionLayout="dropdown"
-                  // Backdating is the point; only the future is off-limits.
-                  disabled={{ after: new Date() }}
-                  autoFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
+          ) : null}
 
-        <DialogFooter className="mt-2 [&>*]:flex-1 sm:[&>*]:flex-none">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={pending}
-          >
-            {t("form.cancel")}
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : <Save />}
-            {isEdit ? t("form.saveChanges") : t("form.save")}
-          </Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
+          <div className="relative flex flex-col gap-2">
+            <Label htmlFor="donor_name">{t("form.donorName")}</Label>
+            <Input
+              id="donor_name"
+              name="donor_name"
+              value={donorQuery}
+              onChange={(e) => onDonorInput(e.target.value)}
+              onBlur={() => setTimeout(() => setShowMatches(false), 150)}
+              placeholder={t("form.donorPlaceholder")}
+              autoComplete="off"
+              required
+            />
+
+            {suggestions.length > 0 ? (
+              <ul className="absolute top-full right-0 left-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border bg-popover p-1 shadow-md">
+                {suggestions.map((donor) => (
+                  <li key={`${donor.donor_name}-${donor.phone_number}`}>
+                    <button
+                      type="button"
+                      className="flex w-full min-h-11 flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-accent"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => pickDonor(donor)}
+                    >
+                      <span className="flex w-full items-center gap-1.5 text-sm">
+                        <User className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="wrap-anywhere min-w-0 flex-1">
+                          {donor.donor_name}
+                        </span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {donor.phone_number}
+                        </span>
+                      </span>
+                      <span className="pl-5 text-xs text-muted-foreground">
+                        {t("form.donorHint", {
+                          count: donor.receipt_count,
+                          date: formatDate(donor.last_collection, locale),
+                        })}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="amount">{t("form.amount")}</Label>
+              <Input
+                id="amount"
+                name="amount"
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                defaultValue={receipt ? String(Number(receipt.amount)) : ""}
+                placeholder="501"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="phone_number">{t("form.mobile")}</Label>
+              <Input
+                ref={phoneRef}
+                id="phone_number"
+                name="phone_number"
+                type="tel"
+                inputMode="numeric"
+                defaultValue={receipt?.phone_number ?? ""}
+                placeholder="9876543210"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label>{t("form.method")}</Label>
+              {/* Base UI Select is controlled; mirror it into a hidden input. */}
+              <input type="hidden" name="payment_method" value={method} />
+              <Select value={method} onValueChange={(v) => setMethod(String(v))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {t(`method.${m}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label>{t("form.date")}</Label>
+              <input
+                type="hidden"
+                name="collection_date"
+                value={date ? toDateValue(date) : ""}
+              />
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-start font-normal"
+                    >
+                      <CalendarIcon />
+                      {date
+                        ? formatDate(toDateValue(date), locale)
+                        : t("form.pickDate")}
+                    </Button>
+                  }
+                />
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    defaultMonth={date}
+                    captionLayout="dropdown"
+                    // Backdating is the point; only the future is off-limits.
+                    disabled={{ after: new Date() }}
+                    autoFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-2 [&>*]:flex-1 sm:[&>*]:flex-none">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={pending}
+            >
+              {t("form.cancel")}
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? <Loader2 className="animate-spin" /> : <Save />}
+              {isEdit ? t("form.saveChanges") : t("form.save")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+
+      {/* Advisory only — a donor may genuinely give twice on the same day. */}
+      <AlertDialog
+        open={Boolean(dup)}
+        onOpenChange={(o) => {
+          if (!o) setDup(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <TriangleAlert className="size-4 text-amber-600" />
+              {t("dup.title")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {dup
+                ? t("dup.body", {
+                    amount: formatAmount(dup.amount),
+                    date: formatDate(dup.date, locale),
+                    by: dup.who ? t("dup.by", { who: dup.who }) : "",
+                  })
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("form.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={saveAnyway} disabled={pending}>
+              {t("dup.saveAnyway")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

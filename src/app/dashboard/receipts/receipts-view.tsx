@@ -10,9 +10,11 @@ import { filterByPeriod, PeriodFilter, type Period } from "../period-filter";
 export function ReceiptsView({
   receipts,
   mandalName,
+  total,
 }: {
   receipts: Receipt[];
   mandalName: string;
+  total: number;
 }) {
   const { t } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
@@ -40,6 +42,7 @@ export function ReceiptsView({
             receipts={visible}
             mandalName={mandalName}
             periodDays={period}
+            total={total}
           />
         </CardContent>
       </Card>

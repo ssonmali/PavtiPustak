@@ -38,7 +38,9 @@ export default async function ReportPage({
     .from("receipts")
     .select("*")
     .order("collection_date", { ascending: true })
-    .order("receipt_number", { ascending: true });
+    .order("receipt_number", { ascending: true })
+    // A print report beyond this is not something anyone reads on paper.
+    .limit(1000);
   if (from) query = query.gte("collection_date", from);
 
   const { data } = await query;

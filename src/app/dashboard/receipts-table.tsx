@@ -3,15 +3,17 @@
 import * as React from "react";
 import {
   Download,
+  Loader2,
   MessageCircle,
   MoreHorizontal,
   Pencil,
+  Printer,
   Plus,
   Search,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteReceipt } from "@/app/actions/receipts";
+import { deleteReceipt, fetchReceipts } from "@/app/actions/receipts";
 import { exportReceiptsToExcel } from "@/lib/export-excel";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import type { Receipt } from "@/lib/types";
@@ -56,14 +58,42 @@ export function ReceiptsTable({
   receipts,
   mandalName,
   periodDays = 0,
+  total,
 }: {
   receipts: Receipt[];
   mandalName: string;
   /** Mirrors the dashboard period so the PDF report covers the same window. */
   periodDays?: number;
+  /** Total rows on the server, when the list is paginated. */
+  total?: number;
 }) {
   const { t, locale } = useI18n();
   const [query, setQuery] = React.useState("");
+  const [loadingMore, setLoadingMore] = React.useState(false);
+
+  // The server sends the first page; further pages append here. A realtime
+  // refresh replaces `receipts`, which changes the key and drops the stale
+  // tail — derived rather than reset in an effect.
+  const pageKey = `${receipts.length}:${receipts[0]?.id ?? ""}`;
+  const [tail, setTail] = React.useState<{ key: string; rows: Receipt[] }>({
+    key: pageKey,
+    rows: [],
+  });
+  const all = React.useMemo(
+    () => [...receipts, ...(tail.key === pageKey ? tail.rows : [])],
+    [receipts, tail, pageKey],
+  );
+  const hasMore = typeof total === "number" && all.length < total;
+
+  async function loadMore() {
+    setLoadingMore(true);
+    const { rows } = await fetchReceipts(all.length);
+    setTail((prev) => ({
+      key: pageKey,
+      rows: prev.key === pageKey ? [...prev.rows, ...rows] : rows,
+    }));
+    setLoadingMore(false);
+  }
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Receipt | undefined>();
   const [toDelete, setToDelete] = React.useState<Receipt | undefined>();
@@ -71,14 +101,14 @@ export function ReceiptsTable({
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return receipts;
-    return receipts.filter(
+    if (!q) return all;
+    return all.filter(
       (r) =>
         r.donor_name.toLowerCase().includes(q) ||
         r.phone_number.includes(q) ||
         String(r.receipt_number) === q,
     );
-  }, [receipts, query]);
+  }, [all, query]);
 
   function openCreate() {
     setEditing(undefined);
@@ -132,7 +162,7 @@ export function ReceiptsTable({
     setDeleting(false);
 
     if (!result.ok) {
-      toast.error(result.error);
+      toast.error("error" in result ? result.error : t("toast.conflict"));
       return;
     }
     toast.success(t("toast.deleted", { number: toDelete.receipt_number }));
@@ -199,7 +229,7 @@ export function ReceiptsTable({
                   colSpan={7}
                   className="h-28 text-center text-sm text-muted-foreground"
                 >
-                  {receipts.length === 0 ? t("table.empty") : t("table.noMatch")}
+                  {all.length === 0 ? t("table.empty") : t("table.noMatch")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -252,6 +282,17 @@ export function ReceiptsTable({
                             <Pencil /> {t("table.edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
+                            onClick={() =>
+                              window.open(
+                                `/dashboard/receipts/${receipt.id}`,
+                                "_blank",
+                                "noopener",
+                              )
+                            }
+                          >
+                            <Printer /> {t("table.print")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             variant="destructive"
                             onClick={() => setToDelete(receipt)}
                           >
@@ -273,7 +314,7 @@ export function ReceiptsTable({
       <ul className="flex flex-col gap-2 sm:hidden">
         {filtered.length === 0 ? (
           <li className="rounded-lg border py-10 text-center text-sm text-muted-foreground">
-            {receipts.length === 0 ? t("table.empty") : t("table.noMatch")}
+            {all.length === 0 ? t("table.empty") : t("table.noMatch")}
           </li>
         ) : (
           filtered.map((receipt) => (
@@ -321,6 +362,20 @@ export function ReceiptsTable({
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label={t("table.print")}
+                  onClick={() =>
+                    window.open(
+                      `/dashboard/receipts/${receipt.id}`,
+                      "_blank",
+                      "noopener",
+                    )
+                  }
+                >
+                  <Printer />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   aria-label={t("table.delete")}
                   onClick={() => setToDelete(receipt)}
                 >
@@ -332,11 +387,23 @@ export function ReceiptsTable({
         )}
       </ul>
 
-      {filtered.length > 0 ? (
-        <p className="text-xs text-muted-foreground">
-          {t("table.showing", { shown: filtered.length, total: receipts.length })}
-        </p>
-      ) : null}
+      <div className="flex flex-col items-center gap-2">
+        {filtered.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {t("table.showing", {
+              shown: filtered.length,
+              total: total ?? all.length,
+            })}
+          </p>
+        ) : null}
+
+        {hasMore && !query ? (
+          <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? <Loader2 className="animate-spin" /> : null}
+            {t("table.loadMore")}
+          </Button>
+        ) : null}
+      </div>
 
       <ReceiptDialog
         open={dialogOpen}

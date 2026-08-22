@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { BarChart3, CalendarRange, Table2, TrendingUp } from "lucide-react";
-import type { Receipt } from "@/lib/types";
+import type { DailyTotal } from "@/lib/types";
 import {
   formatAmount,
   formatDate,
@@ -19,43 +19,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type DayTotal = {
-  date: string;
-  cash: number;
-  upi: number;
-  total: number;
-  count: number;
-};
-
-function aggregate(receipts: Receipt[]): DayTotal[] {
-  const byDate = new Map<string, DayTotal>();
-
-  for (const r of receipts) {
-    const day =
-      byDate.get(r.collection_date) ??
-      { date: r.collection_date, cash: 0, upi: 0, total: 0, count: 0 };
-    const amount = Number(r.amount);
-    if (r.payment_method === "UPI") day.upi += amount;
-    else day.cash += amount;
-    day.total += amount;
-    day.count += 1;
-    byDate.set(r.collection_date, day);
-  }
-
-  // Oldest → newest so the bars read left-to-right as time.
-  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
-}
-
-export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
+export function DailyCollections({ days }: { days: DailyTotal[] }) {
   const { t, locale } = useI18n();
   const [asTable, setAsTable] = React.useState(false);
 
-  // The period filter lives on the dashboard; receipts arrive pre-filtered.
-  const days = React.useMemo(() => aggregate(receipts), [receipts]);
-  const max = Math.max(...days.map((d) => d.total), 1);
-  const grand = days.reduce((s, d) => s + d.total, 0);
-  const busiest = days.reduce<DayTotal | null>(
-    (best, d) => (!best || d.total > best.total ? d : best),
+  // Rows arrive pre-aggregated and pre-filtered from the dashboard.
+  const max = Math.max(...days.map((d) => Number(d.total)), 1);
+  const grand = days.reduce((sum, d) => sum + Number(d.total), 0);
+  const busiest = days.reduce<DailyTotal | null>(
+    (best, d) => (!best || Number(d.total) > Number(best.total) ? d : best),
     null,
   );
 
@@ -105,21 +77,21 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
             </TableHeader>
             <TableBody>
               {[...days].reverse().map((d) => (
-                <TableRow key={d.date}>
+                <TableRow key={d.collection_date}>
                   <TableCell className="whitespace-nowrap">
-                    {formatDate(d.date, locale)}
+                    {formatDate(d.collection_date, locale)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {d.cash ? formatAmount(d.cash) : "—"}
+                    {Number(d.cash) ? formatAmount(d.cash) : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {d.upi ? formatAmount(d.upi) : "—"}
+                    {Number(d.upi) ? formatAmount(d.upi) : "—"}
                   </TableCell>
                   <TableCell className="text-right font-medium tabular-nums">
                     {formatAmount(d.total)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {d.count}
+                    {d.receipt_count}
                   </TableCell>
                 </TableRow>
               ))}
@@ -134,34 +106,36 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
             aria-label={`${t("chart.title")} — ${formatAmount(grand)}`}
           >
             {days.map((d) => {
-              const h = (d.total / max) * 100;
+              const h = (Number(d.total) / max) * 100;
               // Stack UPI above Cash; percentages are of this bar's own height.
-              const upiShare = d.total ? (d.upi / d.total) * 100 : 0;
+              const upiShare = Number(d.total)
+                ? (Number(d.upi) / Number(d.total)) * 100
+                : 0;
               return (
                 <div
-                  key={d.date}
+                  key={d.collection_date}
                   className="group relative flex h-full min-w-6 flex-1 flex-col justify-end sm:min-w-8"
                 >
                   <div
                     className="relative w-full overflow-hidden rounded-t"
                     style={{ height: `${Math.max(h, 1.5)}%` }}
                   >
-                    {d.upi > 0 ? (
+                    {Number(d.upi) > 0 ? (
                       <div
                         className="w-full rounded-t"
                         style={{
                           height: `${upiShare}%`,
                           background: "var(--series-upi)",
                           // 2px surface gap between stacked segments.
-                          marginBottom: d.cash > 0 ? 2 : 0,
+                          marginBottom: Number(d.cash) > 0 ? 2 : 0,
                         }}
                       />
                     ) : null}
-                    {d.cash > 0 ? (
+                    {Number(d.cash) > 0 ? (
                       <div
-                        className={d.upi > 0 ? "w-full" : "w-full rounded-t"}
+                        className={Number(d.upi) > 0 ? "w-full" : "w-full rounded-t"}
                         style={{
-                          height: `calc(${100 - upiShare}% - ${d.upi > 0 ? 2 : 0}px)`,
+                          height: `calc(${100 - upiShare}% - ${Number(d.upi) > 0 ? 2 : 0}px)`,
                           background: "var(--series-cash)",
                         }}
                       />
@@ -173,12 +147,12 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
                     className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 hidden w-max -translate-x-1/2 rounded-md border bg-popover px-2 py-1.5 text-xs shadow-md group-hover:block"
                     role="tooltip"
                   >
-                    <p className="font-medium">{formatDate(d.date, locale)}</p>
+                    <p className="font-medium">{formatDate(d.collection_date, locale)}</p>
                     <p className="tabular-nums">{formatAmount(d.total)}</p>
                     <p className="text-muted-foreground">
-                      {t("chart.receiptsCount", { count: d.count })}
+                      {t("chart.receiptsCount", { count: d.receipt_count })}
                     </p>
-                    {d.cash > 0 ? (
+                    {Number(d.cash) > 0 ? (
                       <p className="flex items-center gap-1.5">
                         <span
                           className="size-2 rounded-full"
@@ -187,7 +161,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
                         {t("method.Cash")} {formatAmount(d.cash)}
                       </p>
                     ) : null}
-                    {d.upi > 0 ? (
+                    {Number(d.upi) > 0 ? (
                       <p className="flex items-center gap-1.5">
                         <span
                           className="size-2 rounded-full"
@@ -209,10 +183,10 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
               const every = Math.ceil(days.length / 6);
               return (
                 <div
-                  key={d.date}
+                  key={d.collection_date}
                   className="min-w-6 flex-1 truncate text-center text-[10px] text-muted-foreground sm:min-w-8"
                 >
-                  {i % every === 0 || i === days.length - 1 ? tick(d.date) : ""}
+                  {i % every === 0 || i === days.length - 1 ? tick(d.collection_date) : ""}
                 </div>
               );
             })}
@@ -241,7 +215,7 @@ export function DailyCollections({ receipts }: { receipts: Receipt[] }) {
         {busiest ? (
           <span className="ml-auto flex items-center gap-1.5 text-muted-foreground">
             <TrendingUp className="size-3.5" />
-            {t("chart.busiestDay")}: {formatDate(busiest.date, locale)} ·{" "}
+            {t("chart.busiestDay")}: {formatDate(busiest.collection_date, locale)} ·{" "}
             <span className="tabular-nums">{formatAmount(busiest.total)}</span>
           </span>
         ) : null}

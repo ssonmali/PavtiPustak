@@ -59,6 +59,13 @@ function Fields({ next }: { next?: string }) {
         </p>
       ) : null}
 
+      <a
+        href="/forgot-password"
+        className="self-start text-xs text-muted-foreground underline"
+      >
+        {t("reset.forgot")}
+      </a>
+
       <Button type="submit" disabled={pending} className="mt-2">
         {pending ? (
           <>

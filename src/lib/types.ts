@@ -14,7 +14,39 @@ export type Receipt = {
   /** `YYYY-MM-DD`, may be backdated. */
   collection_date: string;
   created_at: string;
+  /** Bumped by a trigger on every update; used for optimistic locking. */
+  updated_at: string;
   user_id: string;
+  /** Email of the volunteer who created the receipt, set by a trigger. */
+  created_by_email: string | null;
+};
+
+/** One row of `public.receipt_daily_totals`. */
+export type DailyTotal = {
+  collection_date: string;
+  total: number;
+  cash: number;
+  upi: number;
+  receipt_count: number;
+  donor_count: number;
+};
+
+/** One row of `public.volunteer_totals`. */
+export type VolunteerTotal = {
+  volunteer: string;
+  total: number;
+  receipt_count: number;
+  first_collection: string;
+  last_collection: string;
+};
+
+/** One row of `public.donor_directory` — powers donor autocomplete. */
+export type Donor = {
+  donor_name: string;
+  phone_number: string;
+  lifetime_total: number;
+  receipt_count: number;
+  last_collection: string;
 };
 
 /** Columns the volunteer fills in; the rest are server-assigned. */
@@ -58,7 +90,11 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: Record<never, never>;
+    Views: {
+      receipt_daily_totals: { Row: DailyTotal; Relationships: [] };
+      volunteer_totals: { Row: VolunteerTotal; Relationships: [] };
+      donor_directory: { Row: Donor; Relationships: [] };
+    };
     Functions: Record<never, never>;
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

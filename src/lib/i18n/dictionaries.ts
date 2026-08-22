@@ -24,6 +24,16 @@ const en = {
   "nav.activity": "Activity",
   "nav.report": "Print report",
   "nav.menu": "Menu",
+  // Errors & empty states
+  "error.title": "Something went wrong",
+  "error.body": "The ledger could not be loaded. Your receipts are safe.",
+  "error.retry": "Try again",
+  "error.home": "Back to overview",
+  "notFound.title": "Page not found",
+  "notFound.body": "That page does not exist.",
+  "offline.badge": "Offline — changes will sync when you reconnect",
+  "loading": "Loading…",
+
   "realtime.live": "Live — synced across devices",
   "realtime.off": "Offline — pull to refresh",
 
@@ -51,6 +61,11 @@ const en = {
   "stats.donors": "Donors",
   "stats.today": "Today",
   "stats.avgReceipt": "Average donation",
+  "stats.volunteers": "Volunteers",
+  "volunteers.title": "Collection by volunteer",
+  "volunteers.subtitle": "Who recorded how much.",
+  "table.loadMore": "Load more",
+  "table.loadedOf": "{shown} of {total}",
 
   // Period filter
   "period.today": "Today",
@@ -78,6 +93,31 @@ const en = {
   "table.send": "Send",
   "table.edit": "Edit",
   "table.delete": "Delete",
+  "table.print": "Print receipt",
+
+  // Single receipt slip
+  "slip.title": "Donation Receipt",
+  "slip.number": "Receipt No.",
+  "slip.received": "Received with thanks from",
+  "slip.amount": "Amount",
+  "slip.method": "Paid by",
+  "slip.date": "Date",
+  "slip.thanks": "गणपती बाप्पा मोरया!",
+  "slip.collectedBy": "Collected by",
+
+  // Password reset
+  "reset.forgot": "Forgot password?",
+  "reset.requestTitle": "Reset your password",
+  "reset.requestBody": "We will email you a link to set a new password.",
+  "reset.send": "Send reset link",
+  "reset.sent": "Check your email for the reset link.",
+  "reset.newTitle": "Set a new password",
+  "reset.newPassword": "New password",
+  "reset.confirmPassword": "Confirm password",
+  "reset.mismatch": "Passwords do not match.",
+  "reset.save": "Save password",
+  "reset.done": "Password updated.",
+  "reset.invalidLink": "That link has expired. Request a new one.",
   "table.empty": "No receipts yet. Add your first vargani entry.",
   "table.noMatch": "No receipts match that search.",
   "table.showing": "Showing {shown} of {total} receipts.",
@@ -114,6 +154,16 @@ const en = {
   "toast.deleted": "Receipt #{number} deleted.",
   "toast.exported": "Exported {count} receipt(s).",
   "toast.nothingToExport": "Nothing to export.",
+  "toast.conflict": "Someone else changed this receipt. Reopen it to see their version.",
+
+  // Duplicate guard
+  "dup.title": "Possible duplicate",
+  "dup.body": "A {amount} receipt for this number was already recorded on {date}{by}. Save anyway?",
+  "dup.by": " by {who}",
+  "dup.saveAnyway": "Save anyway",
+
+  // Donor autocomplete
+  "form.donorHint": "{count} past receipts · last {date}",
 
   // Chart
   "chart.title": "Collection by date",
@@ -149,6 +199,15 @@ const mr: Record<MessageKey, string> = {
   "nav.activity": "बदल इतिहास",
   "nav.report": "अहवाल छापा",
   "nav.menu": "मेनू",
+  "error.title": "काहीतरी चूक झाली",
+  "error.body": "नोंदवही उघडता आली नाही. तुमच्या पावत्या सुरक्षित आहेत.",
+  "error.retry": "पुन्हा प्रयत्न करा",
+  "error.home": "आढाव्याकडे परत",
+  "notFound.title": "पान सापडले नाही",
+  "notFound.body": "असे पान अस्तित्वात नाही.",
+  "offline.badge": "ऑफलाइन — पुन्हा जोडले गेल्यावर बदल जतन होतील",
+  "loading": "लोड होत आहे…",
+
   "realtime.live": "थेट — सर्व उपकरणांवर अद्ययावत",
   "realtime.off": "ऑफलाइन — रिफ्रेश करा",
 
@@ -174,6 +233,11 @@ const mr: Record<MessageKey, string> = {
   "stats.donors": "देणगीदार",
   "stats.today": "आज",
   "stats.avgReceipt": "सरासरी देणगी",
+  "stats.volunteers": "स्वयंसेवक",
+  "volunteers.title": "स्वयंसेवकानुसार जमा",
+  "volunteers.subtitle": "कोणी किती नोंदवले.",
+  "table.loadMore": "अधिक पहा",
+  "table.loadedOf": "{total} पैकी {shown}",
 
   "period.today": "आज",
   "period.7": "शेवटचे ७ दिवस",
@@ -199,6 +263,29 @@ const mr: Record<MessageKey, string> = {
   "table.send": "पाठवा",
   "table.edit": "बदल",
   "table.delete": "काढा",
+  "table.print": "पावती छापा",
+
+  "slip.title": "देणगी पावती",
+  "slip.number": "पावती क्र.",
+  "slip.received": "सप्रेम आभारासह स्वीकारले",
+  "slip.amount": "रक्कम",
+  "slip.method": "माध्यम",
+  "slip.date": "दिनांक",
+  "slip.thanks": "गणपती बाप्पा मोरया!",
+  "slip.collectedBy": "जमा करणारे",
+
+  "reset.forgot": "पासवर्ड विसरला?",
+  "reset.requestTitle": "पासवर्ड बदला",
+  "reset.requestBody": "नवीन पासवर्ड ठरवण्यासाठी ईमेलवर दुवा पाठवला जाईल.",
+  "reset.send": "दुवा पाठवा",
+  "reset.sent": "ईमेल तपासा — दुवा पाठवला आहे.",
+  "reset.newTitle": "नवीन पासवर्ड ठरवा",
+  "reset.newPassword": "नवीन पासवर्ड",
+  "reset.confirmPassword": "पासवर्ड पुन्हा लिहा",
+  "reset.mismatch": "दोन्ही पासवर्ड जुळत नाहीत.",
+  "reset.save": "पासवर्ड जतन करा",
+  "reset.done": "पासवर्ड बदलला.",
+  "reset.invalidLink": "हा दुवा कालबाह्य झाला. नवीन मागवा.",
   "table.empty": "अजून पावत्या नाहीत. पहिली वर्गणी नोंदवा.",
   "table.noMatch": "शोधाशी जुळणारी पावती नाही.",
   "table.showing": "{total} पैकी {shown} पावत्या दिसत आहेत.",
@@ -232,6 +319,14 @@ const mr: Record<MessageKey, string> = {
   "toast.deleted": "पावती क्र. {number} काढली.",
   "toast.exported": "{count} पावत्या निर्यात केल्या.",
   "toast.nothingToExport": "निर्यात करण्यासाठी काही नाही.",
+  "toast.conflict": "ही पावती दुसऱ्याने बदलली आहे. पुन्हा उघडून पहा.",
+
+  "dup.title": "आधीच नोंदवलेली असू शकते",
+  "dup.body": "या क्रमांकासाठी {date} रोजी {amount} ची पावती आधीच नोंदवली आहे{by}. तरीही जतन करायचे?",
+  "dup.by": " — {who}",
+  "dup.saveAnyway": "तरीही जतन करा",
+
+  "form.donorHint": "{count} जुन्या पावत्या · शेवटची {date}",
 
   "chart.title": "दिनांकानुसार जमा",
   "chart.subtitle": "दैनिक वर्गणी, देय माध्यमानुसार विभागणी.",

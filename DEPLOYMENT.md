@@ -1,0 +1,77 @@
+# Deploying Pavti Pustak
+
+## 1. Apply the database migrations
+
+Run these in the Supabase dashboard → **SQL Editor**, in order. All four are
+re-runnable.
+
+| File | What it does |
+|---|---|
+| `supabase/01-schema.sql` | `receipts` table, constraints, RLS |
+| `supabase/02-audit-and-shared-editing.sql` | Shared editing + audit log trigger |
+| `supabase/03-realtime.sql` | Realtime publication + replica identity |
+| `supabase/04-views-and-locking.sql` | Aggregate views, `updated_at`, creator email |
+
+Then run `supabase/verify.sql` — it lists the policies, the trigger, and the
+audit row count so you can confirm everything landed.
+
+## 2. Create volunteer accounts
+
+**Authentication → Users → Add user.** Tick **Auto Confirm User**, or the
+account cannot log in. There is no public sign-up by design; also turn off
+*Allow new users to sign up* under **Authentication → Sign In / Providers**.
+
+## 3. Deploy to Vercel
+
+1. **vercel.com → Add New → Project**, import `ssonmali/PavtiPustak`.
+2. Framework preset is detected as Next.js. No build settings to change.
+3. Add three **Environment Variables** (all three environments):
+
+   | Name | Value |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the `sb_publishable_…` key |
+   | `NEXT_PUBLIC_MANDAL_NAME` | your mandal's name, e.g. `श्री गणेश मंडळ` |
+
+   Never add the `sb_secret_…` key. The app does not use it, and a
+   `NEXT_PUBLIC_` variable is shipped to the browser.
+4. Deploy.
+
+## 4. Point Supabase at the deployed URL
+
+**Authentication → URL Configuration:**
+
+- **Site URL:** `https://your-app.vercel.app`
+- **Redirect URLs:** add `https://your-app.vercel.app/auth/confirm` and
+  `https://your-app.vercel.app/**`
+
+Without this, password-reset links bounce to `localhost:3000` and fail.
+
+## 5. Install it on the volunteers' phones
+
+Open the deployed URL in Chrome (Android) or Safari (iOS) → **Add to Home
+Screen**. It installs standalone, with the mandal icon and Marathi as the
+default language.
+
+## 6. Tighten auth rate limits
+
+**Authentication → Rate Limits.** Supabase applies defaults, but lower the
+sign-in and password-recovery limits to suit a mandal of a few volunteers —
+nobody legitimately needs 30 login attempts an hour. This is a dashboard
+setting, not application code, which is why it is not in the repo.
+
+## Known limits
+
+- **Password reset needs email.** Supabase's built-in SMTP is rate-limited to a
+  handful of messages per hour and may land in spam. For reliable delivery,
+  configure custom SMTP under **Project Settings → Auth → SMTP**.
+- **Free-tier projects pause after 7 days of inactivity.** If the mandal only
+  uses this during Ganeshotsav, restore it from the dashboard beforehand.
+- **`receipt_number` can have gaps.** Sequences do not roll back, so a failed
+  insert burns a number. Do not promise the treasurer a gapless series.
+- **Offline support is experimental.** `experimental.useOffline` keeps an
+  interrupted Server Action pending until the network returns. Test it on a real
+  phone in a dead zone before relying on it for a collection round.
+- **No error monitoring is wired up.** Errors go to the Vercel function logs
+  with a digest shown to the user. If you want alerting, add Sentry — it needs
+  an account and a DSN, so it was left out deliberately.
