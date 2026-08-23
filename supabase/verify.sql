@@ -36,3 +36,24 @@ select
     select count(*) from pg_policies
     where schemaname = 'public' and tablename = 'volunteer_names'
   ) as name_policies;   -- expect 4
+
+-- 9. Expenses (migration 08) ---------------------------------------
+select
+  (select count(*) from public.expenses) as expenses,
+  (
+    select count(*) from pg_policies
+    where schemaname = 'public' and tablename = 'expenses'
+  ) as expense_policies,   -- expect 4
+  (
+    select relreplident from pg_class
+    where oid = 'public.expenses'::regclass
+  ) as expenses_replident;  -- expect 'f'
+
+-- 10. Expense audit + combined feed (migration 09) -----------------
+select
+  (select count(*) from public.expense_audit) as expense_audit_rows,
+  (select count(*) from public.activity_log) as activity_rows,
+  (
+    select count(*) from pg_trigger
+    where tgrelid = 'public.expenses'::regclass and tgname = 'expenses_audit'
+  ) as expense_audit_trigger;  -- expect 1

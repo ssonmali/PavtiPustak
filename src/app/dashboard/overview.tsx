@@ -5,11 +5,19 @@ import {
   IndianRupee,
   Receipt as ReceiptIcon,
   TrendingUp,
+  TriangleAlert,
   Users,
+  Wallet,
 } from "lucide-react";
-import type { DailyTotal, NameMap, VolunteerTotal } from "@/lib/types";
+import type {
+  DailyTotal,
+  ExpenseDailyTotal,
+  NameMap,
+  VolunteerTotal,
+} from "@/lib/types";
 import { displayName, formatAmount } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -18,15 +26,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DailyCollections } from "./daily-collections";
-import { PeriodFilter, startOf, type Period } from "./period-filter";
+import {
+  filterByPeriod,
+  PeriodFilter,
+  startOf,
+  type Period,
+} from "./period-filter";
 
 export function Overview({
   daily,
   volunteers,
+  expenseDays,
   names,
 }: {
   daily: DailyTotal[];
   volunteers: VolunteerTotal[];
+  expenseDays: ExpenseDailyTotal[];
   names: NameMap;
 }) {
   const { t } = useI18n();
@@ -45,6 +60,19 @@ export function Overview({
 
   const total = visible.reduce((s, d) => s + Number(d.total), 0);
   const count = visible.reduce((s, d) => s + d.receipt_count, 0);
+
+  // Spending over the same window, so the balance answers "of what came in
+  // during this period, what is left" rather than mixing two date ranges.
+  const spent = React.useMemo(
+    () =>
+      filterByPeriod(
+        expenseDays.map((e) => ({ ...e, collection_date: e.spent_on })),
+        period,
+      ).reduce((sum, e) => sum + Number(e.total), 0),
+    [expenseDays, period],
+  );
+
+  const balance = total - spent;
 
   const stats = [
     { label: t("stats.total"), value: formatAmount(total), icon: IndianRupee },
@@ -72,6 +100,58 @@ export function Overview({
         </div>
         <PeriodFilter period={period} onChange={setPeriod} />
       </div>
+
+      {/* Collected less spent. Shown even at zero spend so the figure is a
+          fixture of the dashboard rather than something that appears once the
+          first expense is recorded. */}
+      <Card className="card-elevated accent-top">
+        <CardHeader>
+          <CardDescription className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+              <Wallet className="size-3.5" />
+            </span>
+            {t("balance.title")}
+          </CardDescription>
+          <CardTitle
+            className={cn(
+              "text-3xl font-semibold tabular-nums sm:text-4xl",
+              // A negative balance is a real state — the mandal has committed
+              // more than it has taken in — so it is called out, not hidden.
+              balance < 0 && "text-destructive",
+            )}
+          >
+            {formatAmount(balance)}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {balance < 0 ? (
+              <span className="flex items-center gap-1.5 text-destructive">
+                <TriangleAlert className="size-3.5 shrink-0" />
+                {t("balance.overspent")}
+              </span>
+            ) : (
+              t("balance.subtitle")
+            )}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            <div className="flex items-baseline gap-2">
+              <dt className="text-muted-foreground">
+                {t("balance.collected")}
+              </dt>
+              <dd className="font-medium tabular-nums">
+                {formatAmount(total)}
+              </dd>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <dt className="text-muted-foreground">{t("balance.spent")}</dt>
+              <dd className="font-medium tabular-nums">
+                &minus;{formatAmount(spent)}
+              </dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon }) => (

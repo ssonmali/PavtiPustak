@@ -21,6 +21,48 @@ export type Receipt = {
   created_by_email: string | null;
 };
 
+/** Spending categories the mandal uses — mirrors the DB check constraint. */
+export const EXPENSE_CATEGORIES = [
+  "Decoration",
+  "Prasad",
+  "Food",
+  "Sound",
+  "Idol",
+  "Mandap",
+  "Electricity",
+  "Other",
+] as const;
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
+/** A row of `public.expenses` exactly as Postgres returns it. */
+export type Expense = {
+  id: string;
+  description: string;
+  amount: number;
+  category: ExpenseCategory;
+  payment_method: PaymentMethod;
+  /** `YYYY-MM-DD`, may be backdated like a receipt. */
+  spent_on: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  created_by_email: string | null;
+};
+
+/** Columns the volunteer fills in; the rest are server-assigned. */
+export type ExpenseInput = Pick<
+  Expense,
+  "description" | "amount" | "category" | "payment_method" | "spent_on" | "note"
+>;
+
+/** One row of `public.expense_daily_totals`. */
+export type ExpenseDailyTotal = {
+  spent_on: string;
+  total: number;
+  expense_count: number;
+};
+
 /** One row of `public.receipt_daily_totals`. */
 export type DailyTotal = {
   collection_date: string;
@@ -82,6 +124,32 @@ export type VolunteerName = {
 /** Email → display name, for resolving attribution without a per-row query. */
 export type NameMap = Record<string, string>;
 
+/** Which ledger an activity entry belongs to. */
+export type ActivityEntity = "receipt" | "expense";
+
+/**
+ * One row of `public.activity_log` — receipt and expense audit rows in a single
+ * ordered feed.
+ *
+ * `before`/`after` are whole-row snapshots of two differently shaped tables, so
+ * they are read as loose records and narrowed per entity when rendering.
+ */
+export type ActivityEntry = {
+  entity: ActivityEntity;
+  /** Unique across the union; `id` alone is not, the sequences are separate. */
+  entry_key: string;
+  id: number;
+  row_id: string | null;
+  /** Only ever set for receipts. */
+  receipt_number: number | null;
+  action: AuditAction;
+  actor_id: string | null;
+  actor_email: string | null;
+  changed_at: string;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+};
+
 /** Minimal generated-types shape so every client call is strictly typed. */
 export type Database = {
   public: {
@@ -92,10 +160,32 @@ export type Database = {
         Update: Partial<ReceiptInput>;
         Relationships: [];
       };
+      expenses: {
+        Row: Expense;
+        Insert: ExpenseInput & { user_id: string };
+        Update: Partial<ExpenseInput>;
+        Relationships: [];
+      };
       volunteer_names: {
         Row: VolunteerName;
         Insert: Pick<VolunteerName, "email" | "display_name">;
         Update: Pick<VolunteerName, "display_name">;
+        Relationships: [];
+      };
+      expense_audit: {
+        Row: {
+          id: number;
+          expense_id: string | null;
+          action: AuditAction;
+          actor_id: string | null;
+          actor_email: string | null;
+          changed_at: string;
+          before: Record<string, unknown> | null;
+          after: Record<string, unknown> | null;
+        };
+        // Written only by the database trigger, never from the client.
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       receipt_audit: {
@@ -110,6 +200,8 @@ export type Database = {
       receipt_daily_totals: { Row: DailyTotal; Relationships: [] };
       volunteer_totals: { Row: VolunteerTotal; Relationships: [] };
       donor_directory: { Row: Donor; Relationships: [] };
+      expense_daily_totals: { Row: ExpenseDailyTotal; Relationships: [] };
+      activity_log: { Row: ActivityEntry; Relationships: [] };
     };
     Functions: {
       /** Trivial round-trip used by the daily keep-alive; touches no table. */

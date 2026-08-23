@@ -55,6 +55,16 @@ export function useRealtimeReceipts(delay = 400) {
         "postgres_changes",
         { event: "*", schema: "public", table: "receipt_audit" },
         refreshSoon,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "expenses" },
+        refreshSoon,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "expense_audit" },
+        refreshSoon,
       );
 
     void (async () => {

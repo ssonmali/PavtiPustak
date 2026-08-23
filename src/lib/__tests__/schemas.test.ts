@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { receiptSchema } from "@/lib/schemas";
+import { expenseSchema, receiptSchema } from "@/lib/schemas";
 
 const valid = {
   donor_name: "Sunil Patil",
@@ -54,5 +54,59 @@ describe("receiptSchema", () => {
   it("rejects a malformed date", () => {
     expect(receiptSchema.safeParse({ ...valid, collection_date: "22/08/2026" }).success)
       .toBe(false);
+  });
+});
+
+describe("expenseSchema", () => {
+  const valid = {
+    description: "Loudspeaker rent",
+    amount: "2500",
+    category: "Decoration",
+    payment_method: "Cash",
+    spent_on: "2026-08-22",
+  };
+
+  it("accepts a well-formed expense with no note", () => {
+    const parsed = expenseSchema.parse(valid);
+    expect(parsed.amount).toBe(2500);
+    expect(parsed.note).toBeNull();
+  });
+
+  it("stores a blank note as null, not an empty string", () => {
+    expect(expenseSchema.parse({ ...valid, note: "   " }).note).toBeNull();
+    expect(expenseSchema.parse({ ...valid, note: " Sharma " }).note).toBe(
+      "Sharma",
+    );
+  });
+
+  it("rejects a zero or negative amount", () => {
+    expect(expenseSchema.safeParse({ ...valid, amount: "0" }).success).toBe(
+      false,
+    );
+    expect(expenseSchema.safeParse({ ...valid, amount: "-100" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a category outside the DB constraint", () => {
+    expect(
+      expenseSchema.safeParse({ ...valid, category: "Fireworks" }).success,
+    ).toBe(false);
+    // Renamed to Mandap in migration 08; the old value must not slip through.
+    expect(
+      expenseSchema.safeParse({ ...valid, category: "Pandal" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a blank description", () => {
+    expect(
+      expenseSchema.safeParse({ ...valid, description: "  " }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a malformed date", () => {
+    expect(
+      expenseSchema.safeParse({ ...valid, spent_on: "22/08/2026" }).success,
+    ).toBe(false);
   });
 });

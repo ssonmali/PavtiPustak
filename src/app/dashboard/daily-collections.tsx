@@ -9,6 +9,7 @@ import {
   formatDateShort,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -22,6 +23,7 @@ import {
 export function DailyCollections({ days }: { days: DailyTotal[] }) {
   const { t, locale } = useI18n();
   const [asTable, setAsTable] = React.useState(false);
+  const [active, setActive] = React.useState<string | null>(null);
 
   // Rows arrive pre-aggregated and pre-filtered from the dashboard.
   const max = Math.max(...days.map((d) => Number(d.total)), 1);
@@ -103,21 +105,56 @@ export function DailyCollections({ days }: { days: DailyTotal[] }) {
       ) : (
         <div className="overflow-x-auto pb-1">
           <div style={{ maxWidth: days.length * 68 }}>
+          <p className="sr-only">
+            {t("chart.title")} — {formatAmount(grand)}
+          </p>
           <div
             className="flex h-44 items-end gap-2 sm:h-56 sm:gap-3"
-            role="img"
-            aria-label={`${t("chart.title")} — ${formatAmount(grand)}`}
+            // Tapping the gaps between bars dismisses an open readout.
+            onPointerDown={(e) => {
+              if (e.target === e.currentTarget) setActive(null);
+            }}
           >
-            {days.map((d) => {
+            {days.map((d, index) => {
               const h = (Number(d.total) / max) * 100;
               // Stack UPI above Cash; percentages are of this bar's own height.
               const upiShare = Number(d.total)
                 ? (Number(d.upi) / Number(d.total)) * 100
                 : 0;
+              const shown = active === d.collection_date;
+              const toggle = () =>
+                setActive((current) =>
+                  current === d.collection_date ? null : d.collection_date,
+                );
+
               return (
                 <div
                   key={d.collection_date}
-                  className="group relative flex h-full min-w-5 flex-1 flex-col justify-end sm:min-w-7"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${formatDate(d.collection_date, locale)}: ${formatAmount(d.total)}, ${t("method.Cash")} ${formatAmount(d.cash)}, ${t("method.UPI")} ${formatAmount(d.upi)}, ${t("chart.receiptsCount", { count: d.receipt_count })}`}
+                  // A mouse gets hover, and nothing on click: the readout is
+                  // already open, so toggling would close it under the cursor.
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === "mouse") setActive(d.collection_date);
+                  }}
+                  onPointerLeave={(e) => {
+                    if (e.pointerType === "mouse") setActive(null);
+                  }}
+                  // Touch and pen toggle instead. Deliberately not onClick or
+                  // onFocus: a tap fires focus first, so the click would land
+                  // on an already-open readout and close it again.
+                  onPointerUp={(e) => {
+                    if (e.pointerType !== "mouse") toggle();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggle();
+                    }
+                  }}
+                  data-active={shown || undefined}
+                  className="group relative flex h-full min-w-5 flex-1 cursor-pointer flex-col justify-end rounded-t-md outline-none focus-visible:ring-2 focus-visible:ring-ring data-active:bg-foreground/[0.06] sm:min-w-7"
                 >
                   <div
                     className="relative w-full overflow-hidden rounded-t-md"
@@ -145,10 +182,34 @@ export function DailyCollections({ days }: { days: DailyTotal[] }) {
                     ) : null}
                   </div>
 
-                  {/* Hover tooltip — hit target is the whole column. */}
+                  {/*
+                   * The readout has to stay inside the plot box: the scrolling
+                   * wrapper computes overflow-y to auto, so anything above the
+                   * bars is clipped and unreachable.
+                   *
+                   * `bottom-full` cannot be used for "above the bar" — the
+                   * column is full height, so that means above the whole plot,
+                   * which is what used to hide the readout for every bar. It
+                   * sits above the bar's own top when there is room for it
+                   * there, and overlays the top of the plot when there is not.
+                   * Horizontally it pins to whichever edge it would overflow.
+                   */}
                   <div
-                    className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 hidden w-max -translate-x-1/2 rounded-md border bg-popover px-2 py-1.5 text-xs shadow-md group-hover:block"
                     role="tooltip"
+                    className={cn(
+                      "pointer-events-none absolute z-20 w-max rounded-md border bg-popover px-2 py-1.5 text-xs shadow-md",
+                      shown ? "block" : "hidden",
+                      index === 0
+                        ? "left-0"
+                        : index === days.length - 1
+                          ? "right-0"
+                          : "left-1/2 -translate-x-1/2",
+                    )}
+                    style={
+                      // 45% leaves roughly the readout's own height above the
+                      // bar; past that there is no room and it moves inside.
+                      h < 45 ? { bottom: `calc(${h}% + 4px)` } : { top: 4 }
+                    }
                   >
                     <p className="font-medium">{formatDate(d.collection_date, locale)}</p>
                     <p className="tabular-nums">{formatAmount(d.total)}</p>

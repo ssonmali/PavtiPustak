@@ -10,8 +10,9 @@ prints the ledger for accounting.
 - **WhatsApp** — one tap sends a bilingual thank-you via the `wa.me` intent
 - **Print / PDF** — a ruled report for today, a custom date range, or all time,
   plus a printable slip per receipt
+- **Expenses** — record spending by category; the overview shows what is left
 - **Overview** — daily collection chart split by Cash/UPI, per-volunteer totals
-- **Activity log** — every change, by whom, with a field-level diff
+- **Activity log** — every change to either ledger, by whom, with a field-level diff
 - **Volunteer names** — each volunteer sets the name shown against their work
 - **Bilingual** — Marathi (default) and English
 - **Realtime** — every volunteer's device stays in sync

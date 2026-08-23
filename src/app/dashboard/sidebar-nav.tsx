@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, LayoutDashboard, Printer, ReceiptText } from "lucide-react";
+import {
+  Activity,
+  LayoutDashboard,
+  Printer,
+  ReceiptText,
+  Wallet,
+} from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/dashboard", labelKey: "nav.overview", icon: LayoutDashboard },
   { href: "/dashboard/receipts", labelKey: "nav.receipts", icon: ReceiptText },
+  { href: "/dashboard/expenses", labelKey: "nav.expenses", icon: Wallet },
   { href: "/dashboard/activity", labelKey: "nav.activity", icon: Activity },
   { href: "/dashboard/report", labelKey: "nav.report", icon: Printer },
 ] as const;

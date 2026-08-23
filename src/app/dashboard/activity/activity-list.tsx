@@ -1,8 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { FilePlus2, Pencil, Trash2, User } from "lucide-react";
-import type { AuditAction, AuditEntry, NameMap } from "@/lib/types";
+import { FilePlus2, Pencil, Trash2, User, Wallet } from "lucide-react";
+import type {
+  ActivityEntity,
+  ActivityEntry,
+  AuditAction,
+  ExpenseCategory,
+  NameMap,
+} from "@/lib/types";
 import {
   dayOf,
   formatAmount,
@@ -35,23 +41,44 @@ const ICONS: Record<AuditAction, React.ElementType> = {
   deleted: Trash2,
 };
 
-/** Only these columns are worth showing a diff for. */
-const TRACKED = [
-  "donor_name",
-  "amount",
-  "phone_number",
-  "payment_method",
-  "collection_date",
+/** Which ledger to show. `all` keeps the feed a single chronological list. */
+const LEDGERS = [
+  { key: "all", labelKey: "activity.allLedgers" },
+  { key: "receipt", labelKey: "activity.contributions" },
+  { key: "expense", labelKey: "activity.expenses" },
 ] as const;
+
+/**
+ * Only these columns are worth showing a diff for, per entity — the two tables
+ * have different shapes, and a snapshot carries every column.
+ */
+const TRACKED: Record<ActivityEntity, readonly string[]> = {
+  receipt: [
+    "donor_name",
+    "amount",
+    "phone_number",
+    "payment_method",
+    "collection_date",
+  ],
+  expense: [
+    "description",
+    "amount",
+    "category",
+    "payment_method",
+    "spent_on",
+    "note",
+  ],
+};
 
 export function ActivityList({
   entries,
   names,
 }: {
-  entries: AuditEntry[];
+  entries: ActivityEntry[];
   names: NameMap;
 }) {
   const { t, locale } = useI18n();
+  const [ledger, setLedger] = React.useState<"all" | ActivityEntity>("all");
   const [action, setAction] = React.useState<"all" | AuditAction>("all");
   const [actor, setActor] = React.useState<string>("all");
   const [period, setPeriod] = React.useState<Period>(0);
@@ -66,15 +93,16 @@ export function ActivityList({
     const from = startOf(period);
     return entries.filter(
       (e) =>
+        (ledger === "all" || e.entity === ledger) &&
         (action === "all" || e.action === action) &&
         (actor === "all" || e.actor_email === actor) &&
         (!from || dayOf(e.changed_at) >= from),
     );
-  }, [entries, action, actor, period]);
+  }, [entries, ledger, action, actor, period]);
 
   /** Grouped under one heading per day, newest day first. */
   const days = React.useMemo(() => {
-    const map = new Map<string, AuditEntry[]>();
+    const map = new Map<string, ActivityEntry[]>();
     for (const e of visible) {
       const day = dayOf(e.changed_at);
       map.set(day, [...(map.get(day) ?? []), e]);
@@ -85,9 +113,12 @@ export function ActivityList({
   const show = (field: string, value: unknown) => {
     if (value === null || value === undefined || value === "") return "—";
     if (field === "amount") return formatAmount(Number(value));
-    if (field === "collection_date") return formatDate(String(value), locale);
+    if (field === "collection_date" || field === "spent_on")
+      return formatDate(String(value), locale);
     if (field === "payment_method")
       return t(`method.${String(value) as "Cash" | "UPI"}`);
+    if (field === "category")
+      return t(`category.${String(value) as ExpenseCategory}`);
     return String(value);
   };
 
@@ -98,6 +129,10 @@ export function ActivityList({
       phone_number: t("table.mobile"),
       payment_method: t("table.method"),
       collection_date: t("table.date"),
+      description: t("expenses.description"),
+      category: t("expenses.category"),
+      spent_on: t("expenses.date"),
+      note: t("expenses.note"),
     })[field] ?? field;
 
   return (
@@ -107,6 +142,23 @@ export function ActivityList({
           {t("activity.title")}
         </h1>
         <p className="text-sm text-muted-foreground">{t("activity.subtitle")}</p>
+      </div>
+
+      {/* Which ledger first, since it changes what the rest of the filters are
+          filtering. Its own row so the two levels read as a hierarchy. */}
+      <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:w-fit sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
+        {LEDGERS.map(({ key, labelKey }) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={ledger === key ? "secondary" : "outline"}
+            className="shrink-0 sm:border-transparent sm:shadow-none"
+            onClick={() => setLedger(key)}
+          >
+            {key === "expense" ? <Wallet /> : null}
+            {t(labelKey)}
+          </Button>
+        ))}
       </div>
 
       {/* Who, what, when — all three filters in one row. */}
@@ -184,26 +236,47 @@ export function ActivityList({
                 {dayEntries.map((entry) => {
                   const Icon = ICONS[entry.action];
                   const snapshot = entry.after ?? entry.before;
+                  const isExpense = entry.entity === "expense";
                   const changes =
                     entry.action === "updated" && entry.before && entry.after
-                      ? TRACKED.filter(
+                      ? TRACKED[entry.entity].filter(
                           (f) =>
                             String(entry.before?.[f] ?? "") !==
                             String(entry.after?.[f] ?? ""),
                         )
                       : [];
+                  // Snapshots are whole rows of two differently shaped tables.
+                  const title = isExpense
+                    ? String(snapshot?.description ?? "")
+                    : String(snapshot?.donor_name ?? "");
+                  const amount = snapshot?.amount;
 
                   return (
-                    <li key={entry.id} className="card-elevated rounded-xl border bg-card p-3">
+                    <li
+                      key={entry.entry_key}
+                      className="card-elevated rounded-xl border bg-card p-3"
+                    >
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                          <Icon
-                            className={
-                              entry.action === "deleted"
-                                ? "size-4 text-destructive"
-                                : "size-4 text-muted-foreground"
-                            }
-                          />
+                          {/* The ledger is readable from the icon before any
+                              text is read: a wallet means money going out. */}
+                          {isExpense ? (
+                            <Wallet
+                              className={
+                                entry.action === "deleted"
+                                  ? "size-4 text-destructive"
+                                  : "size-4 text-muted-foreground"
+                              }
+                            />
+                          ) : (
+                            <Icon
+                              className={
+                                entry.action === "deleted"
+                                  ? "size-4 text-destructive"
+                                  : "size-4 text-muted-foreground"
+                              }
+                            />
+                          )}
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -220,15 +293,17 @@ export function ActivityList({
                               {t(`activity.${entry.action}`)}
                             </Badge>
                             <span className="font-medium">
-                              {t("activity.receiptNo", {
-                                number: entry.receipt_number ?? "—",
-                              })}
+                              {isExpense
+                                ? t("activity.expenseLabel")
+                                : t("activity.receiptNo", {
+                                    number: entry.receipt_number ?? "—",
+                                  })}
                             </span>
                             {snapshot ? (
                               <span className="wrap-anywhere text-muted-foreground">
-                                · {snapshot.donor_name} ·{" "}
+                                · {title} ·{" "}
                                 <span className="tabular-nums">
-                                  {formatAmount(snapshot.amount)}
+                                  {formatAmount(Number(amount ?? 0))}
                                 </span>
                               </span>
                             ) : null}
