@@ -112,7 +112,6 @@ const en = {
 
   // Activity log
   "activity.title": "Activity log",
-  "activity.subtitle": "Every change to the ledger, newest first.",
   "activity.empty": "No changes recorded yet.",
   "activity.created": "created",
   "activity.updated": "edited",
@@ -147,7 +146,8 @@ const en = {
   // Period filter
   "period.today": "Today",
   "period.7": "Last 7 days",
-  "period.30": "Last 30 days",
+  "period.custom": "Custom",
+  "period.clear": "Clear range",
   "period.all": "All time",
   "period.empty": "No contributions in this period.",
 
@@ -402,7 +402,6 @@ const mr: Record<MessageKey, string> = {
   "realtime.polling": "अधून मधून अद्ययावत — थेट सिंक उपलब्ध नाही",
 
   "activity.title": "बदल इतिहास",
-  "activity.subtitle": "नोंदवहीतील प्रत्येक बदल, नवीन प्रथम.",
   "activity.empty": "अजून कोणताही बदल नाही.",
   "activity.created": "नोंदवली",
   "activity.updated": "बदलली",
@@ -435,7 +434,8 @@ const mr: Record<MessageKey, string> = {
 
   "period.today": "आज",
   "period.7": "शेवटचे ७ दिवस",
-  "period.30": "शेवटचे ३० दिवस",
+  "period.custom": "निवडक",
+  "period.clear": "कालावधी काढा",
   "period.all": "संपूर्ण कालावधी",
   "period.empty": "या कालावधीत वर्गणी नाही.",
 

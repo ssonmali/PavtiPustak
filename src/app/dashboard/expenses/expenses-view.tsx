@@ -41,6 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  ALL_TIME,
   filterByPeriod,
   PeriodFilter,
   type Period,
@@ -62,7 +63,7 @@ export function ExpensesView({
   truncated?: number;
 }) {
   const { t, locale } = useI18n();
-  const [period, setPeriod] = React.useState<Period>(0);
+  const [period, setPeriod] = React.useState<Period>(ALL_TIME);
   const [query, setQuery] = React.useState("");
   const [sort, setSort] = React.useState<SortKey>(DEFAULT_SORT);
   const [category, setCategory] = React.useState<ExpenseCategory | null>(null);

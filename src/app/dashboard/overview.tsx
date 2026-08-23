@@ -30,9 +30,11 @@ import {
 import { DailyCollections } from "./daily-collections";
 import { DuePanel } from "./due-panel";
 import {
+  ALL_TIME,
   filterByPeriod,
+  isSingleDay,
   PeriodFilter,
-  startOf,
+  rangeOf,
   type Period,
 } from "./period-filter";
 
@@ -57,13 +59,15 @@ export function Overview({
   names: NameMap;
 }) {
   const { t } = useI18n();
-  const [period, setPeriod] = React.useState<Period>(0);
+  const [period, setPeriod] = React.useState<Period>(ALL_TIME);
 
   const visible = React.useMemo(() => {
-    const from = startOf(period);
-    const rows = from
-      ? daily.filter((d) => d.collection_date >= from)
-      : daily;
+    const { from, to } = rangeOf(period);
+    const rows = daily.filter(
+      (d) =>
+        (!from || d.collection_date >= from) &&
+        (!to || d.collection_date <= to),
+    );
     // Oldest → newest so the chart reads left-to-right as time.
     return [...rows].sort((a, b) =>
       a.collection_date.localeCompare(b.collection_date),
@@ -266,7 +270,7 @@ export function Overview({
         ))}
       </div>
 
-      {period !== 1 ? (
+      {!isSingleDay(period) ? (
         <Card className="card-elevated">
           <CardHeader>
             <CardTitle>{t("chart.title")}</CardTitle>

@@ -12,7 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OfflineBadge } from "@/components/offline-badge";
 import { ReceiptsTable, type ReceiptsTableHandle } from "../receipts-table";
-import { filterByPeriod, PeriodFilter, type Period } from "../period-filter";
+import {
+  ALL_TIME,
+  filterByPeriod,
+  PeriodFilter,
+  type Period,
+} from "../period-filter";
 import {
   filterByStatus,
   StatusFilterBar,
@@ -38,7 +43,7 @@ export function ReceiptsView({
   unpaid: { amount: number; collection_date: string }[];
 }) {
   const { t } = useI18n();
-  const [period, setPeriod] = React.useState<Period>(0);
+  const [period, setPeriod] = React.useState<Period>(ALL_TIME);
   const [status, setStatus] = React.useState<StatusFilter>("all");
   const { editors, setEditing: setPresence } = useEditingPresence(myName);
 
