@@ -184,6 +184,10 @@ const en = {
   "slip.thanks": "गणपती बाप्पा मोरया!",
   "slip.collectedBy": "Collected by",
   "slip.unpaid": "NOT A RECEIPT — payment not yet received, expected {date}",
+  "share.share": "Share receipt",
+  "share.download": "Save as image",
+  "share.saved": "Receipt image saved.",
+  "share.failed": "Could not create the receipt image.",
 
   // Password reset
   "reset.forgot": "Forgot password?",
@@ -470,6 +474,10 @@ const mr: Record<MessageKey, string> = {
   "slip.thanks": "गणपती बाप्पा मोरया!",
   "slip.collectedBy": "जमा करणारे",
   "slip.unpaid": "ही पावती नाही — रक्कम अजून मिळालेली नाही, अपेक्षित {date}",
+  "share.share": "पावती पाठवा",
+  "share.download": "प्रतिमा जतन करा",
+  "share.saved": "पावतीची प्रतिमा जतन झाली.",
+  "share.failed": "पावतीची प्रतिमा तयार करता आली नाही.",
 
   "reset.forgot": "पासवर्ड विसरला?",
   "reset.requestTitle": "पासवर्ड बदला",

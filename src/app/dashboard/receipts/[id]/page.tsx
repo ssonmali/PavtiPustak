@@ -6,6 +6,7 @@ import type { Receipt } from "@/lib/types";
 import { displayName, formatAmount, formatDate } from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { PrintBar } from "../../print-bar";
+import { ShareReceipt } from "./share-receipt";
 
 export const metadata = { title: "Receipt · Pavti Pustak" };
 
@@ -22,6 +23,7 @@ export default async function ReceiptSlipPage({
   // Opt-in: unset, the slip renders exactly as before rather than with a
   // broken image where the idol should be.
   const watermark = process.env.NEXT_PUBLIC_RECEIPT_WATERMARK;
+  const mandalAddress = process.env.NEXT_PUBLIC_MANDAL_ADDRESS;
 
   const [{ data }, names] = await Promise.all([
     supabase.from("receipts").select("*").eq("id", id).maybeSingle(),
@@ -42,7 +44,41 @@ export default async function ReceiptSlipPage({
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 print:max-w-none">
-      <PrintBar printLabel={t("report.print")} backLabel={t("report.back")} />
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <PrintBar printLabel={t("report.print")} backLabel={t("report.back")} />
+        {/* Only for money actually received — an image of a pledge would look
+            exactly like a receipt once it is out of the app. */}
+        {receipt.payment_status === "Paid" ? (
+          <ShareReceipt
+            backgroundUrl={watermark ?? null}
+            fileName={`pavti-${receipt.receipt_number}.png`}
+            data={{
+              mandalName,
+              address: mandalAddress ?? null,
+              title: t("slip.title"),
+              donorLabel: t("slip.received"),
+              donorName: receipt.donor_name,
+              amountLabel: t("slip.amount"),
+              amount: formatAmount(receipt.amount),
+              rows: [
+                { label: t("slip.number"), value: String(receipt.receipt_number) },
+                {
+                  label: t("slip.date"),
+                  value: formatDate(receipt.collection_date, locale),
+                },
+                {
+                  label: t("slip.method"),
+                  value: t(`method.${receipt.payment_method}`),
+                },
+              ],
+              thanks: t("slip.thanks"),
+              footer: receipt.created_by_email
+                ? `${t("slip.collectedBy")}: ${displayName(receipt.created_by_email, names)}`
+                : null,
+            }}
+          />
+        ) : null}
+      </div>
 
       <article className="relative overflow-hidden rounded-lg border bg-card p-5 text-card-foreground print:rounded-none print:border-2 print:p-6">
         {watermark ? (
