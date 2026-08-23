@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
@@ -20,9 +21,12 @@ import {
 export function NotificationBell({ dueToday }: { dueToday: Receipt[] }) {
   const { t } = useI18n();
   const count = dueToday.length;
+  // Controlled so the popover closes on navigation — Link doesn't unmount
+  // the trigger the way a real page load would, so it stays open otherwise.
+  const [open, setOpen] = React.useState(false);
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
           <Button
@@ -66,6 +70,7 @@ export function NotificationBell({ dueToday }: { dueToday: Receipt[] }) {
               render={<Link href="/dashboard/receipts" />}
               variant="outline"
               size="sm"
+              onClick={() => setOpen(false)}
             >
               {t("bell.viewAll")}
             </Button>
