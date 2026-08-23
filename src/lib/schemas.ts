@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from "@/lib/types";
+import {
+  EXPENSE_CATEGORIES,
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+} from "@/lib/types";
 
 /** Shared client + server validation for a receipt. */
 export const receiptSchema = z.object({
@@ -23,7 +27,35 @@ export const receiptSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a collection date.")
     .refine((v) => !Number.isNaN(Date.parse(v)), "Choose a valid date."),
-});
+  // Defaults to Paid, matching the column default: a form or a queued offline
+  // entry from before this field existed still parses.
+  payment_status: z
+    .enum(PAYMENT_STATUSES, {
+      message: "Choose whether the money has been received.",
+    })
+    .default("Paid"),
+  /** Only meaningful when unpaid; the refinement below enforces the pairing. */
+  due_on: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+})
+  // Mirrors the DB constraint: exactly one shape per state. An unpaid row with
+  // no date would never surface in the reminder list.
+  .refine((v) => v.payment_status !== "Unpaid" || v.due_on !== null, {
+    message: "Choose the date the money is expected.",
+    path: ["due_on"],
+  })
+  .refine(
+    (v) =>
+      v.due_on === null || /^\d{4}-\d{2}-\d{2}$/.test(v.due_on),
+    { message: "Choose a valid expected date.", path: ["due_on"] },
+  )
+  // A paid receipt carries no due date, whatever the form happened to submit.
+  .transform((v) =>
+    v.payment_status === "Paid" ? { ...v, due_on: null } : v,
+  );
 
 export type ReceiptFormValues = z.input<typeof receiptSchema>;
 

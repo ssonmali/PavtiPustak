@@ -4,7 +4,7 @@ import { LogOut, ReceiptText } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getMyName } from "@/lib/volunteer-names";
-import { volunteerName } from "@/lib/receipt-utils";
+import { todayInIst, volunteerName } from "@/lib/receipt-utils";
 import { Button } from "@/components/ui/button";
 import { getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/client";
@@ -25,9 +25,17 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  const [{ locale, t }, myName] = await Promise.all([
+  const [{ locale, t }, myName, dueCount] = await Promise.all([
     getDictionary(),
     getMyName(),
+    // Pledges due today or overdue, for the badge on the Receipts tab. `head`
+    // fetches no rows — only the count.
+    supabase
+      .from("receipts")
+      .select("id", { count: "exact", head: true })
+      .eq("payment_status", "Unpaid")
+      .lte("due_on", todayInIst())
+      .then(({ count }) => count ?? 0),
   ]);
 
   return (
@@ -65,11 +73,11 @@ export default async function DashboardLayout({
         </header>
 
         <div className="mx-auto flex w-full max-w-7xl flex-1">
-          <SidebarNav />
+          <SidebarNav dueCount={dueCount} />
           <main className="min-w-0 flex-1 p-3 sm:p-4">{children}</main>
         </div>
 
-        <BottomNav />
+        <BottomNav dueCount={dueCount} />
       </div>
     </I18nProvider>
   );

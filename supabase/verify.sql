@@ -57,3 +57,12 @@ select
     select count(*) from pg_trigger
     where tgrelid = 'public.expenses'::regclass and tgname = 'expenses_audit'
   ) as expense_audit_trigger;  -- expect 1
+
+-- 11. Paid/unpaid receipts (migration 10) --------------------------
+select
+  count(*) filter (where payment_status = 'Unpaid') as unpaid,
+  count(*) filter (where payment_status = 'Unpaid' and due_on is null)
+    as unpaid_without_date,   -- must be 0; the constraint forbids it
+  (select due_now from public.pledge_totals) as due_now,
+  public.mandal_today() as mandal_today
+from public.receipts;

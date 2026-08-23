@@ -38,6 +38,15 @@ export default async function ReceiptSlipPage({
       <PrintBar printLabel={t("report.print")} backLabel={t("report.back")} />
 
       <article className="rounded-lg border bg-card p-5 text-card-foreground print:rounded-none print:border-2 print:p-6">
+        {/* A slip for money still owed is not a receipt, and must not be able
+            to be handed over as one. */}
+        {receipt.payment_status === "Unpaid" ? (
+          <p className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-center text-sm font-semibold text-destructive">
+            {t("slip.unpaid", {
+              date: receipt.due_on ? formatDate(receipt.due_on, locale) : "—",
+            })}
+          </p>
+        ) : null}
         <header className="border-b pb-3 text-center">
           <h1 className="font-display text-xl">{mandalName}</h1>
           <p className="text-xs tracking-wide text-muted-foreground uppercase">

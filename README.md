@@ -7,6 +7,8 @@ prints the ledger for accounting.
 ## Features
 
 - **Receipts** — create, edit, delete, with backdating for previous collections
+- **Pledges** — mark a contribution unpaid with the date it is expected; the
+  dashboard reminds you on the day, and unpaid money never counts as collected
 - **WhatsApp** — one tap sends a bilingual thank-you via the `wa.me` intent
 - **Print / PDF** — a ruled report for today, a custom date range, or all time,
   plus a printable slip per receipt

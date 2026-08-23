@@ -15,6 +15,8 @@ const row = (over: Partial<Receipt> = {}): Receipt => ({
   updated_at: "2026-08-20T10:00:00Z",
   user_id: "u1",
   created_by_email: "a@b.c",
+  payment_status: "Paid",
+  due_on: null,
   ...over,
 });
 

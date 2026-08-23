@@ -10,6 +10,7 @@ import {
   CloudOff,
   Plus,
   Search,
+  Clock,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,9 +19,11 @@ import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
 import {
   formatAmount,
   formatDate,
+  todayInIst,
   whatsappUrl,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import { ReceiptDialog } from "./receipt-dialog";
 import {
   AlertDialog,
@@ -74,6 +77,39 @@ function MethodBadge({
         className="size-1.5 rounded-full"
         style={{ background: method === "UPI" ? "#eb6834" : "#2a78d6" }}
       />
+      {label}
+    </span>
+  );
+}
+
+/**
+ * An unpaid row is money the mandal does not have yet, so it is marked
+ * wherever the amount appears — an amount that reads as collected when it has
+ * not been is the one error worth being loud about.
+ */
+function UnpaidBadge({
+  dueOn,
+  today,
+  label,
+  title,
+}: {
+  dueOn: string | null;
+  today: string;
+  label: string;
+  title: string;
+}) {
+  const overdue = Boolean(dueOn) && dueOn! < today;
+  return (
+    <span
+      title={title}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+        overdue
+          ? "border-destructive/40 bg-destructive/10 text-destructive"
+          : "border-border bg-muted text-muted-foreground",
+      )}
+    >
+      <Clock aria-hidden className="size-3" />
       {label}
     </span>
   );
@@ -152,10 +188,27 @@ export function ReceiptsTable({
     setDialogOpen(true);
   }
 
+  /** Today on the mandal's calendar, for deciding what is overdue. */
+  const today = todayInIst();
+
+  const dueTitle = (dueOn: string | null) => {
+    if (!dueOn) return t("status.unpaidBadge");
+    const date = formatDate(dueOn, locale);
+    return dueOn < today
+      ? t("status.overdue", { date })
+      : t("status.dueOn", { date });
+  };
+
   function sendWhatsApp(receipt: LocalReceipt) {
     // The message quotes the receipt number, which the server assigns on sync.
     if (receipt.pending === "create") {
       toast.error(t("offline.noSend"));
+      return;
+    }
+    // The message thanks the contributor for money received. Sending it for a
+    // pledge would be a receipt for cash nobody has handed over.
+    if (receipt.payment_status === "Unpaid") {
+      toast.error(t("status.cannotSend"));
       return;
     }
     window.open(whatsappUrl(receipt, mandalName), "_blank", "noopener");
@@ -259,7 +312,25 @@ export function ReceiptsTable({
                     {receipt.donor_name}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatAmount(receipt.amount)}
+                    <span
+                      className={
+                        receipt.payment_status === "Unpaid"
+                          ? "text-muted-foreground line-through"
+                          : undefined
+                      }
+                    >
+                      {formatAmount(receipt.amount)}
+                    </span>
+                    {receipt.payment_status === "Unpaid" ? (
+                      <span className="mt-0.5 block">
+                        <UnpaidBadge
+                          dueOn={receipt.due_on}
+                          today={today}
+                          label={t("status.unpaidBadge")}
+                          title={dueTitle(receipt.due_on)}
+                        />
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {receipt.phone_number}
@@ -353,9 +424,23 @@ export function ReceiptsTable({
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-lg font-semibold tabular-nums">
+                  <span
+                    className={cn(
+                      "text-lg font-semibold tabular-nums",
+                      receipt.payment_status === "Unpaid" &&
+                        "text-muted-foreground line-through",
+                    )}
+                  >
                     {formatAmount(receipt.amount)}
                   </span>
+                  {receipt.payment_status === "Unpaid" ? (
+                    <UnpaidBadge
+                      dueOn={receipt.due_on}
+                      today={today}
+                      label={t("status.unpaidBadge")}
+                      title={dueTitle(receipt.due_on)}
+                    />
+                  ) : null}
                   <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
                 </div>
               </div>

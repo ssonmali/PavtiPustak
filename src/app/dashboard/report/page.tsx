@@ -47,7 +47,14 @@ export default async function ReportPage({
 
   const { data } = await query;
   const receipts: Receipt[] = data ?? [];
-  const total = receipts.reduce((sum, r) => sum + Number(r.amount), 0);
+  // The grand total is money received. A pledge is listed so the treasurer can
+  // see what is outstanding, but counting it would overstate the collection.
+  const total = receipts
+    .filter((r) => r.payment_status === "Paid")
+    .reduce((sum, r) => sum + Number(r.amount), 0);
+  const expected = receipts
+    .filter((r) => r.payment_status === "Unpaid")
+    .reduce((sum, r) => sum + Number(r.amount), 0);
   const periodLabel = rangeLabel(range, locale, t("period.all"));
 
   return (
@@ -91,6 +98,7 @@ export default async function ReportPage({
               <th>{t("report.period")}</th>
               <th>{t("stats.receipts")}</th>
               <th>{t("stats.total")}</th>
+              {expected > 0 ? <th>{t("due.expected")}</th> : null}
               <th>{t("report.generated")}</th>
             </tr>
           </thead>
@@ -99,6 +107,9 @@ export default async function ReportPage({
               <td>{periodLabel}</td>
               <td className="tabular-nums">{receipts.length}</td>
               <td className="font-bold tabular-nums">{formatAmount(total)}</td>
+              {expected > 0 ? (
+                <td className="tabular-nums">{formatAmount(expected)}</td>
+              ) : null}
               <td>{formatDateTime(new Date().toISOString(), locale)}</td>
             </tr>
           </tbody>
@@ -135,6 +146,11 @@ export default async function ReportPage({
                   </td>
                   <td className="text-right tabular-nums">
                     {formatAmount(r.amount)}
+                    {r.payment_status === "Unpaid" ? (
+                      <span className="block text-[0.7rem] font-semibold">
+                        ({t("status.unpaidBadge")})
+                      </span>
+                    ) : null}
                   </td>
                 </tr>
               ))
@@ -172,6 +188,9 @@ export default async function ReportPage({
                     #{r.receipt_number} · {r.phone_number} ·{" "}
                     {t(`method.${r.payment_method}`)} ·{" "}
                     {formatDate(r.collection_date, locale)}
+                    {r.payment_status === "Unpaid"
+                      ? ` · ${t("status.unpaidBadge")}`
+                      : ""}
                   </p>
                 </div>
               ))}

@@ -2,6 +2,13 @@
 export const PAYMENT_METHODS = ["Cash", "UPI"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
+/**
+ * Whether the money actually arrived. An `Unpaid` row is a promise: it is
+ * recorded so it can be chased, and is excluded from every collected figure.
+ */
+export const PAYMENT_STATUSES = ["Paid", "Unpaid"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
 /** A row of `public.receipts` exactly as Postgres returns it. */
 export type Receipt = {
   id: string;
@@ -19,6 +26,9 @@ export type Receipt = {
   user_id: string;
   /** Email of the volunteer who created the receipt, set by a trigger. */
   created_by_email: string | null;
+  payment_status: PaymentStatus;
+  /** When the money is expected. Set if and only if the row is `Unpaid`. */
+  due_on: string | null;
 };
 
 /** Spending categories the mandal uses — mirrors the DB check constraint. */
@@ -82,6 +92,18 @@ export type VolunteerTotal = {
   last_collection: string;
 };
 
+/**
+ * The single row of `public.pledge_totals` — what is promised but not received.
+ * `due_now` covers today and anything overdue, which is what gets chased.
+ */
+export type PledgeTotals = {
+  expected: number;
+  pledge_count: number;
+  due_now: number;
+  due_today: number;
+  overdue: number;
+};
+
 /** One row of `public.donor_directory` — powers donor autocomplete. */
 export type Donor = {
   donor_name: string;
@@ -94,7 +116,13 @@ export type Donor = {
 /** Columns the volunteer fills in; the rest are server-assigned. */
 export type ReceiptInput = Pick<
   Receipt,
-  "donor_name" | "amount" | "phone_number" | "payment_method" | "collection_date"
+  | "donor_name"
+  | "amount"
+  | "phone_number"
+  | "payment_method"
+  | "collection_date"
+  | "payment_status"
+  | "due_on"
 >;
 
 export type AuditAction = "created" | "updated" | "deleted";
@@ -202,6 +230,7 @@ export type Database = {
       donor_directory: { Row: Donor; Relationships: [] };
       expense_daily_totals: { Row: ExpenseDailyTotal; Relationships: [] };
       activity_log: { Row: ActivityEntry; Relationships: [] };
+      pledge_totals: { Row: PledgeTotals; Relationships: [] };
     };
     Functions: {
       /** Trivial round-trip used by the daily keep-alive; touches no table. */

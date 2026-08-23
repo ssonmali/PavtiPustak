@@ -62,6 +62,10 @@ export function mergeOutbox(
         updated_at: entry.queuedAt,
         user_id: "",
         created_by_email: null,
+        // Defaults for anything the queued fields did not carry, so a pending
+        // row is a complete Receipt for rendering purposes.
+        payment_status: entry.fields.payment_status ?? "Paid",
+        due_on: entry.fields.due_on ?? null,
         pending: "create",
       });
     }

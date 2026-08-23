@@ -21,13 +21,20 @@ export type OutboxEntry = {
   kind: OutboxKind;
   /** Server id for update/delete. */
   receiptId?: string;
-  /** The receipt fields, for create/update. */
+  /**
+   * The receipt fields, for create/update. Spelled out rather than reusing
+   * ReceiptInput: these rows are persisted on the device, so widening the type
+   * has to be a deliberate edit that considers entries queued by an older
+   * build — hence the optional status fields, which such entries will lack.
+   */
   fields?: {
     donor_name: string;
     amount: number;
     phone_number: string;
     payment_method: "Cash" | "UPI";
     collection_date: string;
+    payment_status?: "Paid" | "Unpaid";
+    due_on?: string | null;
   };
   /** The updated_at the edit was based on, for optimistic locking. */
   expectedUpdatedAt?: string;

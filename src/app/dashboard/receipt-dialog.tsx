@@ -8,7 +8,13 @@ import {
   searchDonors,
   updateReceipt,
 } from "@/app/actions/receipts";
-import { PAYMENT_METHODS, type Donor, type PaymentMethod } from "@/lib/types";
+import {
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+  type Donor,
+  type PaymentMethod,
+  type PaymentStatus,
+} from "@/lib/types";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
 import { formatAmount, formatDate, toDateValue } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
@@ -99,6 +105,16 @@ function ReceiptDialogBody({
   const [method, setMethod] = React.useState<string>(
     receipt?.payment_method ?? "Cash",
   );
+  const [status, setStatus] = React.useState<string>(
+    receipt?.payment_status ?? "Paid",
+  );
+  // Defaults a week out: a pledge with no plausible date is one nobody chases.
+  const [dueDate, setDueDate] = React.useState<Date | undefined>(() => {
+    if (receipt?.due_on) return parseDateValue(receipt.due_on);
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d;
+  });
 
   // Donor autocomplete
   const [donorQuery, setDonorQuery] = React.useState(receipt?.donor_name ?? "");
@@ -157,6 +173,14 @@ function ReceiptDialogBody({
         .replace(/^(\+91|91|0)/, ""),
       payment_method: String(formData.get("payment_method") ?? "Cash") as PaymentMethod,
       collection_date: String(formData.get("collection_date") ?? ""),
+      payment_status: String(
+        formData.get("payment_status") ?? "Paid",
+      ) as PaymentStatus,
+      // Kept null for a paid row, matching the DB constraint.
+      due_on:
+        String(formData.get("payment_status") ?? "Paid") === "Unpaid"
+          ? String(formData.get("due_on") ?? "") || null
+          : null,
     };
   }
 
@@ -389,6 +413,70 @@ function ReceiptDialogBody({
                 </PopoverContent>
               </Popover>
             </div>
+          </div>
+
+          {/* Received or promised. A pledge is recorded so it can be chased,
+              and is kept out of every collected figure until it is marked paid. */}
+          <div className="flex flex-col gap-2 rounded-lg border p-3">
+            <Label>{t("form.status")}</Label>
+            <input type="hidden" name="payment_status" value={status} />
+            <div className="flex gap-1 rounded-lg border p-0.5">
+              {PAYMENT_STATUSES.map((s) => (
+                <Button
+                  key={s}
+                  type="button"
+                  size="sm"
+                  variant={status === s ? "secondary" : "ghost"}
+                  className="flex-1"
+                  onClick={() => setStatus(s)}
+                >
+                  {t(`status.${s}`)}
+                </Button>
+              ))}
+            </div>
+
+            {status === "Unpaid" ? (
+              <div className="flex flex-col gap-2">
+                <Label>{t("form.dueOn")}</Label>
+                <input
+                  type="hidden"
+                  name="due_on"
+                  value={dueDate ? toDateValue(dueDate) : ""}
+                />
+                <Popover>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start font-normal"
+                      >
+                        <CalendarIcon />
+                        {dueDate
+                          ? formatDate(toDateValue(dueDate), locale)
+                          : t("form.pickDate")}
+                      </Button>
+                    }
+                  />
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      defaultMonth={dueDate}
+                      captionLayout="dropdown"
+                      // The opposite of the collection date: a promise is about
+                      // the future, so only the past is off-limits here.
+                      disabled={{ before: new Date() }}
+                      autoFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  {t("form.dueHint")}
+                </p>
+              </div>
+            ) : null}
           </div>
 
           <DialogFooter className="mt-2 [&>*]:flex-1 sm:[&>*]:flex-none">

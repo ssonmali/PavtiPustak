@@ -55,6 +55,44 @@ describe("receiptSchema", () => {
     expect(receiptSchema.safeParse({ ...valid, collection_date: "22/08/2026" }).success)
       .toBe(false);
   });
+
+  it("defaults to Paid when no status is submitted", () => {
+    const parsed = receiptSchema.parse(valid);
+    expect(parsed.payment_status).toBe("Paid");
+    expect(parsed.due_on).toBeNull();
+  });
+
+  it("requires a due date when unpaid", () => {
+    expect(
+      receiptSchema.safeParse({ ...valid, payment_status: "Unpaid" }).success,
+    ).toBe(false);
+    expect(
+      receiptSchema.safeParse({
+        ...valid,
+        payment_status: "Unpaid",
+        due_on: "2026-09-01",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("drops a due date on a paid receipt, matching the DB constraint", () => {
+    const parsed = receiptSchema.parse({
+      ...valid,
+      payment_status: "Paid",
+      due_on: "2026-09-01",
+    });
+    expect(parsed.due_on).toBeNull();
+  });
+
+  it("rejects a malformed due date", () => {
+    expect(
+      receiptSchema.safeParse({
+        ...valid,
+        payment_status: "Unpaid",
+        due_on: "01/09/2026",
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("expenseSchema", () => {

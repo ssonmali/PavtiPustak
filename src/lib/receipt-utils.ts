@@ -161,3 +161,28 @@ export function whatsappUrl(receipt: Receipt, mandalName: string) {
   // 91 = India country code; phone_number is stored as 10 digits.
   return `https://wa.me/91${receipt.phone_number}?text=${encodeURIComponent(message)}`;
 }
+
+/**
+ * A polite nudge for a pledge that has come due.
+ *
+ * Deliberately separate from `whatsappUrl`: that message thanks someone for
+ * money received and quotes a receipt number, which would be a false receipt
+ * for a contribution still owed.
+ */
+export function pledgeReminderUrl(receipt: Receipt, mandalName: string) {
+  const due = receipt.due_on ? formatDate(receipt.due_on) : "";
+  const message = [
+    `🙏 *${mandalName}* 🙏`,
+    "",
+    `प्रिय ${receipt.donor_name},`,
+    `आपण कबूल केलेली *${formatAmount(receipt.amount)}* वर्गणी`,
+    due ? `*${due}* पर्यंत अपेक्षित आहे.` : `अपेक्षित आहे.`,
+    `सोयीनुसार देण्याची विनंती. 🌺`,
+    "",
+    `A gentle reminder about your pledged contribution of ${formatAmount(receipt.amount)}${due ? `, expected by ${due}` : ""}.`,
+    "",
+    `गणपती बाप्पा मोरया! 🎉`,
+  ].join("\n");
+
+  return `https://wa.me/91${receipt.phone_number}?text=${encodeURIComponent(message)}`;
+}

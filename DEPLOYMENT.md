@@ -16,6 +16,7 @@ re-runnable.
 | `supabase/07-volunteer-names.sql` | Volunteer display names, set by each volunteer |
 | `supabase/08-expenses.sql` | Expenses table, daily spend view, realtime |
 | `supabase/09-expense-audit.sql` | Expense audit log + the combined activity feed |
+| `supabase/10-payment-status.sql` | Paid/unpaid receipts, due dates, pledge totals |
 
 Then run `supabase/verify.sql` — it lists the policies, the trigger, and the
 audit row count so you can confirm everything landed.

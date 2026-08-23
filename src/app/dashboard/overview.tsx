@@ -13,6 +13,8 @@ import type {
   DailyTotal,
   ExpenseDailyTotal,
   NameMap,
+  PledgeTotals,
+  Receipt,
   VolunteerTotal,
 } from "@/lib/types";
 import { displayName, formatAmount } from "@/lib/receipt-utils";
@@ -26,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DailyCollections } from "./daily-collections";
+import { DuePanel } from "./due-panel";
 import {
   filterByPeriod,
   PeriodFilter,
@@ -37,11 +40,17 @@ export function Overview({
   daily,
   volunteers,
   expenseDays,
+  pledges,
+  due,
+  mandalName,
   names,
 }: {
   daily: DailyTotal[];
   volunteers: VolunteerTotal[];
   expenseDays: ExpenseDailyTotal[];
+  pledges: PledgeTotals | null;
+  due: Receipt[];
+  mandalName: string;
   names: NameMap;
 }) {
   const { t } = useI18n();
@@ -101,6 +110,8 @@ export function Overview({
         <PeriodFilter period={period} onChange={setPeriod} />
       </div>
 
+      <DuePanel pledges={due} mandalName={mandalName} />
+
       {/* Collected less spent. Shown even at zero spend so the figure is a
           fixture of the dashboard rather than something that appears once the
           first expense is recorded. */}
@@ -149,6 +160,14 @@ export function Overview({
                 &minus;{formatAmount(spent)}
               </dd>
             </div>
+            {pledges && Number(pledges.expected) > 0 ? (
+              <div className="flex items-baseline gap-2">
+                <dt className="text-muted-foreground">{t("due.expected")}</dt>
+                <dd className="font-medium tabular-nums text-muted-foreground">
+                  {formatAmount(pledges.expected)}
+                </dd>
+              </div>
+            ) : null}
           </dl>
         </CardContent>
       </Card>

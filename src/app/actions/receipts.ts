@@ -35,6 +35,8 @@ function fieldsFrom(formData: FormData) {
     phone_number: formData.get("phone_number"),
     payment_method: formData.get("payment_method"),
     collection_date: formData.get("collection_date"),
+    payment_status: formData.get("payment_status") ?? undefined,
+    due_on: formData.get("due_on") ?? undefined,
   });
 }
 
@@ -107,6 +109,27 @@ export async function updateReceipt(
 
   // Zero rows means the guard matched nothing: someone edited it first.
   if (!data || data.length === 0) return { ok: false, conflict: true };
+
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Marks a pledge as received: the money arrived, so the row joins every
+ * collected figure and leaves the reminder list. The due date is cleared to
+ * satisfy the constraint that only unpaid rows carry one.
+ */
+export async function markReceiptPaid(id: string): Promise<ActionResult> {
+  const { supabase } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("receipts")
+    .update({ payment_status: "Paid", due_on: null })
+    .eq("id", id)
+    .select("id");
+
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not-found" };
 
   refresh();
   return { ok: true };
