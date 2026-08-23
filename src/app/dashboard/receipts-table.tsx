@@ -20,13 +20,13 @@ import {
   markReceiptPaid,
 } from "@/app/actions/receipts";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/types";
+import { useReceiptShare } from "@/lib/use-receipt-share";
+import { PAYMENT_METHODS, type NameMap, type PaymentMethod } from "@/lib/types";
 import type { Editors } from "@/lib/use-editing-presence";
 import {
   formatAmount,
   formatDate,
   todayInIst,
-  whatsappUrl,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -146,6 +146,7 @@ export type ReceiptsTableHandle = { openCreate: () => void };
 export function ReceiptsTable({
   receipts,
   mandalName,
+  names,
   total,
   online = true,
   queue,
@@ -155,6 +156,8 @@ export function ReceiptsTable({
 }: {
   receipts: LocalReceipt[];
   mandalName: string;
+  /** Volunteer display names, for the "collected by" line on the image. */
+  names: NameMap;
   /** Total rows on the server, when the list is paginated. */
   total?: number;
   online?: boolean;
@@ -303,6 +306,8 @@ export function ReceiptsTable({
     toast.success(t("status.markedPaid"));
   }
 
+  const shareReceipt = useReceiptShare(mandalName, names);
+
   function sendWhatsApp(receipt: LocalReceipt) {
     // The message quotes the receipt number, which the server assigns on sync.
     if (receipt.pending === "create") {
@@ -315,7 +320,9 @@ export function ReceiptsTable({
       toast.error(t("status.cannotSend"));
       return;
     }
-    window.open(whatsappUrl(receipt, mandalName), "_blank", "noopener");
+    // Image with the receipt text as its caption, falling back to the
+    // addressed wa.me message where the share sheet cannot take a file.
+    void shareReceipt(receipt);
   }
 
   /** Queues the delete on the device; returns false if it could not be stored. */

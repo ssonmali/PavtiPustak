@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import type { DailyTotal, Receipt } from "@/lib/types";
+import type { DailyTotal, NameMap, Receipt } from "@/lib/types";
 import { useI18n } from "@/lib/i18n/client";
 import { formatAmount } from "@/lib/receipt-utils";
 import { useOfflineReceipts, type FlushResult } from "@/lib/offline";
@@ -27,6 +27,7 @@ import {
 export function ReceiptsView({
   receipts,
   mandalName,
+  names,
   total,
   myName,
   daily,
@@ -34,6 +35,8 @@ export function ReceiptsView({
 }: {
   receipts: Receipt[];
   mandalName: string;
+  /** Volunteer display names, for the shared receipt image. */
+  names: NameMap;
   total: number;
   /** This volunteer's display name, published to the other editors. */
   myName: string;
@@ -161,6 +164,7 @@ export function ReceiptsView({
           <ReceiptsTable
             receipts={visible}
             mandalName={mandalName}
+            names={names}
             // Pagination only makes sense against the live server list, and
             // only when nothing is filtered out of it client-side.
             total={online && status === "all" ? total : undefined}
