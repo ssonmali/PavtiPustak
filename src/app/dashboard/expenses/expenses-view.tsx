@@ -131,25 +131,25 @@ export function ExpensesView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="mr-auto">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex flex-col gap-3">
+        {/* The action keeps the top-right corner beside the heading at every
+            width, rather than moving between rows as the layout changes. */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
               {t("expenses.title")}
             </h1>
-            {/* Beside the heading rather than down in the ledger card: adding
-                an expense is why you come to this page. */}
-            <Button size="sm" onClick={openCreate}>
-              <Plus /> {t("expenses.new")}
-            </Button>
+            <p className="text-sm text-muted-foreground">
+              {t("expenses.total")}:{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {formatAmount(total)}
+              </span>{" "}
+              · {t("expenses.count", { count: visible.length })}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {t("expenses.total")}:{" "}
-            <span className="font-medium tabular-nums text-foreground">
-              {formatAmount(total)}
-            </span>{" "}
-            · {t("expenses.count", { count: visible.length })}
-          </p>
+          <Button size="sm" onClick={openCreate} className="shrink-0">
+            <Plus /> {t("expenses.new")}
+          </Button>
         </div>
         <PeriodFilter period={period} onChange={setPeriod} />
       </div>
@@ -159,6 +159,12 @@ export function ExpensesView({
           {t("expenses.limit", { count: truncated })}
         </p>
       ) : null}
+
+      <CategoryBreakdown
+        rows={breakdown}
+        selected={category}
+        onSelect={setCategory}
+      />
 
       <Card className="card-elevated">
         <CardContent>
@@ -293,12 +299,6 @@ export function ExpensesView({
           </div>
         </CardContent>
       </Card>
-
-      <CategoryBreakdown
-        rows={breakdown}
-        selected={category}
-        onSelect={setCategory}
-      />
 
       <Dialog
         open={dialogOpen}

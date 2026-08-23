@@ -75,19 +75,25 @@ export function ReceiptsView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="mr-auto">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex flex-col gap-3">
+        {/* The action keeps the top-right corner beside the heading at every
+            width, rather than moving between rows as the layout changes. */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
               {t("table.title")}
             </h1>
-            <Button size="sm" onClick={() => tableRef.current?.openCreate()}>
-              <Plus /> {t("table.new")}
-            </Button>
+            <p className="text-sm text-muted-foreground">
+              {online ? t("table.subtitle") : t("offline.showingSaved")}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {online ? t("table.subtitle") : t("offline.showingSaved")}
-          </p>
+          <Button
+            size="sm"
+            onClick={() => tableRef.current?.openCreate()}
+            className="shrink-0"
+          >
+            <Plus /> {t("table.new")}
+          </Button>
         </div>
         <PeriodFilter period={period} onChange={setPeriod} />
       </div>
