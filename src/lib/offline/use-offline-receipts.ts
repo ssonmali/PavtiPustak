@@ -11,7 +11,7 @@ import {
   readOutbox,
   type OutboxEntry,
 } from "./index";
-import { mergeOutbox, type LocalReceipt } from "./merge";
+import { mergeOutbox, pickBase, type LocalReceipt } from "./merge";
 import { flushOutbox, type FlushResult } from "./sync";
 
 /** True when the browser reports no connectivity. */
@@ -56,7 +56,7 @@ export function useOfflineReceipts({ serverRows, onFlush }: Options) {
 
   // Mirror the server list into IndexedDB whenever we successfully get one.
   React.useEffect(() => {
-    if (serverRows.length > 0) void cacheReceipts(serverRows);
+    void cacheReceipts(serverRows);
   }, [serverRows]);
 
   // Load the local copy once on mount; it is the fallback when offline.
@@ -104,15 +104,7 @@ export function useOfflineReceipts({ serverRows, onFlush }: Options) {
   }, [flush]);
 
   const receipts: LocalReceipt[] = React.useMemo(() => {
-    // Online, the server list is the truth. Offline, prefer the device copy:
-    // the HTML may have come from the service worker cache and be older than
-    // what IndexedDB holds.
-    const base =
-      online && serverRows.length > 0
-        ? serverRows
-        : (cached?.length ? cached : serverRows);
-
-    return mergeOutbox(base, outbox);
+    return mergeOutbox(pickBase(online, serverRows, cached), outbox);
   }, [online, serverRows, cached, outbox]);
 
   /**

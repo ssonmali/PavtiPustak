@@ -93,8 +93,14 @@ async function tx<T>(
 
 // --- Cached receipts -------------------------------------------------
 
+/**
+ * Replaces the device copy with the server's list.
+ *
+ * An empty list is a real answer, not a no-op: skipping it left a wiped or
+ * brand-new ledger showing whatever this device had cached, forever.
+ */
 export async function cacheReceipts(receipts: Receipt[]) {
-  if (!isAvailable() || receipts.length === 0) return;
+  if (!isAvailable()) return;
   try {
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
