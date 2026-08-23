@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import {
+  Clock,
   IndianRupee,
   Receipt as ReceiptIcon,
-  TrendingUp,
   TriangleAlert,
   Users,
   Wallet,
@@ -41,6 +41,7 @@ export function Overview({
   volunteers,
   expenseDays,
   pledges,
+  unpaidDays,
   due,
   mandalName,
   names,
@@ -49,6 +50,8 @@ export function Overview({
   volunteers: VolunteerTotal[];
   expenseDays: ExpenseDailyTotal[];
   pledges: PledgeTotals | null;
+  /** Unpaid receipt amounts with the date they were recorded. */
+  unpaidDays: { amount: number; collection_date: string }[];
   due: Receipt[];
   mandalName: string;
   names: NameMap;
@@ -83,13 +86,35 @@ export function Overview({
 
   const balance = total - spent;
 
+  // Over the same window as everything else on the page, and keyed on the date
+  // the contribution was recorded rather than when it is expected — so it lines
+  // up with the collected figure beside it.
+  const unpaid = React.useMemo(
+    () =>
+      filterByPeriod(unpaidDays, period).reduce(
+        (sum, r) => sum + Number(r.amount),
+        0,
+      ),
+    [unpaidDays, period],
+  );
+  const unpaidCount = React.useMemo(
+    () => filterByPeriod(unpaidDays, period).length,
+    [unpaidDays, period],
+  );
+
   const stats = [
     { label: t("stats.total"), value: formatAmount(total), icon: IndianRupee },
     { label: t("stats.receipts"), value: String(count), icon: ReceiptIcon },
     {
-      label: t("stats.avgReceipt"),
-      value: count ? formatAmount(total / count) : "—",
-      icon: TrendingUp,
+      label: t("stats.unpaid"),
+      value: formatAmount(unpaid),
+      icon: Clock,
+      // Money the mandal does not hold, so it does not wear the same weight as
+      // the collected figure beside it.
+      muted: true,
+      hint: unpaidCount
+        ? t("chart.receiptsCount", { count: unpaidCount })
+        : undefined,
     },
     {
       label: t("stats.volunteers"),
@@ -173,7 +198,7 @@ export function Overview({
       </Card>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {stats.map(({ label, value, icon: Icon }) => (
+        {stats.map(({ label, value, icon: Icon, muted, hint }) => (
           <Card key={label} className="card-elevated accent-top">
             <CardHeader>
               <CardDescription className="flex items-center gap-2">
@@ -182,9 +207,19 @@ export function Overview({
                 </span>
                 {label}
               </CardDescription>
-              <CardTitle className="text-2xl font-semibold tabular-nums sm:text-3xl">
+              <CardTitle
+                className={cn(
+                  "text-2xl font-semibold tabular-nums sm:text-3xl",
+                  muted && "text-muted-foreground",
+                )}
+              >
                 {value}
               </CardTitle>
+              {hint ? (
+                <CardDescription className="tabular-nums">
+                  {hint}
+                </CardDescription>
+              ) : null}
             </CardHeader>
           </Card>
         ))}
