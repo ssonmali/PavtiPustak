@@ -79,7 +79,15 @@ export function CategoryBreakdown({
                     <span className="tabular-nums">
                       {formatAmount(row.total)}
                     </span>
-                    <span className="w-10 text-right text-xs text-muted-foreground tabular-nums">
+                    {/* Not muted while selected: against the stronger fill
+                        the muted ink falls to 3.9:1, under the 4.5:1 small
+                        text needs. */}
+                    <span
+                      className={cn(
+                        "w-10 text-right text-xs tabular-nums",
+                        active ? "text-accent-foreground" : "text-muted-foreground",
+                      )}
+                    >
                       {share}%
                     </span>
                   </span>

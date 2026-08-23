@@ -23,7 +23,7 @@ const buttonVariants = cva(
         // A flat fill rather than the brand gradient: the default variant
         // paints a background-image, which no background-color can override.
         whatsapp:
-          "bg-whatsapp text-whatsapp-foreground shadow-[var(--elevation-sm)] hover:shadow-[var(--elevation-md)] hover:brightness-105 active:brightness-95 active:translate-y-px",
+          "bg-whatsapp text-whatsapp-ink hover:brightness-95 dark:hover:brightness-125",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
