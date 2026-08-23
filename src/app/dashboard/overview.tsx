@@ -178,7 +178,7 @@ export function Overview({
               "text-3xl font-semibold tabular-nums sm:text-4xl",
               // A negative balance is a real state — the mandal has committed
               // more than it has taken in — so it is called out, not hidden.
-              balance < 0 && "text-destructive",
+              balance < 0 ? "text-destructive" : "text-positive-ink",
             )}
           >
             {formatAmount(balance)}
@@ -200,20 +200,20 @@ export function Overview({
               <dt className="text-muted-foreground">
                 {t("balance.collected")}
               </dt>
-              <dd className="font-medium tabular-nums">
-                {formatAmount(total)}
+              <dd className="font-medium tabular-nums text-positive-ink">
+                +{formatAmount(total)}
               </dd>
             </div>
             <div className="flex items-baseline gap-2">
               <dt className="text-muted-foreground">{t("balance.spent")}</dt>
-              <dd className="font-medium tabular-nums">
+              <dd className="font-medium tabular-nums text-destructive">
                 &minus;{formatAmount(spent)}
               </dd>
             </div>
             {pledges && Number(pledges.expected) > 0 ? (
               <div className="flex items-baseline gap-2">
                 <dt className="text-muted-foreground">{t("due.expected")}</dt>
-                <dd className="font-medium tabular-nums text-muted-foreground">
+                <dd className="font-medium tabular-nums text-pending-ink">
                   {formatAmount(pledges.expected)}
                 </dd>
               </div>

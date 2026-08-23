@@ -30,6 +30,8 @@
   --color-positive: var(--positive);
   --color-info: var(--info);
   --color-pending: var(--pending);
+  --color-positive-ink: var(--positive-ink);
+  --color-pending-ink: var(--pending-ink);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -86,6 +88,12 @@
   --positive: oklch(0.48 0.13 150);
   --info: oklch(0.55 0.13 245);
   --pending: oklch(0.68 0.13 85);
+  /* The same two states as ink, stepped darker so they clear 4.5:1 as text on
+     a card: green 5.59:1, amber 4.83:1. Only ever used where a sign or a word
+     already carries the meaning — green and red are the confusable pair, so
+     colour here is the second reading, never the first. */
+  --positive-ink: oklch(0.5 0.13 150);
+  --pending-ink: oklch(0.55 0.105 85);
   --border: oklch(0.9 0.018 75);
   --input: oklch(0.9 0.018 75);
   --ring: oklch(0.56 0.16 48);
@@ -144,6 +152,9 @@
   --positive: oklch(0.56 0.13 150);
   --info: oklch(0.62 0.12 245);
   --pending: oklch(0.66 0.13 85);
+  /* Lighter than the light-mode ink, not darker: green 5.56:1, amber 6.49:1. */
+  --positive-ink: oklch(0.72 0.13 150);
+  --pending-ink: oklch(0.78 0.13 85);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.74 0.15 62);

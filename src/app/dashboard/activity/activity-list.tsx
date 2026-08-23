@@ -18,6 +18,7 @@ import {
   displayName,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -270,23 +271,19 @@ export function ActivityList({
                         <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
                           {/* The ledger is readable from the icon before any
                               text is read: a wallet means money going out. */}
-                          {isExpense ? (
-                            <Wallet
-                              className={
-                                entry.action === "deleted"
-                                  ? "size-4 text-destructive"
-                                  : "size-4 text-muted-foreground"
-                              }
-                            />
-                          ) : (
-                            <Icon
-                              className={
-                                entry.action === "deleted"
-                                  ? "size-4 text-destructive"
-                                  : "size-4 text-muted-foreground"
-                              }
-                            />
-                          )}
+                          {(() => {
+                            const Glyph = isExpense ? Wallet : Icon;
+                            return (
+                              <Glyph
+                                className={cn(
+                                  "size-4",
+                                  entry.action === "deleted" && "text-destructive",
+                                  entry.action === "created" && "text-positive-ink",
+                                  entry.action === "updated" && "text-pending-ink",
+                                )}
+                              />
+                            );
+                          })()}
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -296,8 +293,8 @@ export function ActivityList({
                                 entry.action === "deleted"
                                   ? "destructive"
                                   : entry.action === "created"
-                                    ? "outline"
-                                    : "secondary"
+                                    ? "positive"
+                                    : "warning"
                               }
                             >
                               {t(`activity.${entry.action}`)}
@@ -312,7 +309,27 @@ export function ActivityList({
                             {snapshot ? (
                               <span className="wrap-anywhere text-muted-foreground">
                                 · {title} ·{" "}
-                                <span className="tabular-nums">
+                                {/* The sign is what says which way the money
+                                    went; the colour repeats it. */}
+                                <span
+                                  className={cn(
+                                    "tabular-nums",
+                                    // A deleted row's amount is what it used to
+                                    // be. Showing it as a live inflow next to a
+                                    // red "deleted" badge would claim money that
+                                    // never landed, so it is struck instead.
+                                    entry.action === "deleted"
+                                      ? "text-muted-foreground line-through"
+                                      : isExpense
+                                        ? "text-destructive"
+                                        : "text-positive-ink",
+                                  )}
+                                >
+                                  {entry.action === "deleted"
+                                    ? ""
+                                    : isExpense
+                                      ? "\u2212"
+                                      : "+"}
                                   {formatAmount(Number(amount ?? 0))}
                                 </span>
                               </span>
