@@ -6,7 +6,6 @@ import type { Receipt } from "@/lib/types";
 import { displayName, formatAmount, formatDate } from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { PrintBar } from "../../print-bar";
-import { ShareReceipt } from "./share-receipt";
 
 export const metadata = { title: "Receipt · Pavti Pustak" };
 
@@ -45,15 +44,6 @@ export default async function ReceiptSlipPage({
     <div className="mx-auto flex max-w-md flex-col gap-4 print:max-w-none">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <PrintBar printLabel={t("report.print")} backLabel={t("report.back")} />
-        {/* Only for money actually received — an image of a pledge would look
-            exactly like a receipt once it is out of the app. */}
-        {receipt.payment_status === "Paid" ? (
-          <ShareReceipt
-            receipt={receipt}
-            mandalName={mandalName}
-            names={names}
-          />
-        ) : null}
       </div>
 
       <article className="relative overflow-hidden rounded-lg border bg-card p-5 text-card-foreground print:rounded-none print:border-2 print:p-6">

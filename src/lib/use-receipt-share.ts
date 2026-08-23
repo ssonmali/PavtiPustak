@@ -3,18 +3,31 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n/client";
+import { dictionaries, interpolate, type MessageKey } from "@/lib/i18n/dictionaries";
 import {
   displayName,
-  formatAmount,
+  formatAmountMarathi,
   formatDate,
   whatsappUrl,
 } from "@/lib/receipt-utils";
 import { drawReceiptImage, type ReceiptImageData } from "@/lib/receipt-image";
 import type { NameMap, Receipt } from "@/lib/types";
 
+/**
+ * The shared image is handed to whoever the contributor forwards it to, not
+ * just the volunteer who sent it — it reads in Marathi regardless of which
+ * language the sender has the app set to. Names are never run through this:
+ * they're proper nouns, not UI text.
+ */
+function tMarathi(key: MessageKey, values?: Record<string, string | number>) {
+  return interpolate(dictionaries.mr[key], values);
+}
+
 /** NEXT_PUBLIC_* are inlined at build time, so the client can read them. */
 const WATERMARK = process.env.NEXT_PUBLIC_RECEIPT_WATERMARK ?? null;
 const ADDRESS = process.env.NEXT_PUBLIC_MANDAL_ADDRESS ?? null;
+const PRESIDENT = process.env.NEXT_PUBLIC_MANDAL_PRESIDENT ?? null;
+const VICE_PRESIDENT = process.env.NEXT_PUBLIC_MANDAL_VICE_PRESIDENT ?? null;
 
 let fileShareSupport: boolean | null = null;
 
@@ -46,10 +59,20 @@ export function supportsFileShare() {
  * the addressed text message is a better outcome than a saved file nobody sends.
  */
 export function useReceiptShare(mandalName: string, names: NameMap) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
 
   return React.useCallback(
     async (receipt: Receipt) => {
+      // Copied up front, before anything that can fail below: if the share
+      // sheet opens the wrong chat, the volunteer can paste the right number
+      // in themselves rather than hunting for it back in the app.
+      try {
+        await navigator.clipboard.writeText(receipt.phone_number);
+      } catch {
+        // Clipboard access can be denied or unavailable; not worth blocking
+        // the send over.
+      }
+
       const collectedBy = receipt.created_by_email
         ? displayName(receipt.created_by_email, names)
         : null;
@@ -66,24 +89,28 @@ export function useReceiptShare(mandalName: string, names: NameMap) {
       const data: ReceiptImageData = {
         mandalName,
         address: ADDRESS,
-        title: t("slip.title"),
-        donorLabel: t("slip.received"),
+        title: tMarathi("slip.title"),
+        donorLabel: tMarathi("slip.received"),
         donorName: receipt.donor_name,
-        amountLabel: t("slip.amount"),
-        amount: formatAmount(receipt.amount),
+        amountLabel: tMarathi("slip.amount"),
+        amount: formatAmountMarathi(receipt.amount),
         rows: [
-          { label: t("slip.number"), value: String(receipt.receipt_number) },
+          { label: tMarathi("slip.number"), value: String(receipt.receipt_number) },
           {
-            label: t("slip.date"),
-            value: formatDate(receipt.collection_date, locale),
+            label: tMarathi("slip.date"),
+            value: formatDate(receipt.collection_date, "mr"),
           },
           {
-            label: t("slip.method"),
-            value: t(`method.${receipt.payment_method}`),
+            label: tMarathi("slip.method"),
+            value: tMarathi(`method.${receipt.payment_method}`),
           },
         ],
-        thanks: t("slip.thanks"),
-        footer: collectedBy ? `${t("slip.collectedBy")}: ${collectedBy}` : null,
+        thanks: tMarathi("slip.thanks"),
+        footer: collectedBy
+          ? `${tMarathi("slip.collectedBy")}: ${collectedBy}`
+          : null,
+        president: PRESIDENT,
+        vicePresident: VICE_PRESIDENT,
       };
 
       try {
@@ -105,6 +132,6 @@ export function useReceiptShare(mandalName: string, names: NameMap) {
         toast.error(t("share.failed"));
       }
     },
-    [locale, mandalName, names, t],
+    [mandalName, names, t],
   );
 }

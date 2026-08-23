@@ -9,6 +9,16 @@ const inr = new Intl.NumberFormat("en-IN", {
 export const formatAmount = (amount: number | string) =>
   inr.format(Number(amount));
 
+const inrDevanagari = new Intl.NumberFormat("mr-IN-u-nu-deva", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
+
+/** Devanagari digits (१, २, ३…) — for the shared image, not the rest of the app. */
+export const formatAmountMarathi = (amount: number | string) =>
+  inrDevanagari.format(Number(amount));
+
 /**
  * `2026-08-22` -> `22 Aug 2026`.
  *
@@ -139,23 +149,28 @@ export function volunteerName(email: string | null | undefined) {
   return words.length > 0 ? words.join(" ") : email;
 }
 
-/** Bilingual thank-you note, opened through the wa.me web intent. */
+/** NEXT_PUBLIC_* is inlined at build time, so this reads on server and client alike. */
+const MANDAL_ADDRESS = process.env.NEXT_PUBLIC_MANDAL_ADDRESS ?? null;
+
+/** Marathi thank-you note, opened through the wa.me web intent. */
 export function whatsappUrl(receipt: Receipt, mandalName: string) {
   const message = [
-    `🙏 *${mandalName}* 🙏`,
+    `🙏 ${mandalName} 🙏`,
+    ...(MANDAL_ADDRESS ? [`         ${MANDAL_ADDRESS}`] : []),
     "",
-    `प्रिय ${receipt.donor_name},`,
+    ` आदरणीय ${receipt.donor_name},`,
     `आपल्या वर्गणीसाठी मनःपूर्वक आभार! 🌺`,
     "",
-    `पावती क्रमांक: *${receipt.receipt_number}*`,
-    `रक्कम: *${formatAmount(receipt.amount)}*`,
-    `दिनांक: *${formatDate(receipt.collection_date)}*`,
-    `माध्यम: *${receipt.payment_method}*`,
+    `पावती क्रमांक: ${receipt.receipt_number}`,
+    `रक्कम: ${formatAmount(receipt.amount)}`,
+    `दिनांक: ${formatDate(receipt.collection_date)}`,
+    `माध्यम: ${receipt.payment_method}`,
     "",
-    `Thank you for your generous contribution of ${formatAmount(receipt.amount)}.`,
-    `Receipt No: ${receipt.receipt_number} | ${formatDate(receipt.collection_date)}`,
+    `आपल्या बहुमोल सहकार्यामुळे गणेशोत्सव अधिक उत्साहात आणि भक्तिमय वातावरणात साजरा करण्यास मोलाची मदत होईल. 🌺`,
     "",
-    `गणपती बाप्पा मोरया! 🎉`,
+    `🌸 आपल्या योगदानाबद्दल पुन्हा एकदा मनःपूर्वक आभार! 🌸`,
+    "",
+    `🚩🙏 गणपती बाप्पा मोरया🎉`,
   ].join("\n");
 
   // 91 = India country code; phone_number is stored as 10 digits.

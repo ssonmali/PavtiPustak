@@ -23,6 +23,8 @@ export type ReceiptImageData = {
   rows: { label: string; value: string }[];
   thanks: string;
   footer?: string | null;
+  president?: string | null;
+  vicePresident?: string | null;
 };
 
 /**
@@ -142,11 +144,8 @@ export async function drawReceiptImage(
     }
   };
 
-  // Saffron rule at the top, echoing the app's brand band.
-  ctx.fillStyle = "#e08a2c";
-  ctx.fillRect(pad, 68, inner, 6);
 
-  centred(data.mandalName, `600 60px ${DISPLAY}`, "#fdf6ec", 74);
+  centred(data.mandalName, `600 70px ${DISPLAY}`, "#fdf6ec", 64);
   if (data.address) {
     y += 6;
     centred(data.address, `400 28px ${SANS}`, "rgba(253, 246, 236, 0.72)", 38);
@@ -161,21 +160,25 @@ export async function drawReceiptImage(
   );
 
   // The amount is what a contributor checks first, so it gets the space.
-  y += 76;
-  centred(data.amountLabel, `500 30px ${SANS}`, "rgba(253, 246, 236, 0.7)", 42);
-  y += 24;
-  centred(data.amount, `700 108px ${SANS}`, "#ffffff", 120);
+  y += 54;
+  centred(data.amountLabel, `500 30px ${SANS}`, "rgba(253, 246, 236, 0.7)", 52);
+  // 108px text needs ~80px of clearance above its own baseline, or the label
+  // above it clips into the top of the digits.
+  y += 48;
+  centred(data.amount, `700 68px ${SANS}`, "#ffffff", 130);
 
   y += 40;
   ctx.fillStyle = "rgba(253, 246, 236, 0.22)";
   ctx.fillRect(pad, y, inner, 2);
 
-  y += 60;
-  centred(data.donorLabel, `400 28px ${SANS}`, "rgba(253, 246, 236, 0.7)", 38);
+  // Pushed down from the divider rather than sitting right under it, so the
+  // donor name reads as centred between this divider and the next one.
+  y += 88;
+  centred(data.donorLabel, `400 28px ${SANS}`, "rgba(253, 246, 236, 0.7)", 95);
   y += 12;
-  centred(data.donorName, `600 52px ${SANS}`, "#ffffff", 64);
+  centred(data.donorName, `600 102px ${SANS}`, "#ffffff", 70);
 
-  y += 46;
+  y += 18;
   ctx.fillStyle = "rgba(253, 246, 236, 0.22)";
   ctx.fillRect(pad, y, inner, 2);
 
@@ -194,13 +197,25 @@ export async function drawReceiptImage(
     y += 52;
   }
 
-  // Footer pinned to the bottom rather than following the rows, so receipts
-  // with different numbers of lines still look like the same document.
-  y = IMAGE_HEIGHT - 148;
-  centred(data.thanks, `600 46px ${DISPLAY}`, "#f6c17a", 56);
+  y = Math.min(Math.max(y + 64, IMAGE_HEIGHT - 150), IMAGE_HEIGHT - 120);
+  centred(data.thanks, `600 46px ${DISPLAY}`, "#f6c17a", 36);
   if (data.footer) {
     y += 10;
-    centred(data.footer, `400 26px ${SANS}`, "rgba(253, 246, 236, 0.6)", 34);
+    centred(data.footer, `400 26px ${SANS}`, "rgba(253, 246, 236, 0.6)", 24);
+  }
+
+  if (data.president || data.vicePresident) {
+    y += 16;
+    ctx.font = `500 30px ${SANS}`;
+    ctx.fillStyle = "rgba(253, 246, 236, 0.55)";
+    if (data.president) {
+      ctx.textAlign = "left";
+      ctx.fillText(`अध्यक्ष: ${data.president}`, pad, y);
+    }
+    if (data.vicePresident) {
+      ctx.textAlign = "right";
+      ctx.fillText(`उपाध्यक्ष: ${data.vicePresident}`, IMAGE_WIDTH - pad, y);
+    }
   }
 
   return await new Promise<Blob>((resolve, reject) => {

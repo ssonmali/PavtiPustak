@@ -203,6 +203,8 @@ export function ReceiptsTable({
   const [deleting, setDeleting] = React.useState(false);
   /** Id of the pledge currently being marked received. */
   const [marking, setMarking] = React.useState<string | null>(null);
+  /** Id of the receipt whose share image is currently being generated. */
+  const [sending, setSending] = React.useState<string | null>(null);
   /** Pledge waiting for the volunteer to say how it was actually paid. */
   const [toMarkPaid, setToMarkPaid] = React.useState<LocalReceipt | undefined>();
 
@@ -322,7 +324,8 @@ export function ReceiptsTable({
     }
     // Image with the receipt text as its caption, falling back to the
     // addressed wa.me message where the share sheet cannot take a file.
-    void shareReceipt(receipt);
+    setSending(receipt.id);
+    void shareReceipt(receipt).finally(() => setSending(null));
   }
 
   /** Queues the delete on the device; returns false if it could not be stored. */
@@ -466,7 +469,10 @@ export function ReceiptsTable({
                           button is dead rather than leaving it a mystery. */}
                       <Button
                         size="sm"
-                        disabled={receipt.payment_status === "Unpaid"}
+                        disabled={
+                          receipt.payment_status === "Unpaid" ||
+                          sending === receipt.id
+                        }
                         onClick={() => sendWhatsApp(receipt)}
                         title={
                           receipt.payment_status === "Unpaid"
@@ -475,7 +481,12 @@ export function ReceiptsTable({
                         }
                         variant="whatsapp"
                       >
-                        <MessageCircle /> {t("table.send")}
+                        {sending === receipt.id ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <MessageCircle />
+                        )}
+                        {t("table.send")}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -605,9 +616,15 @@ export function ReceiptsTable({
                   <Button
                     variant="whatsapp"
                     className="flex-1"
+                    disabled={sending === receipt.id}
                     onClick={() => sendWhatsApp(receipt)}
                   >
-                    <MessageCircle /> {t("table.send")}
+                    {sending === receipt.id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <MessageCircle />
+                    )}
+                    {t("table.send")}
                   </Button>
                 )}
                 <Button variant="ghost" onClick={() => openEdit(receipt)}>
