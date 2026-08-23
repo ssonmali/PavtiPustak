@@ -8,6 +8,7 @@ import type {
   AuditAction,
   ExpenseCategory,
   NameMap,
+  PaymentStatus,
 } from "@/lib/types";
 import {
   dayOf,
@@ -59,6 +60,10 @@ const TRACKED: Record<ActivityEntity, readonly string[]> = {
     "phone_number",
     "payment_method",
     "collection_date",
+    // Without these, marking a pledge received logged an "edited" entry with
+    // no visible change — the one edit most worth seeing in the log.
+    "payment_status",
+    "due_on",
   ],
   expense: [
     "description",
@@ -119,6 +124,9 @@ export function ActivityList({
       return t(`method.${String(value) as "Cash" | "UPI"}`);
     if (field === "category")
       return t(`category.${String(value) as ExpenseCategory}`);
+    if (field === "due_on") return formatDate(String(value), locale);
+    if (field === "payment_status")
+      return t(`status.${String(value) as PaymentStatus}`);
     return String(value);
   };
 
@@ -133,6 +141,8 @@ export function ActivityList({
       category: t("expenses.category"),
       spent_on: t("expenses.date"),
       note: t("expenses.note"),
+      payment_status: t("status.field"),
+      due_on: t("form.dueOn"),
     })[field] ?? field;
 
   return (

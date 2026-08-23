@@ -10,11 +10,16 @@ import {
   CloudOff,
   Plus,
   Search,
+  Check,
   Clock,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteReceipt, fetchReceipts } from "@/app/actions/receipts";
+import {
+  deleteReceipt,
+  fetchReceipts,
+  markReceiptPaid,
+} from "@/app/actions/receipts";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
 import {
   formatAmount,
@@ -166,6 +171,8 @@ export function ReceiptsTable({
   const [editing, setEditing] = React.useState<LocalReceipt | undefined>();
   const [toDelete, setToDelete] = React.useState<LocalReceipt | undefined>();
   const [deleting, setDeleting] = React.useState(false);
+  /** Id of the pledge currently being marked received. */
+  const [marking, setMarking] = React.useState<string | null>(null);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -198,6 +205,30 @@ export function ReceiptsTable({
       ? t("status.overdue", { date })
       : t("status.dueOn", { date });
   };
+
+  /** Marks a pledge received from the list, without opening the edit form. */
+  async function markPaid(receipt: LocalReceipt) {
+    if (receipt.pending === "create") {
+      toast.error(t("offline.noSend"));
+      return;
+    }
+    setMarking(receipt.id);
+    let result;
+    try {
+      result = await markReceiptPaid(receipt.id);
+    } catch {
+      setMarking(null);
+      toast.error(t("error.body"));
+      return;
+    }
+    setMarking(null);
+
+    if (!result.ok) {
+      toast.error("error" in result ? result.error : t("toast.conflict"));
+      return;
+    }
+    toast.success(t("status.markedPaid"));
+  }
 
   function sendWhatsApp(receipt: LocalReceipt) {
     // The message quotes the receipt number, which the server assigns on sync.
@@ -360,6 +391,14 @@ export function ReceiptsTable({
                           }
                         />
                         <DropdownMenuContent align="end">
+                          {receipt.payment_status === "Unpaid" ? (
+                            <DropdownMenuItem
+                              onClick={() => void markPaid(receipt)}
+                              disabled={marking === receipt.id}
+                            >
+                              <Check /> {t("status.markPaid")}
+                            </DropdownMenuItem>
+                          ) : null}
                           <DropdownMenuItem onClick={() => openEdit(receipt)}>
                             <Pencil /> {t("table.edit")}
                           </DropdownMenuItem>
@@ -446,13 +485,28 @@ export function ReceiptsTable({
               </div>
 
               <div className="mt-3 flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => sendWhatsApp(receipt)}
-                >
-                  <MessageCircle /> {t("table.send")}
-                </Button>
+                {receipt.payment_status === "Unpaid" ? (
+                  <Button
+                    className="flex-1"
+                    onClick={() => void markPaid(receipt)}
+                    disabled={marking === receipt.id}
+                  >
+                    {marking === receipt.id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <Check />
+                    )}
+                    {t("status.markPaid")}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => sendWhatsApp(receipt)}
+                  >
+                    <MessageCircle /> {t("table.send")}
+                  </Button>
+                )}
                 <Button variant="ghost" onClick={() => openEdit(receipt)}>
                   <Pencil /> {t("table.edit")}
                 </Button>

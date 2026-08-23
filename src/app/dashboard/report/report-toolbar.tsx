@@ -19,6 +19,9 @@ import type { Receipt } from "@/lib/types";
 import type { ReportRange } from "./report-range";
 
 type Labels = {
+  statusAll: string;
+  statusPaid: string;
+  statusUnpaid: string;
   today: string;
   all: string;
   from: string;
@@ -47,11 +50,13 @@ function rangeSlug({ from, to }: ReportRange) {
  */
 export function ReportToolbar({
   range,
+  status,
   labels,
   receipts,
   mandalName,
 }: {
   range: ReportRange;
+  status: "all" | "Paid" | "Unpaid";
   labels: Labels;
   /** The rows on the page, so Excel exports exactly what is printed. */
   receipts: Receipt[];
@@ -73,13 +78,34 @@ export function ReportToolbar({
     toast.success(t("toast.exported", { count: receipts.length }));
   }
 
+  /**
+   * A link for one part of the selection that keeps the other part. Without
+   * this, choosing "Unpaid" and then "Today" would silently drop the status.
+   */
+  const keep = (over: { range?: string; status?: string }) => {
+    const p = new URLSearchParams();
+    const nextRange = over.range ?? range.key;
+    if (nextRange === "today") p.set("range", "today");
+    if (nextRange === "custom") {
+      if (range.from) p.set("from", range.from);
+      if (range.to) p.set("to", range.to);
+    }
+    const nextStatus =
+      over.status ?? (status === "all" ? "" : status.toLowerCase());
+    if (nextStatus) p.set("status", nextStatus);
+    const qs = p.toString();
+    return qs ? `/dashboard/report?${qs}` : "/dashboard/report";
+  };
+
   const presets = [
-    {
-      key: "today",
-      href: "/dashboard/report?range=today",
-      label: labels.today,
-    },
-    { key: "all", href: "/dashboard/report", label: labels.all },
+    { key: "today", href: keep({ range: "today" }), label: labels.today },
+    { key: "all", href: keep({ range: "all" }), label: labels.all },
+  ] as const;
+
+  const statuses = [
+    { key: "all", label: labels.statusAll },
+    { key: "Paid", label: labels.statusPaid },
+    { key: "Unpaid", label: labels.statusUnpaid },
   ] as const;
 
   return (
@@ -122,6 +148,27 @@ export function ReportToolbar({
         method="get"
         className="overflow-hidden rounded-lg border"
       >
+        {/* Status sits with the ranges: both narrow what gets printed. */}
+        <div className="flex flex-wrap items-center gap-1 border-b bg-muted/40 p-1.5">
+          {statuses.map((s) => (
+            <Button
+              key={s.key}
+              size="sm"
+              variant={status === s.key ? "secondary" : "ghost"}
+              nativeButton={false}
+              render={
+                <Link
+                  href={keep({
+                    status: s.key === "all" ? "" : s.key.toLowerCase(),
+                  })}
+                />
+              }
+            >
+              {s.label}
+            </Button>
+          ))}
+        </div>
+
         <div className="flex flex-wrap items-center gap-1 border-b bg-muted/40 p-1.5">
           {presets.map((p) => (
             <Button
@@ -135,6 +182,10 @@ export function ReportToolbar({
             </Button>
           ))}
         </div>
+
+        {status === "all" ? null : (
+          <input type="hidden" name="status" value={status.toLowerCase()} />
+        )}
 
         <div className="flex flex-wrap items-end gap-2 p-3">
           <div className="flex flex-col gap-1">

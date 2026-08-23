@@ -9,6 +9,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { OfflineBadge } from "@/components/offline-badge";
 import { ReceiptsTable } from "../receipts-table";
 import { filterByPeriod, PeriodFilter, type Period } from "../period-filter";
+import {
+  filterByStatus,
+  StatusFilterBar,
+  type StatusFilter,
+} from "../status-filter";
 
 export function ReceiptsView({
   receipts,
@@ -21,6 +26,7 @@ export function ReceiptsView({
 }) {
   const { t } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
+  const [status, setStatus] = React.useState<StatusFilter>("all");
 
   const onFlush = React.useCallback(
     (result: FlushResult) => {
@@ -42,9 +48,20 @@ export function ReceiptsView({
   const { online, syncing, pending, receipts: local, queue } =
     useOfflineReceipts({ serverRows: receipts, onFlush });
 
-  const visible = React.useMemo(
+  const inPeriod = React.useMemo(
     () => filterByPeriod(local, period),
     [local, period],
+  );
+
+  const visible = React.useMemo(
+    () => filterByStatus(inPeriod, status),
+    [inPeriod, status],
+  );
+
+  // Counted within the period, so the badge matches what switching would show.
+  const unpaidCount = React.useMemo(
+    () => inPeriod.filter((r) => r.payment_status === "Unpaid").length,
+    [inPeriod],
   );
 
   return (
@@ -61,6 +78,12 @@ export function ReceiptsView({
         <PeriodFilter period={period} onChange={setPeriod} />
       </div>
 
+      <StatusFilterBar
+        status={status}
+        onChange={setStatus}
+        unpaidCount={unpaidCount}
+      />
+
       <OfflineBadge online={online} pending={pending} syncing={syncing} />
 
       <Card className="card-elevated">
@@ -68,8 +91,9 @@ export function ReceiptsView({
           <ReceiptsTable
             receipts={visible}
             mandalName={mandalName}
-            // Pagination only makes sense against the live server list.
-            total={online ? total : undefined}
+            // Pagination only makes sense against the live server list, and
+            // only when nothing is filtered out of it client-side.
+            total={online && status === "all" ? total : undefined}
             online={online}
             queue={queue}
           />

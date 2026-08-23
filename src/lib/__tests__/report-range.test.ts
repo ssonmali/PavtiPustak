@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parseRange } from "@/app/dashboard/report/report-range";
+import {
+  parseRange,
+  parseStatus,
+} from "@/app/dashboard/report/report-range";
 import { todayInIst } from "@/lib/receipt-utils";
 
 describe("parseRange", () => {
@@ -54,5 +57,29 @@ describe("parseRange", () => {
     expect(parseRange({ from: ["2026-08-01", "2026-09-01"] }).from).toBe(
       "2026-08-01",
     );
+  });
+});
+
+describe("parseStatus", () => {
+  it("defaults to both statuses", () => {
+    expect(parseStatus({})).toBe("all");
+  });
+
+  it("reads the two narrowing values", () => {
+    expect(parseStatus({ status: "paid" })).toBe("Paid");
+    expect(parseStatus({ status: "unpaid" })).toBe("Unpaid");
+  });
+
+  it("is case-insensitive, since these end up hand-typed", () => {
+    expect(parseStatus({ status: "Paid" })).toBe("Paid");
+    expect(parseStatus({ status: "UNPAID" })).toBe("Unpaid");
+  });
+
+  it("ignores anything else rather than printing nothing", () => {
+    expect(parseStatus({ status: "junk" })).toBe("all");
+  });
+
+  it("takes the first value when the param repeats", () => {
+    expect(parseStatus({ status: ["unpaid", "paid"] })).toBe("Unpaid");
   });
 });

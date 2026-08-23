@@ -30,6 +30,18 @@ function day(value: string | string[] | undefined) {
  * Reads the range out of the query string. Unparseable or missing values fall
  * back to all time rather than erroring — a printed report is not worth a 400.
  */
+/** `?status=paid|unpaid` narrows the report; anything else means both. */
+export function parseStatus(
+  params: Record<string, string | string[] | undefined>,
+): "all" | "Paid" | "Unpaid" {
+  const raw = (
+    Array.isArray(params.status) ? params.status[0] : params.status
+  )?.toLowerCase();
+  if (raw === "paid") return "Paid";
+  if (raw === "unpaid") return "Unpaid";
+  return "all";
+}
+
 export function parseRange(
   params: Record<string, string | string[] | undefined>,
 ): ReportRange {
