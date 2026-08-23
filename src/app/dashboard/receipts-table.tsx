@@ -424,7 +424,9 @@ export function ReceiptsTable({
                     {receipt.phone_number}
                   </TableCell>
                   <TableCell>
-                    <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
+                    {receipt.payment_status === "Paid" ? (
+                      <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
+                    ) : null}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {formatDate(receipt.collection_date, locale)}
@@ -544,7 +546,9 @@ export function ReceiptsTable({
                   >
                     {formatAmount(receipt.amount)}
                   </span>
-                  <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
+                  {receipt.payment_status === "Paid" ? (
+                    <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
+                  ) : null}
                 </div>
               </div>
 

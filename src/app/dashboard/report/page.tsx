@@ -183,9 +183,12 @@ export default async function ReportPage({
                   <th>{t("slip.number")}</th>
                   <th>{t("table.donor")}</th>
                   <th>{t("table.mobile")}</th>
-                  <th>{t("table.method")}</th>
+                  {section.key === "Unpaid" ? (
+                    <th>{t("form.dueOn")}</th>
+                  ) : (
+                    <th>{t("table.method")}</th>
+                  )}
                   <th>{t("table.date")}</th>
-                  {section.key === "Unpaid" ? <th>{t("form.dueOn")}</th> : null}
                   <th className="text-right">{t("table.amount")}</th>
                 </tr>
               </thead>
@@ -195,15 +198,16 @@ export default async function ReportPage({
                     <td className="tabular-nums">{r.receipt_number}</td>
                     <td>{r.donor_name}</td>
                     <td className="tabular-nums">{r.phone_number}</td>
-                    <td>{t(`method.${r.payment_method}`)}</td>
-                    <td className="whitespace-nowrap">
-                      {formatDate(r.collection_date, locale)}
-                    </td>
                     {section.key === "Unpaid" ? (
                       <td className="whitespace-nowrap">
                         {r.due_on ? formatDate(r.due_on, locale) : "—"}
                       </td>
-                    ) : null}
+                    ) : (
+                      <td>{t(`method.${r.payment_method}`)}</td>
+                    )}
+                    <td className="whitespace-nowrap">
+                      {formatDate(r.collection_date, locale)}
+                    </td>
                     <td className="text-right tabular-nums">
                       {formatAmount(r.amount)}
                     </td>
@@ -212,7 +216,7 @@ export default async function ReportPage({
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={section.key === "Unpaid" ? 6 : 5}>
+                  <td colSpan={5}>
                     {section.key === "Unpaid"
                       ? t("due.expected")
                       : t("report.grandTotal")}
@@ -240,7 +244,9 @@ export default async function ReportPage({
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     #{r.receipt_number} · {r.phone_number} ·{" "}
-                    {t(`method.${r.payment_method}`)} ·{" "}
+                    {section.key === "Unpaid"
+                      ? ""
+                      : `${t(`method.${r.payment_method}`)} · `}
                     {formatDate(r.collection_date, locale)}
                     {r.due_on
                       ? ` · ${t("form.dueOn")} ${formatDate(r.due_on, locale)}`

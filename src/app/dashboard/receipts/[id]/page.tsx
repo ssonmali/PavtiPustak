@@ -29,7 +29,10 @@ export default async function ReceiptSlipPage({
 
   const rows = [
     { label: t("slip.amount"), value: formatAmount(receipt.amount), strong: true },
-    { label: t("slip.method"), value: t(`method.${receipt.payment_method}`) },
+    // A method hasn't been chosen for a pledge — nothing has been received yet.
+    ...(receipt.payment_status === "Paid"
+      ? [{ label: t("slip.method"), value: t(`method.${receipt.payment_method}`) }]
+      : []),
     { label: t("slip.date"), value: formatDate(receipt.collection_date, locale) },
   ];
 

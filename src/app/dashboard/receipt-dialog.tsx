@@ -48,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 type QueueFn = (
   entry: Omit<OutboxEntry, "localId" | "queuedAt" | "attempts">,
@@ -374,24 +375,37 @@ function ReceiptDialogBody({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label>{t("form.method")}</Label>
-              {/* Base UI Select is controlled; mirror it into a hidden input. */}
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-3",
+              status === "Paid" && "sm:grid-cols-2",
+            )}
+          >
+            {/* How it was received isn't known until it is — a pledge has no
+                method yet, so asking now would just record a guess. */}
+            {status === "Paid" ? (
+              <div className="flex flex-col gap-2">
+                <Label>{t("form.method")}</Label>
+                {/* Base UI Select is controlled; mirror it into a hidden input. */}
+                <input type="hidden" name="payment_method" value={method} />
+                <Select value={method} onValueChange={(v) => setMethod(String(v))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {t(`method.${m}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              // Still submitted so the not-null column is satisfied; meaningless
+              // until the pledge is marked received, when this field reappears.
               <input type="hidden" name="payment_method" value={method} />
-              <Select value={method} onValueChange={(v) => setMethod(String(v))}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_METHODS.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {t(`method.${m}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <Label>{t("form.date")}</Label>
