@@ -93,13 +93,17 @@ export function SettingsMenu({
           <Settings />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuLabel>{t("settings.theme")}</DropdownMenuLabel>
+          {/* Each heading sits inside its group: Base UI's group label reads a
+              context the group provides and throws outright without one, and
+              nesting is what associates the heading with the group for a
+              screen reader. */}
           {/* Left open on choose: the theme applies instantly, so you can see
               the change land without reopening the menu to try the next one. */}
           <DropdownMenuRadioGroup
             value={currentTheme}
             onValueChange={(v) => setTheme(String(v))}
           >
+            <DropdownMenuLabel>{t("settings.theme")}</DropdownMenuLabel>
             {THEMES.map((option) => {
               const Icon = THEME_ICONS[option];
               return (
@@ -117,7 +121,6 @@ export function SettingsMenu({
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuLabel>{t("settings.language")}</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={locale}
             onValueChange={(v) => {
@@ -125,6 +128,7 @@ export function SettingsMenu({
               startTransition(() => setLocale(String(v)));
             }}
           >
+            <DropdownMenuLabel>{t("settings.language")}</DropdownMenuLabel>
             {LOCALES.map((code) => (
               <DropdownMenuRadioItem key={code} value={code}>
                 <Languages />
