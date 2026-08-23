@@ -1,4 +1,4 @@
-import type { Receipt } from "@/lib/types";
+import type { NameMap, Receipt } from "@/lib/types";
 
 const inr = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -95,6 +95,48 @@ export function toDateValue(date: Date) {
 export function utcMidnight(isoDate: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d));
+}
+
+/**
+ * The name to show for a volunteer: the one they set, or one derived from their
+ * email address when they have not set one.
+ *
+ * Attribution is stored as an email on every receipt and audit row, so the
+ * lookup is by address rather than by user id — which also means a volunteer
+ * naming themselves renames their whole history at once.
+ */
+export function displayName(
+  email: string | null | undefined,
+  names?: NameMap,
+) {
+  if (!email) return null;
+  return names?.[email.toLowerCase()] ?? volunteerName(email);
+}
+
+/**
+ * A readable volunteer name from a login email.
+ *
+ * Accounts are created by hand in the Supabase dashboard, so there is no
+ * profile record to read a real name from — the local part of the address is
+ * the only name the app has. `sanket.sonmali@…` reads as "Sanket Sonmali".
+ * Addresses that are not name-shaped are left recognisable rather than
+ * mangled: `ganesh123@…` becomes "Ganesh 123".
+ */
+export function volunteerName(email: string | null | undefined) {
+  if (!email) return null;
+
+  // A `+tag` suffix is routing, not part of anyone's name.
+  const local = email.split("@")[0].split("+")[0];
+  if (!local) return email;
+
+  const words = local
+    .split(/[._-]+/)
+    // A digit run is its own word: `ganesh123` reads better as "Ganesh 123".
+    .flatMap((part) => part.match(/\d+|\D+/g) ?? [])
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1).toLowerCase());
+
+  return words.length > 0 ? words.join(" ") : email;
 }
 
 /** Bilingual thank-you note, opened through the wa.me web intent. */

@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogOut, ReceiptText } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getMyName } from "@/lib/volunteer-names";
+import { volunteerName } from "@/lib/receipt-utils";
 import { Button } from "@/components/ui/button";
 import { getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/client";
@@ -22,7 +25,10 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  const { locale, t } = await getDictionary();
+  const [{ locale, t }, myName] = await Promise.all([
+    getDictionary(),
+    getMyName(),
+  ]);
 
   return (
     <I18nProvider locale={locale}>
@@ -37,9 +43,14 @@ export default async function DashboardLayout({
               <p className="truncate font-display text-[0.95rem] leading-tight font-semibold tracking-tight">
                 {process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal"}
               </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {user.email}
-              </p>
+              {/* The name doubles as the way into the one setting there is. */}
+              <Link
+                href="/dashboard/settings"
+                title={t("nav.settings")}
+                className="block truncate text-xs text-muted-foreground underline-offset-3 hover:text-foreground hover:underline"
+              >
+                {myName ?? volunteerName(user.email) ?? user.email}
+              </Link>
             </div>
             <RealtimeRefresh />
             <ThemeToggle />

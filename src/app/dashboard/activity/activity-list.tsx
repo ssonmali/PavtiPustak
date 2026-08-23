@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { FilePlus2, Pencil, Trash2, User } from "lucide-react";
-import type { AuditAction, AuditEntry } from "@/lib/types";
+import type { AuditAction, AuditEntry, NameMap } from "@/lib/types";
 import {
   dayOf,
   formatAmount,
   formatDate,
   formatTime,
+  displayName,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +44,13 @@ const TRACKED = [
   "collection_date",
 ] as const;
 
-export function ActivityList({ entries }: { entries: AuditEntry[] }) {
+export function ActivityList({
+  entries,
+  names,
+}: {
+  entries: AuditEntry[];
+  names: NameMap;
+}) {
   const { t, locale } = useI18n();
   const [action, setAction] = React.useState<"all" | AuditAction>("all");
   const [actor, setActor] = React.useState<string>("all");
@@ -126,7 +133,9 @@ export function ActivityList({ entries }: { entries: AuditEntry[] }) {
                   <Button variant="outline" size="sm" className="max-w-48">
                     <User />
                     <span className="truncate">
-                      {actor === "all" ? t("activity.allVolunteers") : actor}
+                      {actor === "all"
+                        ? t("activity.allVolunteers")
+                        : displayName(actor, names)}
                     </span>
                   </Button>
                 }
@@ -137,7 +146,7 @@ export function ActivityList({ entries }: { entries: AuditEntry[] }) {
                 </DropdownMenuItem>
                 {volunteers.map((email) => (
                   <DropdownMenuItem key={email} onClick={() => setActor(email)}>
-                    {email}
+                    {displayName(email, names)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -242,7 +251,8 @@ export function ActivityList({ entries }: { entries: AuditEntry[] }) {
                           <p className="mt-1 text-xs text-muted-foreground">
                             {formatTime(entry.changed_at, locale)} ·{" "}
                             {t("activity.by", {
-                              who: entry.actor_email ?? "—",
+                              who:
+                                displayName(entry.actor_email, names) ?? "—",
                             })}
                           </p>
                         </div>

@@ -7,8 +7,8 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import type { DailyTotal, VolunteerTotal } from "@/lib/types";
-import { formatAmount } from "@/lib/receipt-utils";
+import type { DailyTotal, NameMap, VolunteerTotal } from "@/lib/types";
+import { displayName, formatAmount } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import {
   Card,
@@ -23,9 +23,11 @@ import { PeriodFilter, startOf, type Period } from "./period-filter";
 export function Overview({
   daily,
   volunteers,
+  names,
 }: {
   daily: DailyTotal[];
   volunteers: VolunteerTotal[];
+  names: NameMap;
 }) {
   const { t } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
@@ -117,7 +119,7 @@ export function Overview({
                   <li key={v.volunteer} className="flex flex-col gap-1">
                     <div className="flex items-baseline gap-2 text-sm">
                       <span className="wrap-anywhere min-w-0 flex-1 truncate">
-                        {v.volunteer}
+                        {displayName(v.volunteer, names)}
                       </span>
                       <span className="tabular-nums">
                         {formatAmount(v.total)}

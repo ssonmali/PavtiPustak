@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getVolunteerNames } from "@/lib/volunteer-names";
 import type { Receipt } from "@/lib/types";
-import { formatAmount, formatDate } from "@/lib/receipt-utils";
+import { displayName, formatAmount, formatDate } from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { PrintBar } from "../../print-bar";
 
@@ -18,11 +19,10 @@ export default async function ReceiptSlipPage({
   const { locale, t } = await getDictionary();
   const mandalName = process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal";
 
-  const { data } = await supabase
-    .from("receipts")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data }, names] = await Promise.all([
+    supabase.from("receipts").select("*").eq("id", id).maybeSingle(),
+    getVolunteerNames(),
+  ]);
 
   if (!data) notFound();
   const receipt = data as Receipt;
@@ -81,7 +81,8 @@ export default async function ReceiptSlipPage({
           <p className="text-sm font-medium">{t("slip.thanks")}</p>
           {receipt.created_by_email ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              {t("slip.collectedBy")}: {receipt.created_by_email}
+              {t("slip.collectedBy")}:{" "}
+              {displayName(receipt.created_by_email, names)}
             </p>
           ) : null}
         </footer>

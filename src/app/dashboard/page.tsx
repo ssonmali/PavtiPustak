@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getVolunteerNames } from "@/lib/volunteer-names";
 import type { DailyTotal, VolunteerTotal } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Overview } from "./overview";
@@ -10,7 +11,7 @@ export default async function DashboardPage() {
 
   // Aggregates come from views, so the dashboard stays a few hundred bytes
   // whether the mandal has 50 receipts or 50,000.
-  const [daily, volunteers] = await Promise.all([
+  const [daily, volunteers, names] = await Promise.all([
     supabase
       .from("receipt_daily_totals")
       .select("*")
@@ -20,6 +21,7 @@ export default async function DashboardPage() {
       .from("volunteer_totals")
       .select("*")
       .order("total", { ascending: false }),
+    getVolunteerNames(),
   ]);
 
   const error = daily.error ?? volunteers.error;
@@ -40,6 +42,7 @@ export default async function DashboardPage() {
     <Overview
       daily={(daily.data ?? []) as DailyTotal[]}
       volunteers={(volunteers.data ?? []) as VolunteerTotal[]}
+      names={names}
     />
   );
 }

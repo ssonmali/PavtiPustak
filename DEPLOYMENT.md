@@ -2,7 +2,7 @@
 
 ## 1. Apply the database migrations
 
-Run these in the Supabase dashboard → **SQL Editor**, in order. All four are
+Run these in the Supabase dashboard → **SQL Editor**, in order. All of them are
 re-runnable.
 
 | File | What it does |
@@ -13,6 +13,7 @@ re-runnable.
 | `supabase/04-views-and-locking.sql` | Aggregate views, `updated_at`, creator email |
 | `supabase/05-realtime-fix.sql` | Replica identity + audit publication |
 | `supabase/06-ping.sql` | `ping()` for the daily keep-alive |
+| `supabase/07-volunteer-names.sql` | Volunteer display names, set by each volunteer |
 
 Then run `supabase/verify.sql` — it lists the policies, the trigger, and the
 audit row count so you can confirm everything landed.
@@ -22,6 +23,14 @@ audit row count so you can confirm everything landed.
 **Authentication → Users → Add user.** Tick **Auto Confirm User**, or the
 account cannot log in. There is no public sign-up by design; also turn off
 *Allow new users to sign up* under **Authentication → Sign In / Providers**.
+
+**Volunteers set their own display name in the app** — the name in the header
+links to the form. Until someone sets one, the name is derived from their email:
+`sanket.sonmali@…` reads as "Sanket Sonmali", and `ganesh123@…` as "Ganesh 123".
+Prefer `firstname.lastname@…` addresses so the default is already right.
+
+A volunteer can only rename themselves; the RLS policy compares the row's email
+against the one in the JWT, so nobody can rename a colleague.
 
 ## 3. Deploy to Vercel
 

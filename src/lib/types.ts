@@ -72,6 +72,16 @@ export type AuditEntry = {
   after: Receipt | null;
 };
 
+/** One row of `public.volunteer_names` — a volunteer's own display name. */
+export type VolunteerName = {
+  email: string;
+  display_name: string;
+  updated_at: string;
+};
+
+/** Email → display name, for resolving attribution without a per-row query. */
+export type NameMap = Record<string, string>;
+
 /** Minimal generated-types shape so every client call is strictly typed. */
 export type Database = {
   public: {
@@ -80,6 +90,12 @@ export type Database = {
         Row: Receipt;
         Insert: ReceiptInput & { user_id: string };
         Update: Partial<ReceiptInput>;
+        Relationships: [];
+      };
+      volunteer_names: {
+        Row: VolunteerName;
+        Insert: Pick<VolunteerName, "email" | "display_name">;
+        Update: Pick<VolunteerName, "display_name">;
         Relationships: [];
       };
       receipt_audit: {

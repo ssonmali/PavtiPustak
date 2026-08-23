@@ -14,7 +14,7 @@ export default async function NotFound() {
           <p className="font-medium">{t("notFound.title")}</p>
           <p className="text-sm text-muted-foreground">{t("notFound.body")}</p>
         </div>
-        <Button render={<Link href="/dashboard" />}>{t("error.home")}</Button>
+        <Button nativeButton={false} render={<Link href="/dashboard" />}>{t("error.home")}</Button>
       </div>
     </main>
   );

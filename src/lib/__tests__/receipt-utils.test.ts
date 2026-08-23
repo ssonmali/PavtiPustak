@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   dayOf,
+  displayName,
   formatAmount,
   formatDate,
   formatDateShort,
   formatDateTime,
   toDateValue,
   utcMidnight,
+  volunteerName,
   whatsappUrl,
 } from "@/lib/receipt-utils";
 import type { Receipt } from "@/lib/types";
@@ -72,6 +74,74 @@ describe("utcMidnight", () => {
     // derived; a fractional result means the sheet shows the previous day.
     const serial = utcMidnight("2026-08-01").getTime() / 86_400_000 + 25_569;
     expect(serial).toBe(46_235);
+  });
+});
+
+describe("volunteerName", () => {
+  it("reads a dotted address as a name", () => {
+    expect(volunteerName("sanket.sonmali@smartdings.com")).toBe(
+      "Sanket Sonmali",
+    );
+  });
+
+  it("splits on underscores and hyphens too", () => {
+    expect(volunteerName("anita_deshmukh@gmail.com")).toBe("Anita Deshmukh");
+    expect(volunteerName("ram-joshi@gmail.com")).toBe("Ram Joshi");
+  });
+
+  it("normalises shouty addresses", () => {
+    expect(volunteerName("MANDAL.TREASURER@gmail.com")).toBe(
+      "Mandal Treasurer",
+    );
+  });
+
+  it("drops a +tag, which is routing rather than a name", () => {
+    expect(volunteerName("sanket.sonmali+mandal@gmail.com")).toBe(
+      "Sanket Sonmali",
+    );
+  });
+
+  it("leaves an address that is not name-shaped recognisable", () => {
+    expect(volunteerName("treasurer@gmail.com")).toBe("Treasurer");
+  });
+
+  it("separates a digit run from the word beside it", () => {
+    expect(volunteerName("ganesh123@gmail.com")).toBe("Ganesh 123");
+    expect(volunteerName("2ganesh@gmail.com")).toBe("2 Ganesh");
+    expect(volunteerName("ram.joshi2@gmail.com")).toBe("Ram Joshi 2");
+  });
+
+  it("returns null for a missing email so callers can fall back", () => {
+    expect(volunteerName(null)).toBeNull();
+    expect(volunteerName(undefined)).toBeNull();
+  });
+
+  it("never returns an empty string", () => {
+    expect(volunteerName("@gmail.com")).toBe("@gmail.com");
+  });
+});
+
+describe("displayName", () => {
+  const names = { "ganesh123@gmail.com": "Ganesh Kulkarni" };
+
+  it("prefers the name a volunteer set", () => {
+    expect(displayName("ganesh123@gmail.com", names)).toBe("Ganesh Kulkarni");
+  });
+
+  it("matches the map case-insensitively", () => {
+    expect(displayName("Ganesh123@Gmail.com", names)).toBe("Ganesh Kulkarni");
+  });
+
+  it("falls back to the derived name when none is set", () => {
+    expect(displayName("ram.joshi@gmail.com", names)).toBe("Ram Joshi");
+  });
+
+  it("works with no map at all", () => {
+    expect(displayName("ram.joshi@gmail.com")).toBe("Ram Joshi");
+  });
+
+  it("stays null for a missing email", () => {
+    expect(displayName(null, names)).toBeNull();
   });
 });
 

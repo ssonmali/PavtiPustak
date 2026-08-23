@@ -1,7 +1,7 @@
 # पावती पुस्तक · Pavti Pustak
 
 Vargani (contribution) receipt management for a Ganesh Mandal. Volunteers record
-contributions on their phones, WhatsApp a receipt to the donor, and the treasurer
+contributions on their phones, WhatsApp a receipt to the contributor, and the treasurer
 prints the ledger for accounting.
 
 ## Features
@@ -12,6 +12,7 @@ prints the ledger for accounting.
   plus a printable slip per receipt
 - **Overview** — daily collection chart split by Cash/UPI, per-volunteer totals
 - **Activity log** — every change, by whom, with a field-level diff
+- **Volunteer names** — each volunteer sets the name shown against their work
 - **Bilingual** — Marathi (default) and English
 - **Realtime** — every volunteer's device stays in sync
 - **Offline-first** — enter receipts with no signal; they queue on the device

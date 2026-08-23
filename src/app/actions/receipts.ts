@@ -4,6 +4,8 @@ import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { receiptSchema } from "@/lib/schemas";
 import type { Receipt } from "@/lib/types";
+import { displayName } from "@/lib/receipt-utils";
+import { getVolunteerNames } from "@/lib/volunteer-names";
 
 export type ActionResult =
   | { ok: true }
@@ -61,7 +63,11 @@ export async function createReceipt(formData: FormData): Promise<ActionResult> {
         duplicate: {
           amount: Number(existing.amount),
           date: existing.collection_date,
-          who: existing.created_by_email,
+          // Resolved here: the dialog has an email and no name map.
+          who: displayName(
+            existing.created_by_email,
+            await getVolunteerNames(),
+          ),
         },
       };
     }

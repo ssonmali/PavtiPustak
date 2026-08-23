@@ -28,3 +28,11 @@ select 'views' as check, table_name
 from information_schema.views
 where table_schema = 'public'
 order by table_name;
+
+-- 8. Volunteer display names (migration 07) ------------------------
+select
+  (select count(*) from public.volunteer_names) as names_set,
+  (
+    select count(*) from pg_policies
+    where schemaname = 'public' and tablename = 'volunteer_names'
+  ) as name_policies;   -- expect 4

@@ -20,7 +20,6 @@ import type { ReportRange } from "./report-range";
 
 type Labels = {
   today: string;
-  custom: string;
   all: string;
   from: string;
   to: string;
@@ -75,35 +74,26 @@ export function ReportToolbar({
   }
 
   const presets = [
-    { key: "today", href: "/dashboard/report?range=today", label: labels.today },
+    {
+      key: "today",
+      href: "/dashboard/report?range=today",
+      label: labels.today,
+    },
     { key: "all", href: "/dashboard/report", label: labels.all },
   ] as const;
 
   return (
     // print:hidden keeps the toolbar out of the PDF itself.
     <div className="flex flex-col gap-3 print:hidden">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           size="sm"
+          nativeButton={false}
           render={<Link href="/dashboard/receipts" />}
         >
           <ArrowLeft /> {labels.back}
         </Button>
-
-        <div className="flex items-center gap-1 rounded-lg border p-0.5">
-          {presets.map((p) => (
-            <Button
-              key={p.key}
-              size="sm"
-              variant={range.key === p.key ? "secondary" : "outline"}
-              className="border-transparent shadow-none"
-              render={<Link href={p.href} />}
-            >
-              {p.label}
-            </Button>
-          ))}
-        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -125,43 +115,60 @@ export function ReportToolbar({
       </div>
 
       <form
+        // The date fields are uncontrolled, so a range picked elsewhere has to
+        // arrive as a fresh instance; changing defaultValue in place is ignored.
+        key={`${range.from ?? ""}:${range.to ?? ""}`}
         action="/dashboard/report"
         method="get"
-        className="flex flex-wrap items-end gap-2 rounded-lg border p-3"
+        className="overflow-hidden rounded-lg border"
       >
-        <p className="w-full text-xs font-medium">{labels.custom}</p>
+        <div className="flex flex-wrap items-center gap-1 border-b bg-muted/40 p-1.5">
+          {presets.map((p) => (
+            <Button
+              key={p.key}
+              size="sm"
+              variant={range.key === p.key ? "secondary" : "ghost"}
+              nativeButton={false}
+              render={<Link href={p.href} />}
+            >
+              {p.label}
+            </Button>
+          ))}
+        </div>
 
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="from" className="text-xs text-muted-foreground">
-            {labels.from}
-          </Label>
-          <Input
-            id="from"
-            name="from"
-            type="date"
-            defaultValue={range.from ?? ""}
-            className="w-40"
-          />
+        <div className="flex flex-wrap items-end gap-2 p-3">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="from" className="text-xs text-muted-foreground">
+              {labels.from}
+            </Label>
+            <Input
+              id="from"
+              name="from"
+              type="date"
+              defaultValue={range.from ?? ""}
+              className="w-40"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="to" className="text-xs text-muted-foreground">
+              {labels.to}
+            </Label>
+            <Input
+              id="to"
+              name="to"
+              type="date"
+              defaultValue={range.to ?? ""}
+              className="w-40"
+            />
+          </div>
+          <Button
+            type="submit"
+            size="sm"
+            variant={range.key === "custom" ? "secondary" : "outline"}
+          >
+            {labels.apply}
+          </Button>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="to" className="text-xs text-muted-foreground">
-            {labels.to}
-          </Label>
-          <Input
-            id="to"
-            name="to"
-            type="date"
-            defaultValue={range.to ?? ""}
-            className="w-40"
-          />
-        </div>
-        <Button
-          type="submit"
-          size="sm"
-          variant={range.key === "custom" ? "secondary" : "outline"}
-        >
-          {labels.apply}
-        </Button>
       </form>
     </div>
   );

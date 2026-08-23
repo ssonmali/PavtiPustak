@@ -56,7 +56,6 @@ export default async function ReportPage({
         range={range}
         labels={{
           today: t("period.today"),
-          custom: t("report.custom"),
           all: t("period.all"),
           from: t("report.from"),
           to: t("report.to"),

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getVolunteerNames } from "@/lib/volunteer-names";
 import type { AuditEntry } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { ActivityList } from "./activity-list";
@@ -7,6 +8,7 @@ export const metadata = { title: "Activity · Pavti Pustak" };
 
 export default async function ActivityPage() {
   const supabase = await createClient();
+  const names = await getVolunteerNames();
 
   // Newest first, capped — the log grows forever and nobody scrolls past 200.
   const { data, error } = await supabase
@@ -28,5 +30,7 @@ export default async function ActivityPage() {
     );
   }
 
-  return <ActivityList entries={(data ?? []) as AuditEntry[]} />;
+  return (
+    <ActivityList entries={(data ?? []) as AuditEntry[]} names={names} />
+  );
 }
