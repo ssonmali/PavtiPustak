@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   Clock,
   IndianRupee,
+  Sigma,
   Receipt as ReceiptIcon,
   TriangleAlert,
   Users,
@@ -103,6 +104,12 @@ export function Overview({
   );
 
   const stats = [
+    {
+      // Everything recorded, received or not — what the mandal is counting on.
+      label: t("stats.estimated"),
+      value: formatAmount(total + unpaid),
+      icon: Sigma,
+    },
     { label: t("stats.total"), value: formatAmount(total), icon: IndianRupee },
     { label: t("stats.receipts"), value: String(count), icon: ReceiptIcon },
     {
@@ -197,7 +204,7 @@ export function Overview({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
         {stats.map(({ label, value, icon: Icon, muted, hint }) => (
           <Card key={label} className="card-elevated accent-top">
             <CardHeader>

@@ -121,6 +121,7 @@ const en = {
   "activity.noneInPeriod": "No changes in this period.",
 
   // Stats
+  "stats.estimated": "Total estimated",
   "stats.total": "Total collected",
   "stats.receipts": "Receipts",
   "stats.donors": "Contributors",
@@ -387,6 +388,7 @@ const mr: Record<MessageKey, string> = {
   "activity.dayCount": "{count} बदल",
   "activity.noneInPeriod": "या कालावधीत बदल नाही.",
 
+  "stats.estimated": "एकूण अंदाजित",
   "stats.total": "एकूण जमा",
   "stats.receipts": "पावत्या",
   "stats.donors": "वर्गणीदार",
