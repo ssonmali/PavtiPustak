@@ -83,9 +83,6 @@ export function ReceiptsView({
             <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
               {t("table.title")}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {online ? t("table.subtitle") : t("offline.showingSaved")}
-            </p>
           </div>
           <Button
             size="sm"

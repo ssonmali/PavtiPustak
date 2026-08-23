@@ -31,6 +31,8 @@ import {
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { ReceiptDialog } from "./receipt-dialog";
+import { SortFilter } from "./sort-filter";
+import { DEFAULT_SORT, sortRows, type SortKey } from "./sort-rows";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -166,6 +168,7 @@ export function ReceiptsTable({
 }) {
   const { t, locale } = useI18n();
   const [query, setQuery] = React.useState("");
+  const [sort, setSort] = React.useState<SortKey>(DEFAULT_SORT);
   const [loadingMore, setLoadingMore] = React.useState(false);
 
   // The server sends the first page; further pages append here. A realtime
@@ -202,14 +205,22 @@ export function ReceiptsTable({
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter(
-      (r) =>
-        r.donor_name.toLowerCase().includes(q) ||
-        r.phone_number.includes(q) ||
-        String(r.receipt_number) === q,
-    );
-  }, [all, query]);
+    const matched = !q
+      ? all
+      : all.filter(
+          (r) =>
+            r.donor_name.toLowerCase().includes(q) ||
+            r.phone_number.includes(q) ||
+            String(r.receipt_number) === q,
+        );
+    // Sorts what is loaded. With a paginated tail the top of an amount sort is
+    // the largest of the rows fetched so far, not of the whole ledger.
+    return sortRows(matched, sort, {
+      date: (r) => r.collection_date,
+      amount: (r) => r.amount,
+      name: (r) => r.donor_name,
+    }, locale);
+  }, [all, query, sort, locale]);
 
   function openCreate() {
     setEditing(undefined);
@@ -350,14 +361,17 @@ export function ReceiptsTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative sm:max-w-xs">
-        <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("table.search")}
-          className="pl-8"
-        />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative sm:max-w-xs sm:flex-1">
+          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("table.search")}
+            className="pl-8"
+          />
+        </div>
+        <SortFilter value={sort} onChange={setSort} />
       </div>
 
       {/* Phones get the card list below; the table starts at sm. */}

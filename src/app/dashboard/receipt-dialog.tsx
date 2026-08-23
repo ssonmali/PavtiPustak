@@ -390,7 +390,11 @@ function ReceiptDialogBody({
                 <input type="hidden" name="payment_method" value={method} />
                 <Select value={method} onValueChange={(v) => setMethod(String(v))}>
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    {/* Without a formatter Base UI puts the raw value here, so
+                        the trigger read "Cash" while the list read "रोख". */}
+                    <SelectValue>
+                      {(v) => t(v === "UPI" ? "method.UPI" : "method.Cash")}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {PAYMENT_METHODS.map((m) => (

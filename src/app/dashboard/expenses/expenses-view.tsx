@@ -46,6 +46,8 @@ import {
   type Period,
 } from "../period-filter";
 import { ExpenseDialog } from "./expense-dialog";
+import { SortFilter } from "../sort-filter";
+import { DEFAULT_SORT, sortRows, type SortKey } from "../sort-rows";
 import { CategoryBreakdown } from "./category-breakdown";
 import { categoryTotals } from "./category-totals";
 
@@ -62,6 +64,7 @@ export function ExpensesView({
   const { t, locale } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
   const [query, setQuery] = React.useState("");
+  const [sort, setSort] = React.useState<SortKey>(DEFAULT_SORT);
   const [category, setCategory] = React.useState<ExpenseCategory | null>(null);
   const [editing, setEditing] = React.useState<Expense | undefined>();
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -87,14 +90,20 @@ export function ExpensesView({
     const inCategory = category
       ? inPeriod.filter((e) => e.category === category)
       : inPeriod;
-    if (!clean) return inCategory;
-    return inCategory.filter(
-      (e) =>
-        e.description.toLowerCase().includes(clean) ||
-        (e.note ?? "").toLowerCase().includes(clean) ||
-        e.category.toLowerCase().includes(clean),
-    );
-  }, [inPeriod, query, category]);
+    const matched = !clean
+      ? inCategory
+      : inCategory.filter(
+          (e) =>
+            e.description.toLowerCase().includes(clean) ||
+            (e.note ?? "").toLowerCase().includes(clean) ||
+            e.category.toLowerCase().includes(clean),
+        );
+    return sortRows(matched, sort, {
+      date: (e) => e.spent_on,
+      amount: (e) => e.amount,
+      name: (e) => e.description,
+    }, locale);
+  }, [inPeriod, query, category, sort, locale]);
 
   const total = visible.reduce((sum, e) => sum + Number(e.amount), 0);
 
@@ -169,14 +178,17 @@ export function ExpensesView({
       <Card className="card-elevated">
         <CardContent>
           <div className="flex flex-col gap-3">
-            <div className="relative sm:max-w-xs">
-              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("expenses.search")}
-                className="pl-8"
-              />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative sm:max-w-xs sm:flex-1">
+                <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("expenses.search")}
+                  className="pl-8"
+                />
+              </div>
+              <SortFilter value={sort} onChange={setSort} />
             </div>
 
             {/* Phones get the card list below; the table starts at sm. */}
