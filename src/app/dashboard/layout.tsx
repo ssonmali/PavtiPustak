@@ -1,15 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LogOut, ReceiptText } from "lucide-react";
-import { logout } from "@/app/actions/auth";
+import { ReceiptText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getMyName } from "@/lib/volunteer-names";
 import { todayInIst, volunteerName } from "@/lib/receipt-utils";
-import { Button } from "@/components/ui/button";
 import { getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/client";
-import { LanguageToggle } from "@/components/language-toggle";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { SettingsMenu } from "@/components/settings-menu";
 import { BottomNav, SidebarNav } from "./sidebar-nav";
 import { RealtimeRefresh } from "./realtime-refresh";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
@@ -29,7 +25,7 @@ export default async function DashboardLayout({
 
   const today = todayInIst();
 
-  const [{ locale, t }, myName, { data: dueToday }] = await Promise.all([
+  const [{ locale }, myName, { data: dueToday }] = await Promise.all([
     getDictionary(),
     getMyName(),
     // Pledges due exactly today, for the bell — overdue-but-older pledges
@@ -55,25 +51,18 @@ export default async function DashboardLayout({
               <p className="truncate font-display text-[0.95rem] leading-tight font-semibold tracking-tight">
                 {process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
               </p>
-              {/* The name doubles as the way into the one setting there is. */}
-              <Link
-                href="/dashboard/settings"
-                title={t("nav.settings")}
-                className="block truncate text-xs text-muted-foreground underline-offset-3 hover:text-foreground hover:underline"
-              >
+              <p className="truncate text-xs text-muted-foreground">
                 {myName ?? volunteerName(user.email) ?? user.email}
-              </Link>
+              </p>
             </div>
             <RealtimeRefresh />
             <NotificationBell dueToday={(dueToday ?? []) as Receipt[]} />
-            <ThemeToggle />
-            <LanguageToggle locale={locale} />
-            <form action={logout}>
-              <Button type="submit" variant="outline" size="sm">
-                <LogOut />
-                <span className="hidden sm:inline">{t("auth.logout")}</span>
-              </Button>
-            </form>
+            <SettingsMenu
+              locale={locale}
+              name={myName}
+              email={user.email ?? ""}
+              derivedName={volunteerName(user.email) ?? ""}
+            />
           </div>
         </header>
 

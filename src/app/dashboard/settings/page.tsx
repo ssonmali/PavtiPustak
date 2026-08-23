@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getMyName } from "@/lib/volunteer-names";
 import { getDictionary } from "@/lib/i18n/server";
 import { volunteerName } from "@/lib/receipt-utils";
-import { NameForm } from "./name-form";
+import { Card, CardContent } from "@/components/ui/card";
+import { NameForm } from "@/components/name-form";
 
 export const metadata = { title: "Your name · Pavti Pustak" };
 
@@ -29,13 +30,17 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      <NameForm
-        name={name}
-        email={email}
-        // What the app falls back to, so the placeholder shows what happens if
-        // the field is left blank rather than an unrelated example name.
-        derived={volunteerName(email) ?? ""}
-      />
+      <Card className="card-elevated">
+        <CardContent>
+          <NameForm
+            name={name}
+            email={email}
+            // What the app falls back to, so the placeholder shows what happens
+            // if the field is left blank rather than an unrelated example name.
+            derived={volunteerName(email) ?? ""}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

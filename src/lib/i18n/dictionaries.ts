@@ -74,6 +74,12 @@ const en = {
   "settings.tooLong": "Keep the name under 60 characters.",
   "settings.failed": "Could not save the name.",
   "settings.signedInAs": "Signed in as {email}",
+  "settings.menu": "Settings",
+  "settings.theme": "Theme",
+  "settings.language": "Language",
+  "theme.system": "System",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
 
   // Errors & empty states
   "error.title": "Something went wrong",
@@ -352,6 +358,12 @@ const mr: Record<MessageKey, string> = {
   "settings.tooLong": "नाव ६० अक्षरांपेक्षा कमी ठेवा.",
   "settings.failed": "नाव जतन करता आले नाही.",
   "settings.signedInAs": "{email} म्हणून साइन इन",
+  "settings.menu": "सेटिंग्ज",
+  "settings.theme": "रंगसंगती",
+  "settings.language": "भाषा",
+  "theme.system": "सिस्टीमनुसार",
+  "theme.light": "उजळ",
+  "theme.dark": "गडद",
 
   "error.title": "काहीतरी चूक झाली",
   "error.body": "नोंदवही उघडता आली नाही. तुमच्या पावत्या सुरक्षित आहेत.",
