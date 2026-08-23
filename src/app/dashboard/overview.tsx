@@ -13,12 +13,10 @@ import {
 import type {
   DailyTotal,
   ExpenseDailyTotal,
-  NameMap,
   PledgeTotals,
   Receipt,
-  VolunteerTotal,
 } from "@/lib/types";
-import { displayName, formatAmount } from "@/lib/receipt-utils";
+import { formatAmount } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import {
@@ -39,23 +37,22 @@ import {
 
 export function Overview({
   daily,
-  volunteers,
+  volunteerCount,
   expenseDays,
   pledges,
   unpaidDays,
   due,
   mandalName,
-  names,
 }: {
   daily: DailyTotal[];
-  volunteers: VolunteerTotal[];
+  /** Only the count is shown; the per-volunteer breakdown was removed. */
+  volunteerCount: number;
   expenseDays: ExpenseDailyTotal[];
   pledges: PledgeTotals | null;
   /** Unpaid receipt amounts with the date they were recorded. */
   unpaidDays: { amount: number; collection_date: string }[];
   due: Receipt[];
   mandalName: string;
-  names: NameMap;
 }) {
   const { t } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
@@ -125,7 +122,7 @@ export function Overview({
     },
     {
       label: t("stats.volunteers"),
-      value: String(volunteers.length),
+      value: String(volunteerCount),
       icon: Users,
     },
   ];
@@ -240,45 +237,6 @@ export function Overview({
           </CardHeader>
           <CardContent>
             <DailyCollections days={visible} />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {volunteers.length > 0 ? (
-        <Card className="card-elevated">
-          <CardHeader>
-            <CardTitle>{t("volunteers.title")}</CardTitle>
-            <CardDescription>{t("volunteers.subtitle")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col gap-2">
-              {volunteers.map((v) => {
-                const share = total
-                  ? Math.round((Number(v.total) / total) * 100)
-                  : 0;
-                return (
-                  <li key={v.volunteer} className="flex flex-col gap-1">
-                    <div className="flex items-baseline gap-2 text-sm">
-                      <span className="wrap-anywhere min-w-0 flex-1 truncate">
-                        {displayName(v.volunteer, names)}
-                      </span>
-                      <span className="tabular-nums">
-                        {formatAmount(v.total)}
-                      </span>
-                      <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">
-                        {t("chart.receiptsCount", { count: v.receipt_count })}
-                      </span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-[image:var(--brand-gradient)]"
-                        style={{ width: `${share}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
           </CardContent>
         </Card>
       ) : null}
