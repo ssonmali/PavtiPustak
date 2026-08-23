@@ -21,7 +21,7 @@ const ITEMS = [
 ] as const;
 
 /** Vertical rail, shown from md up. */
-export function SidebarNav({ dueCount = 0 }: { dueCount?: number }) {
+export function SidebarNav() {
   const { t } = useI18n();
   const pathname = usePathname();
 
@@ -51,13 +51,6 @@ export function SidebarNav({ dueCount = 0 }: { dueCount?: number }) {
             ) : null}
             <Icon className={cn("size-4 shrink-0", active && "text-primary")} />
             {t(labelKey)}
-            {/* Contributions still to collect, so the reminder is visible from
-                anywhere in the app rather than only on the overview. */}
-            {href === "/dashboard/receipts" && dueCount > 0 ? (
-              <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] leading-none font-semibold text-primary-foreground tabular-nums">
-                {dueCount}
-              </span>
-            ) : null}
           </Link>
         );
       })}
@@ -66,7 +59,7 @@ export function SidebarNav({ dueCount = 0 }: { dueCount?: number }) {
 }
 
 /** Thumb-reachable bottom tabs, the same destinations, below md. */
-export function BottomNav({ dueCount = 0 }: { dueCount?: number }) {
+export function BottomNav() {
   const { t } = useI18n();
   const pathname = usePathname();
 
@@ -90,14 +83,7 @@ export function BottomNav({ dueCount = 0 }: { dueCount?: number }) {
                 className="absolute top-0 h-0.5 w-8 rounded-full bg-[image:var(--brand-gradient)]"
               />
             ) : null}
-            <span className="relative">
-              <Icon className="size-5" />
-              {href === "/dashboard/receipts" && dueCount > 0 ? (
-                <span className="absolute -top-1 -right-2 rounded-full bg-primary px-1 py-px text-[9px] leading-none font-semibold text-primary-foreground tabular-nums">
-                  {dueCount}
-                </span>
-              ) : null}
-            </span>
+            <Icon className="size-5" />
             <span className="truncate px-1">{t(labelKey)}</span>
           </Link>
         );

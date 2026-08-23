@@ -13,6 +13,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { BottomNav, SidebarNav } from "./sidebar-nav";
 import { RealtimeRefresh } from "./realtime-refresh";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
+import { NotificationBell } from "./notification-bell";
+import type { Receipt } from "@/lib/types";
 
 export default async function DashboardLayout({
   children,
@@ -25,17 +27,19 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  const [{ locale, t }, myName, dueCount] = await Promise.all([
+  const today = todayInIst();
+
+  const [{ locale, t }, myName, { data: dueToday }] = await Promise.all([
     getDictionary(),
     getMyName(),
-    // Pledges due today or overdue, for the badge on the Receipts tab. `head`
-    // fetches no rows — only the count.
+    // Pledges due exactly today, for the bell — overdue-but-older pledges
+    // already had their day and don't need to keep re-alerting.
     supabase
       .from("receipts")
-      .select("id", { count: "exact", head: true })
+      .select("*")
       .eq("payment_status", "Unpaid")
-      .lte("due_on", todayInIst())
-      .then(({ count }) => count ?? 0),
+      .eq("due_on", today)
+      .order("amount", { ascending: false }),
   ]);
 
   return (
@@ -61,6 +65,7 @@ export default async function DashboardLayout({
               </Link>
             </div>
             <RealtimeRefresh />
+            <NotificationBell dueToday={(dueToday ?? []) as Receipt[]} />
             <ThemeToggle />
             <LanguageToggle locale={locale} />
             <form action={logout}>
@@ -73,11 +78,11 @@ export default async function DashboardLayout({
         </header>
 
         <div className="mx-auto flex w-full max-w-7xl flex-1">
-          <SidebarNav dueCount={dueCount} />
+          <SidebarNav />
           <main className="min-w-0 flex-1 p-3 sm:p-4">{children}</main>
         </div>
 
-        <BottomNav dueCount={dueCount} />
+        <BottomNav />
       </div>
     </I18nProvider>
   );
