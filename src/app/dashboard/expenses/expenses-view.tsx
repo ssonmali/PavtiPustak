@@ -10,7 +10,7 @@ import {
   formatAmount,
   formatDate,
 } from "@/lib/receipt-utils";
-import type { Expense, NameMap } from "@/lib/types";
+import type { Expense, ExpenseCategory, NameMap } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +46,8 @@ import {
   type Period,
 } from "../period-filter";
 import { ExpenseDialog } from "./expense-dialog";
+import { CategoryBreakdown } from "./category-breakdown";
+import { categoryTotals } from "./category-totals";
 
 export function ExpensesView({
   expenses,
@@ -60,6 +62,7 @@ export function ExpensesView({
   const { t, locale } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
   const [query, setQuery] = React.useState("");
+  const [category, setCategory] = React.useState<ExpenseCategory | null>(null);
   const [editing, setEditing] = React.useState<Expense | undefined>();
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [toDelete, setToDelete] = React.useState<Expense | undefined>();
@@ -75,16 +78,23 @@ export function ExpensesView({
     [expenses, period],
   );
 
+  // Built from the period alone, deliberately before the category filter: a
+  // breakdown computed after it would collapse to the one row you selected.
+  const breakdown = React.useMemo(() => categoryTotals(inPeriod), [inPeriod]);
+
   const visible = React.useMemo(() => {
     const clean = query.trim().toLowerCase();
-    if (!clean) return inPeriod;
-    return inPeriod.filter(
+    const inCategory = category
+      ? inPeriod.filter((e) => e.category === category)
+      : inPeriod;
+    if (!clean) return inCategory;
+    return inCategory.filter(
       (e) =>
         e.description.toLowerCase().includes(clean) ||
         (e.note ?? "").toLowerCase().includes(clean) ||
         e.category.toLowerCase().includes(clean),
     );
-  }, [inPeriod, query]);
+  }, [inPeriod, query, category]);
 
   const total = visible.reduce((sum, e) => sum + Number(e.amount), 0);
 
@@ -142,6 +152,12 @@ export function ExpensesView({
           {t("expenses.limit", { count: truncated })}
         </p>
       ) : null}
+
+      <CategoryBreakdown
+        rows={breakdown}
+        selected={category}
+        onSelect={setCategory}
+      />
 
       <Card className="card-elevated">
         <CardContent>
