@@ -8,7 +8,6 @@ import {
   Pencil,
   Printer,
   CloudOff,
-  Plus,
   Search,
   Check,
   Clock,
@@ -139,6 +138,9 @@ type QueueFn = (
   entry: Omit<OutboxEntry, "localId" | "queuedAt" | "attempts">,
 ) => Promise<void>;
 
+/** Lets the page header open the create dialog this component owns. */
+export type ReceiptsTableHandle = { openCreate: () => void };
+
 export function ReceiptsTable({
   receipts,
   mandalName,
@@ -147,6 +149,7 @@ export function ReceiptsTable({
   queue,
   editors,
   setPresence,
+  ref,
 }: {
   receipts: LocalReceipt[];
   mandalName: string;
@@ -159,6 +162,7 @@ export function ReceiptsTable({
   editors: Editors;
   /** Announces which receipt this device has open. */
   setPresence: (receiptId: string | null) => void;
+  ref?: React.Ref<ReceiptsTableHandle>;
 }) {
   const { t, locale } = useI18n();
   const [query, setQuery] = React.useState("");
@@ -211,6 +215,8 @@ export function ReceiptsTable({
     setEditing(undefined);
     setDialogOpen(true);
   }
+
+  React.useImperativeHandle(ref, () => ({ openCreate }));
 
   function openEdit(receipt: LocalReceipt) {
     // Advisory only — the save is still guarded by the updated_at check. This
@@ -344,19 +350,14 @@ export function ReceiptsTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative sm:max-w-xs sm:flex-1">
-          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("table.search")}
-            className="pl-8"
-          />
-        </div>
-        <Button onClick={openCreate} className="w-full sm:ml-auto sm:w-auto">
-          <Plus /> {t("table.new")}
-        </Button>
+      <div className="relative sm:max-w-xs">
+        <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("table.search")}
+          className="pl-8"
+        />
       </div>
 
       {/* Phones get the card list below; the table starts at sm. */}

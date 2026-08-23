@@ -6,9 +6,11 @@ import type { Receipt } from "@/lib/types";
 import { useI18n } from "@/lib/i18n/client";
 import { useOfflineReceipts, type FlushResult } from "@/lib/offline";
 import { useEditingPresence } from "@/lib/use-editing-presence";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OfflineBadge } from "@/components/offline-badge";
-import { ReceiptsTable } from "../receipts-table";
+import { ReceiptsTable, type ReceiptsTableHandle } from "../receipts-table";
 import { filterByPeriod, PeriodFilter, type Period } from "../period-filter";
 import {
   filterByStatus,
@@ -63,6 +65,8 @@ export function ReceiptsView({
     [inPeriod, status],
   );
 
+  const tableRef = React.useRef<ReceiptsTableHandle>(null);
+
   // Counted within the period, so the badge matches what switching would show.
   const unpaidCount = React.useMemo(
     () => inPeriod.filter((r) => r.payment_status === "Unpaid").length,
@@ -73,9 +77,14 @@ export function ReceiptsView({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="mr-auto">
-          <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
-            {t("table.title")}
-          </h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
+              {t("table.title")}
+            </h1>
+            <Button size="sm" onClick={() => tableRef.current?.openCreate()}>
+              <Plus /> {t("table.new")}
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground">
             {online ? t("table.subtitle") : t("offline.showingSaved")}
           </p>
@@ -103,6 +112,7 @@ export function ReceiptsView({
             queue={queue}
             editors={editors}
             setPresence={setPresence}
+            ref={tableRef}
           />
         </CardContent>
       </Card>

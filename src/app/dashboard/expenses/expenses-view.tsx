@@ -133,9 +133,16 @@ export function ExpensesView({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="mr-auto">
-          <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
-            {t("expenses.title")}
-          </h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
+              {t("expenses.title")}
+            </h1>
+            {/* Beside the heading rather than down in the ledger card: adding
+                an expense is why you come to this page. */}
+            <Button size="sm" onClick={openCreate}>
+              <Plus /> {t("expenses.new")}
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground">
             {t("expenses.total")}:{" "}
             <span className="font-medium tabular-nums text-foreground">
@@ -156,19 +163,14 @@ export function ExpensesView({
       <Card className="card-elevated">
         <CardContent>
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative sm:max-w-xs sm:flex-1">
-                <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t("expenses.search")}
-                  className="pl-8"
-                />
-              </div>
-              <Button onClick={openCreate} className="w-full sm:ml-auto sm:w-auto">
-                <Plus /> {t("expenses.new")}
-              </Button>
+            <div className="relative sm:max-w-xs">
+              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("expenses.search")}
+                className="pl-8"
+              />
             </div>
 
             {/* Phones get the card list below; the table starts at sm. */}
