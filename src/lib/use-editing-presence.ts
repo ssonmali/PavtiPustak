@@ -35,6 +35,26 @@ export function editorsFromPresence(
 }
 
 /**
+ * What to push, given the socket state and what this device has open.
+ *
+ * Pure and exported for the tests. Presence cannot be pushed before the channel
+ * has joined — doing so throws — and joining is asynchronous, so every push has
+ * to be gated on it rather than on a render.
+ */
+export function presenceAction(
+  joined: boolean,
+  editing: string | null,
+  tracked: boolean,
+): "track" | "untrack" | "none" {
+  // Nothing can be pushed yet. Whatever is open will be tracked by the rejoin.
+  if (!joined) return "none";
+  if (editing) return "track";
+  // Only worth a push if this device actually has presence to withdraw; on
+  // mount, and after a close that already untracked, there is nothing to clear.
+  return tracked ? "untrack" : "none";
+}
+
+/**
  * Announces which receipt this volunteer has open, and reports who else has one
  * open right now.
  *
@@ -60,6 +80,10 @@ export function useEditingPresence(myName: string) {
   const channelRef = React.useRef<ReturnType<
     ReturnType<typeof createClient>["channel"]
   > | null>(null);
+  /** True only between a SUBSCRIBED ack and the socket dropping. */
+  const [joined, setJoined] = React.useState(false);
+  /** Whether this device currently has presence on the channel. */
+  const trackedRef = React.useRef(false);
 
   React.useEffect(() => {
     const supabase = createClient();
@@ -86,12 +110,18 @@ export function useEditingPresence(myName: string) {
       if (session?.access_token) {
         await supabase.realtime.setAuth(session.access_token);
       }
-      channel.subscribe();
+      // Presence can only be pushed once the server has acked the join, so the
+      // publish effect below waits on this rather than on the first render.
+      channel.subscribe((status) => {
+        if (disposed) return;
+        setJoined(status === "SUBSCRIBED");
+      });
     })();
 
     return () => {
       disposed = true;
       channelRef.current = null;
+      trackedRef.current = false;
       void supabase.removeChannel(channel);
     };
   }, []);
@@ -102,14 +132,26 @@ export function useEditingPresence(myName: string) {
     const channel = channelRef.current;
     if (!channel) return;
 
+    // A dropped socket takes this device's presence with it, so a reconnect has
+    // to re-announce: `joined` going false then true re-runs this effect.
+    if (!joined) {
+      trackedRef.current = false;
+      return;
+    }
+
+    const action = presenceAction(joined, editing, trackedRef.current);
+    if (action === "none") return;
+
     void (async () => {
-      if (editing) {
+      if (action === "track") {
         await channel.track({ receipt_id: editing, who: myName });
+        trackedRef.current = true;
       } else {
         await channel.untrack();
+        trackedRef.current = false;
       }
     })();
-  }, [editing, myName]);
+  }, [joined, editing, myName]);
 
   return {
     /** Receipt id → names of other volunteers with it open. */

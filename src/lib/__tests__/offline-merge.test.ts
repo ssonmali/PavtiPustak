@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { localId, mergeOutbox } from "@/lib/offline/merge";
+import { localId, mergeOutbox, pickBase } from "@/lib/offline/merge";
 import type { OutboxEntry } from "@/lib/offline/db";
 import type { Receipt } from "@/lib/types";
 
@@ -140,5 +140,30 @@ describe("localId", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("pickBase", () => {
+  const server = [row({ id: "s1" })];
+  const cached = [row({ id: "c1" })];
+
+  // The bug this pins: a wiped ledger returns an empty server list, and
+  // treating that as "nothing loaded" left the old cached rows on screen with
+  // no way to ever clear them.
+  it("shows nothing when the server has nothing and we are online", () => {
+    expect(pickBase(true, [], cached)).toEqual([]);
+  });
+
+  it("prefers the server list when online", () => {
+    expect(pickBase(true, server, cached)).toEqual(server);
+  });
+
+  it("falls back to the device copy when offline", () => {
+    expect(pickBase(false, [], cached)).toEqual(cached);
+  });
+
+  it("uses the server list offline when the device has no copy", () => {
+    expect(pickBase(false, server, null)).toEqual(server);
+    expect(pickBase(false, server, [])).toEqual(server);
   });
 });

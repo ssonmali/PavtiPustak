@@ -8,7 +8,6 @@ import {
   Pencil,
   Printer,
   CloudOff,
-  Plus,
   Search,
   Check,
   Clock,
@@ -21,17 +20,19 @@ import {
   markReceiptPaid,
 } from "@/app/actions/receipts";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/types";
+import { useReceiptShare } from "@/lib/use-receipt-share";
+import { PAYMENT_METHODS, type NameMap, type PaymentMethod } from "@/lib/types";
 import type { Editors } from "@/lib/use-editing-presence";
 import {
   formatAmount,
   formatDate,
   todayInIst,
-  whatsappUrl,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { ReceiptDialog } from "./receipt-dialog";
+import { SortFilter } from "./sort-filter";
+import { DEFAULT_SORT, sortRows, type SortKey } from "./sort-rows";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -113,7 +114,7 @@ function UnpaidBadge({
         "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
         overdue
           ? "border-destructive/40 bg-destructive/10 text-destructive"
-          : "border-border bg-muted text-muted-foreground",
+          : "border-pending/45 bg-pending/15 text-foreground",
       )}
     >
       <Clock aria-hidden className="size-3" />
@@ -139,17 +140,24 @@ type QueueFn = (
   entry: Omit<OutboxEntry, "localId" | "queuedAt" | "attempts">,
 ) => Promise<void>;
 
+/** Lets the page header open the create dialog this component owns. */
+export type ReceiptsTableHandle = { openCreate: () => void };
+
 export function ReceiptsTable({
   receipts,
   mandalName,
+  names,
   total,
   online = true,
   queue,
   editors,
   setPresence,
+  ref,
 }: {
   receipts: LocalReceipt[];
   mandalName: string;
+  /** Volunteer display names, for the "collected by" line on the image. */
+  names: NameMap;
   /** Total rows on the server, when the list is paginated. */
   total?: number;
   online?: boolean;
@@ -159,9 +167,11 @@ export function ReceiptsTable({
   editors: Editors;
   /** Announces which receipt this device has open. */
   setPresence: (receiptId: string | null) => void;
+  ref?: React.Ref<ReceiptsTableHandle>;
 }) {
   const { t, locale } = useI18n();
   const [query, setQuery] = React.useState("");
+  const [sort, setSort] = React.useState<SortKey>(DEFAULT_SORT);
   const [loadingMore, setLoadingMore] = React.useState(false);
 
   // The server sends the first page; further pages append here. A realtime
@@ -193,24 +203,36 @@ export function ReceiptsTable({
   const [deleting, setDeleting] = React.useState(false);
   /** Id of the pledge currently being marked received. */
   const [marking, setMarking] = React.useState<string | null>(null);
+  /** Id of the receipt whose share image is currently being generated. */
+  const [sending, setSending] = React.useState<string | null>(null);
   /** Pledge waiting for the volunteer to say how it was actually paid. */
   const [toMarkPaid, setToMarkPaid] = React.useState<LocalReceipt | undefined>();
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter(
-      (r) =>
-        r.donor_name.toLowerCase().includes(q) ||
-        r.phone_number.includes(q) ||
-        String(r.receipt_number) === q,
-    );
-  }, [all, query]);
+    const matched = !q
+      ? all
+      : all.filter(
+          (r) =>
+            r.donor_name.toLowerCase().includes(q) ||
+            r.phone_number.includes(q) ||
+            String(r.receipt_number) === q,
+        );
+    // Sorts what is loaded. With a paginated tail the top of an amount sort is
+    // the largest of the rows fetched so far, not of the whole ledger.
+    return sortRows(matched, sort, {
+      date: (r) => r.collection_date,
+      amount: (r) => r.amount,
+      name: (r) => r.donor_name,
+    }, locale);
+  }, [all, query, sort, locale]);
 
   function openCreate() {
     setEditing(undefined);
     setDialogOpen(true);
   }
+
+  React.useImperativeHandle(ref, () => ({ openCreate }));
 
   function openEdit(receipt: LocalReceipt) {
     // Advisory only — the save is still guarded by the updated_at check. This
@@ -286,6 +308,8 @@ export function ReceiptsTable({
     toast.success(t("status.markedPaid"));
   }
 
+  const shareReceipt = useReceiptShare(mandalName, names);
+
   function sendWhatsApp(receipt: LocalReceipt) {
     // The message quotes the receipt number, which the server assigns on sync.
     if (receipt.pending === "create") {
@@ -298,7 +322,10 @@ export function ReceiptsTable({
       toast.error(t("status.cannotSend"));
       return;
     }
-    window.open(whatsappUrl(receipt, mandalName), "_blank", "noopener");
+    // Image with the receipt text as its caption, falling back to the
+    // addressed wa.me message where the share sheet cannot take a file.
+    setSending(receipt.id);
+    void shareReceipt(receipt).finally(() => setSending(null));
   }
 
   /** Queues the delete on the device; returns false if it could not be stored. */
@@ -354,9 +381,7 @@ export function ReceiptsTable({
             className="pl-8"
           />
         </div>
-        <Button onClick={openCreate} className="w-full sm:ml-auto sm:w-auto">
-          <Plus /> {t("table.new")}
-        </Button>
+        <SortFilter value={sort} onChange={setSort} />
       </div>
 
       {/* Phones get the card list below; the table starts at sm. */}
@@ -439,13 +464,29 @@ export function ReceiptsTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {/* A receipt thanks someone for money received, so it
+                          cannot be sent for a pledge. The title says why the
+                          button is dead rather than leaving it a mystery. */}
                       <Button
                         size="sm"
-                        variant="outline"
+                        disabled={
+                          receipt.payment_status === "Unpaid" ||
+                          sending === receipt.id
+                        }
                         onClick={() => sendWhatsApp(receipt)}
-                        title={t("table.sendTitle", { name: receipt.donor_name })}
+                        title={
+                          receipt.payment_status === "Unpaid"
+                            ? t("status.cannotSend")
+                            : t("table.sendTitle", { name: receipt.donor_name })
+                        }
+                        variant="whatsapp"
                       >
-                        <MessageCircle /> {t("table.send")}
+                        {sending === receipt.id ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <MessageCircle />
+                        )}
+                        {t("table.send")}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -573,11 +614,17 @@ export function ReceiptsTable({
                   </Button>
                 ) : (
                   <Button
-                    variant="outline"
+                    variant="whatsapp"
                     className="flex-1"
+                    disabled={sending === receipt.id}
                     onClick={() => sendWhatsApp(receipt)}
                   >
-                    <MessageCircle /> {t("table.send")}
+                    {sending === receipt.id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <MessageCircle />
+                    )}
+                    {t("table.send")}
                   </Button>
                 )}
                 <Button variant="ghost" onClick={() => openEdit(receipt)}>

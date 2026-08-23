@@ -1,15 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LogOut, ReceiptText } from "lucide-react";
-import { logout } from "@/app/actions/auth";
+import { ReceiptText } from "lucide-react";
+import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getMyName } from "@/lib/volunteer-names";
 import { todayInIst, volunteerName } from "@/lib/receipt-utils";
-import { Button } from "@/components/ui/button";
 import { getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/client";
-import { LanguageToggle } from "@/components/language-toggle";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { SettingsMenu } from "@/components/settings-menu";
 import { BottomNav, SidebarNav } from "./sidebar-nav";
 import { RealtimeRefresh } from "./realtime-refresh";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
@@ -19,17 +16,15 @@ import type { Receipt } from "@/lib/types";
 export default async function DashboardLayout({
   children,
 }: LayoutProps<"/dashboard">) {
-  // proxy.ts is an optimistic gate only — re-verify on the server.
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
   const today = todayInIst();
 
-  const [{ locale, t }, myName, { data: dueToday }] = await Promise.all([
+  // All four together rather than the auth check first: proxy.ts has already
+  // gated this path, so waiting on a second validation before even starting the
+  // other reads added a round-trip to every dashboard load. getMyName() shares
+  // the same cached user, so this is still one validation.
+  const [user, { locale }, myName, { data: dueToday }] = await Promise.all([
+    getUser(),
     getDictionary(),
     getMyName(),
     // Pledges due exactly today, for the bell — overdue-but-older pledges
@@ -41,6 +36,9 @@ export default async function DashboardLayout({
       .eq("due_on", today)
       .order("amount", { ascending: false }),
   ]);
+
+  // proxy.ts is an optimistic gate only — this is the authoritative check.
+  if (!user) redirect("/login");
 
   return (
     <I18nProvider locale={locale}>
@@ -55,25 +53,18 @@ export default async function DashboardLayout({
               <p className="truncate font-display text-[0.95rem] leading-tight font-semibold tracking-tight">
                 {process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
               </p>
-              {/* The name doubles as the way into the one setting there is. */}
-              <Link
-                href="/dashboard/settings"
-                title={t("nav.settings")}
-                className="block truncate text-xs text-muted-foreground underline-offset-3 hover:text-foreground hover:underline"
-              >
+              <p className="truncate text-xs text-muted-foreground">
                 {myName ?? volunteerName(user.email) ?? user.email}
-              </Link>
+              </p>
             </div>
             <RealtimeRefresh />
             <NotificationBell dueToday={(dueToday ?? []) as Receipt[]} />
-            <ThemeToggle />
-            <LanguageToggle locale={locale} />
-            <form action={logout}>
-              <Button type="submit" variant="outline" size="sm">
-                <LogOut />
-                <span className="hidden sm:inline">{t("auth.logout")}</span>
-              </Button>
-            </form>
+            <SettingsMenu
+              locale={locale}
+              name={myName}
+              email={user.email ?? ""}
+              derivedName={volunteerName(user.email) ?? ""}
+            />
           </div>
         </header>
 

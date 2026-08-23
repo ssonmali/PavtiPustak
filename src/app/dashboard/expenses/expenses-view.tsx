@@ -10,7 +10,7 @@ import {
   formatAmount,
   formatDate,
 } from "@/lib/receipt-utils";
-import type { Expense, NameMap } from "@/lib/types";
+import type { Expense, ExpenseCategory, NameMap } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,11 +41,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  ALL_TIME,
   filterByPeriod,
   PeriodFilter,
   type Period,
 } from "../period-filter";
 import { ExpenseDialog } from "./expense-dialog";
+import { SortFilter } from "../sort-filter";
+import { DEFAULT_SORT, sortRows, type SortKey } from "../sort-rows";
+import { CategoryBreakdown } from "./category-breakdown";
+import { categoryTotals } from "./category-totals";
 
 export function ExpensesView({
   expenses,
@@ -58,8 +63,10 @@ export function ExpensesView({
   truncated?: number;
 }) {
   const { t, locale } = useI18n();
-  const [period, setPeriod] = React.useState<Period>(0);
+  const [period, setPeriod] = React.useState<Period>(ALL_TIME);
   const [query, setQuery] = React.useState("");
+  const [sort, setSort] = React.useState<SortKey>(DEFAULT_SORT);
+  const [category, setCategory] = React.useState<ExpenseCategory | null>(null);
   const [editing, setEditing] = React.useState<Expense | undefined>();
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [toDelete, setToDelete] = React.useState<Expense | undefined>();
@@ -75,16 +82,29 @@ export function ExpensesView({
     [expenses, period],
   );
 
+  // Built from the period alone, deliberately before the category filter: a
+  // breakdown computed after it would collapse to the one row you selected.
+  const breakdown = React.useMemo(() => categoryTotals(inPeriod), [inPeriod]);
+
   const visible = React.useMemo(() => {
     const clean = query.trim().toLowerCase();
-    if (!clean) return inPeriod;
-    return inPeriod.filter(
-      (e) =>
-        e.description.toLowerCase().includes(clean) ||
-        (e.note ?? "").toLowerCase().includes(clean) ||
-        e.category.toLowerCase().includes(clean),
-    );
-  }, [inPeriod, query]);
+    const inCategory = category
+      ? inPeriod.filter((e) => e.category === category)
+      : inPeriod;
+    const matched = !clean
+      ? inCategory
+      : inCategory.filter(
+          (e) =>
+            e.description.toLowerCase().includes(clean) ||
+            (e.note ?? "").toLowerCase().includes(clean) ||
+            e.category.toLowerCase().includes(clean),
+        );
+    return sortRows(matched, sort, {
+      date: (e) => e.spent_on,
+      amount: (e) => e.amount,
+      name: (e) => e.description,
+    }, locale);
+  }, [inPeriod, query, category, sort, locale]);
 
   const total = visible.reduce((sum, e) => sum + Number(e.amount), 0);
 
@@ -121,18 +141,25 @@ export function ExpensesView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="mr-auto">
-          <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
-            {t("expenses.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t("expenses.total")}:{" "}
-            <span className="font-medium tabular-nums text-foreground">
-              {formatAmount(total)}
-            </span>{" "}
-            · {t("expenses.count", { count: visible.length })}
-          </p>
+      <div className="flex flex-col gap-3">
+        {/* The action keeps the top-right corner beside the heading at every
+            width, rather than moving between rows as the layout changes. */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
+              {t("expenses.title")}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {t("expenses.total")}:{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {formatAmount(total)}
+              </span>{" "}
+              · {t("expenses.count", { count: visible.length })}
+            </p>
+          </div>
+          <Button size="sm" onClick={openCreate} className="shrink-0">
+            <Plus /> {t("expenses.new")}
+          </Button>
         </div>
         <PeriodFilter period={period} onChange={setPeriod} />
       </div>
@@ -142,6 +169,12 @@ export function ExpensesView({
           {t("expenses.limit", { count: truncated })}
         </p>
       ) : null}
+
+      <CategoryBreakdown
+        rows={breakdown}
+        selected={category}
+        onSelect={setCategory}
+      />
 
       <Card className="card-elevated">
         <CardContent>
@@ -156,9 +189,7 @@ export function ExpensesView({
                   className="pl-8"
                 />
               </div>
-              <Button onClick={openCreate} className="w-full sm:ml-auto sm:w-auto">
-                <Plus /> {t("expenses.new")}
-              </Button>
+              <SortFilter value={sort} onChange={setSort} />
             </div>
 
             {/* Phones get the card list below; the table starts at sm. */}

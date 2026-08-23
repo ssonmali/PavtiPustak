@@ -84,3 +84,20 @@ export function mergeOutbox(
 export function pendingCount(outbox: OutboxEntry[]) {
   return outbox.length;
 }
+
+/**
+ * Which list the UI should show: the server's, or this device's copy.
+ *
+ * Online, the server is the truth even when it returns nothing — an empty
+ * ledger is a fact, and treating "empty" as "not loaded" left deleted receipts
+ * on screen with no way to clear them. Offline, prefer the device copy: the
+ * HTML may have come from the service worker cache and be older than IndexedDB.
+ */
+export function pickBase(
+  online: boolean,
+  serverRows: Receipt[],
+  cached: Receipt[] | null,
+): Receipt[] {
+  if (online) return serverRows;
+  return cached?.length ? cached : serverRows;
+}

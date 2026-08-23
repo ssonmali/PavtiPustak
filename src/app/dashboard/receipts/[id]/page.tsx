@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getVolunteerNames } from "@/lib/volunteer-names";
@@ -18,6 +19,9 @@ export default async function ReceiptSlipPage({
   const supabase = await createClient();
   const { locale, t } = await getDictionary();
   const mandalName = process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal";
+  // Opt-in: unset, the slip renders exactly as before rather than with a
+  // broken image where the idol should be.
+  const watermark = process.env.NEXT_PUBLIC_RECEIPT_WATERMARK;
 
   const [{ data }, names] = await Promise.all([
     supabase.from("receipts").select("*").eq("id", id).maybeSingle(),
@@ -38,9 +42,26 @@ export default async function ReceiptSlipPage({
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 print:max-w-none">
-      <PrintBar printLabel={t("report.print")} backLabel={t("report.back")} />
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <PrintBar printLabel={t("report.print")} backLabel={t("report.back")} />
+      </div>
 
-      <article className="rounded-lg border bg-card p-5 text-card-foreground print:rounded-none print:border-2 print:p-6">
+      <article className="relative overflow-hidden rounded-lg border bg-card p-5 text-card-foreground print:rounded-none print:border-2 print:p-6">
+        {watermark ? (
+          <Image
+            src={watermark}
+            alt=""
+            aria-hidden
+            fill
+            // Eager: a lazy image may not have loaded when print() fires.
+            priority
+            sizes="28rem"
+            className="pointer-events-none select-none object-cover opacity-[0.07] print:opacity-[0.12] print:[print-color-adjust:exact]"
+          />
+        ) : null}
+
+        {/* Above the watermark, and its own stacking context. */}
+        <div className="relative">
         {/* A slip for money still owed is not a receipt, and must not be able
             to be handed over as one. */}
         {receipt.payment_status === "Unpaid" ? (
@@ -98,6 +119,7 @@ export default async function ReceiptSlipPage({
             </p>
           ) : null}
         </footer>
+        </div>
       </article>
     </div>
   );

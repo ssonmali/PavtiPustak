@@ -10,6 +10,7 @@ import {
   EXPENSE_CATEGORIES,
   PAYMENT_METHODS,
   type Expense,
+  type ExpenseCategory,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -40,6 +41,18 @@ function fromDateValue(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
+
+/** The typed dictionary takes literal keys, so the label is looked up. */
+const CATEGORY_KEYS = {
+  Decoration: "category.Decoration",
+  Prasad: "category.Prasad",
+  Food: "category.Food",
+  Sound: "category.Sound",
+  Idol: "category.Idol",
+  Mandap: "category.Mandap",
+  Electricity: "category.Electricity",
+  Other: "category.Other",
+} as const;
 
 export function ExpenseDialog({
   expense,
@@ -149,7 +162,11 @@ export function ExpenseDialog({
               onValueChange={(v) => setCategory(String(v))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue />
+                {/* Without a formatter Base UI shows the raw value, so the
+                    trigger stayed English while the list was translated. */}
+                <SelectValue>
+                  {(v) => t(CATEGORY_KEYS[v as ExpenseCategory])}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {EXPENSE_CATEGORIES.map((c) => (
@@ -168,7 +185,9 @@ export function ExpenseDialog({
             <input type="hidden" name="payment_method" value={method} />
             <Select value={method} onValueChange={(v) => setMethod(String(v))}>
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue>
+                  {(v) => t(v === "UPI" ? "method.UPI" : "method.Cash")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {PAYMENT_METHODS.map((m) => (

@@ -74,10 +74,10 @@ export function DuePanel({
   }
 
   return (
-    <Card className="card-elevated border-primary/30">
+    <Card className="card-elevated accent-top border-pending/30 [--accent-line:var(--pending)]">
       <CardHeader>
         <CardDescription className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-pending/15 text-pending">
             <BellRing className="size-3.5" />
           </span>
           {t("due.title")}

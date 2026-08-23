@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { editorsFromPresence } from "@/lib/use-editing-presence";
+import {
+  editorsFromPresence,
+  presenceAction,
+} from "@/lib/use-editing-presence";
 
 const entry = (receipt_id: string, who: string) => ({ receipt_id, who });
 
@@ -56,5 +59,31 @@ describe("editorsFromPresence", () => {
 
   it("is empty when nobody is present", () => {
     expect(editorsFromPresence({}, "Me")).toEqual({});
+  });
+});
+
+describe("presenceAction", () => {
+  // The bug this pins: the publish effect ran on mount, before the channel had
+  // joined, and untracking on an unjoined channel throws.
+  it("pushes nothing before the channel has joined", () => {
+    expect(presenceAction(false, null, false)).toBe("none");
+    expect(presenceAction(false, "receipt-1", false)).toBe("none");
+    expect(presenceAction(false, "receipt-1", true)).toBe("none");
+  });
+
+  it("does not untrack on mount, when there is nothing to withdraw", () => {
+    expect(presenceAction(true, null, false)).toBe("none");
+  });
+
+  it("tracks once joined and a receipt is open", () => {
+    expect(presenceAction(true, "receipt-1", false)).toBe("track");
+  });
+
+  it("re-tracks when the open receipt changes", () => {
+    expect(presenceAction(true, "receipt-2", true)).toBe("track");
+  });
+
+  it("untracks when the dialog closes on an already-tracked device", () => {
+    expect(presenceAction(true, null, true)).toBe("untrack");
   });
 });

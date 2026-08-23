@@ -18,6 +18,7 @@ import {
   displayName,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,7 +28,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PeriodFilter, startOf, type Period } from "../period-filter";
+import {
+  ALL_TIME,
+  inPeriod,
+  PeriodFilter,
+  type Period,
+} from "../period-filter";
 
 const ACTION_FILTERS = [
   { key: "all", labelKey: "activity.filterAll" },
@@ -86,7 +92,7 @@ export function ActivityList({
   const [ledger, setLedger] = React.useState<"all" | ActivityEntity>("all");
   const [action, setAction] = React.useState<"all" | AuditAction>("all");
   const [actor, setActor] = React.useState<string>("all");
-  const [period, setPeriod] = React.useState<Period>(0);
+  const [period, setPeriod] = React.useState<Period>(ALL_TIME);
 
   const volunteers = React.useMemo(
     () =>
@@ -95,13 +101,12 @@ export function ActivityList({
   );
 
   const visible = React.useMemo(() => {
-    const from = startOf(period);
     return entries.filter(
       (e) =>
         (ledger === "all" || e.entity === ledger) &&
         (action === "all" || e.action === action) &&
         (actor === "all" || e.actor_email === actor) &&
-        (!from || dayOf(e.changed_at) >= from),
+        inPeriod(dayOf(e.changed_at), period),
     );
   }, [entries, ledger, action, actor, period]);
 
@@ -147,11 +152,36 @@ export function ActivityList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
+      <div className="flex flex-col items-start">
         <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
           {t("activity.title")}
         </h1>
-        <p className="text-sm text-muted-foreground">{t("activity.subtitle")}</p>
+        {volunteers.length > 1 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="sm" className="mt-1 max-w-56">
+                  <User />
+                  <span className="truncate">
+                    {actor === "all"
+                      ? t("activity.allVolunteers")
+                      : displayName(actor, names)}
+                  </span>
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setActor("all")}>
+                {t("activity.allVolunteers")}
+              </DropdownMenuItem>
+              {volunteers.map((email) => (
+                <DropdownMenuItem key={email} onClick={() => setActor(email)}>
+                  {displayName(email, names)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
 
       {/* Which ledger first, since it changes what the rest of the filters are
@@ -188,33 +218,6 @@ export function ActivityList({
         </div>
 
         <div className="flex items-center gap-2 sm:ml-auto">
-          {volunteers.length > 1 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="outline" size="sm" className="max-w-48">
-                    <User />
-                    <span className="truncate">
-                      {actor === "all"
-                        ? t("activity.allVolunteers")
-                        : displayName(actor, names)}
-                    </span>
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setActor("all")}>
-                  {t("activity.allVolunteers")}
-                </DropdownMenuItem>
-                {volunteers.map((email) => (
-                  <DropdownMenuItem key={email} onClick={() => setActor(email)}>
-                    {displayName(email, names)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-
           <PeriodFilter period={period} onChange={setPeriod} />
         </div>
       </div>
@@ -270,23 +273,19 @@ export function ActivityList({
                         <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
                           {/* The ledger is readable from the icon before any
                               text is read: a wallet means money going out. */}
-                          {isExpense ? (
-                            <Wallet
-                              className={
-                                entry.action === "deleted"
-                                  ? "size-4 text-destructive"
-                                  : "size-4 text-muted-foreground"
-                              }
-                            />
-                          ) : (
-                            <Icon
-                              className={
-                                entry.action === "deleted"
-                                  ? "size-4 text-destructive"
-                                  : "size-4 text-muted-foreground"
-                              }
-                            />
-                          )}
+                          {(() => {
+                            const Glyph = isExpense ? Wallet : Icon;
+                            return (
+                              <Glyph
+                                className={cn(
+                                  "size-4",
+                                  entry.action === "deleted" && "text-destructive",
+                                  entry.action === "created" && "text-positive-ink",
+                                  entry.action === "updated" && "text-pending-ink",
+                                )}
+                              />
+                            );
+                          })()}
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -296,8 +295,8 @@ export function ActivityList({
                                 entry.action === "deleted"
                                   ? "destructive"
                                   : entry.action === "created"
-                                    ? "outline"
-                                    : "secondary"
+                                    ? "positive"
+                                    : "warning"
                               }
                             >
                               {t(`activity.${entry.action}`)}
@@ -312,7 +311,27 @@ export function ActivityList({
                             {snapshot ? (
                               <span className="wrap-anywhere text-muted-foreground">
                                 · {title} ·{" "}
-                                <span className="tabular-nums">
+                                {/* The sign is what says which way the money
+                                    went; the colour repeats it. */}
+                                <span
+                                  className={cn(
+                                    "tabular-nums",
+                                    // A deleted row's amount is what it used to
+                                    // be. Showing it as a live inflow next to a
+                                    // red "deleted" badge would claim money that
+                                    // never landed, so it is struck instead.
+                                    entry.action === "deleted"
+                                      ? "text-muted-foreground line-through"
+                                      : isExpense
+                                        ? "text-destructive"
+                                        : "text-positive-ink",
+                                  )}
+                                >
+                                  {entry.action === "deleted"
+                                    ? ""
+                                    : isExpense
+                                      ? "\u2212"
+                                      : "+"}
                                   {formatAmount(Number(amount ?? 0))}
                                 </span>
                               </span>

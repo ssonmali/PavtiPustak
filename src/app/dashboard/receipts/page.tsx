@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { getMyName } from "@/lib/volunteer-names";
+import { getUser } from "@/lib/auth";
+import { getMyName, getVolunteerNames } from "@/lib/volunteer-names";
 import { volunteerName } from "@/lib/receipt-utils";
-import type { Receipt } from "@/lib/types";
+import type { DailyTotal, Receipt } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { ReceiptsView } from "./receipts-view";
 
@@ -10,17 +11,29 @@ export const metadata = { title: "Receipts · Pavti Pustak" };
 export default async function ReceiptsPage() {
   const supabase = await createClient();
 
-  const [{ data, error, count }, myName, { data: auth }] = await Promise.all([
-    // First page only; the client appends further pages on demand.
-    supabase
-      .from("receipts")
-      .select("*", { count: "exact" })
-      .order("collection_date", { ascending: false })
-      .order("receipt_number", { ascending: false })
-      .range(0, 49),
-    getMyName(),
-    supabase.auth.getUser(),
-  ]);
+  const [{ data, error, count }, myName, user, names, daily, unpaidRows] =
+    await Promise.all([
+      // First page only; the client appends further pages on demand.
+      supabase
+        .from("receipts")
+        .select("*", { count: "exact" })
+        .order("collection_date", { ascending: false })
+        .order("receipt_number", { ascending: false })
+        .range(0, 49),
+      getMyName(),
+      getUser(),
+      getVolunteerNames(),
+      supabase
+        .from("receipt_daily_totals")
+        .select("*")
+        .order("collection_date", { ascending: false })
+        .limit(400),
+      supabase
+        .from("receipts")
+        .select("amount, collection_date")
+        .eq("payment_status", "Unpaid")
+        .limit(1000),
+    ]);
 
   if (error) {
     return (
@@ -40,7 +53,10 @@ export default async function ReceiptsPage() {
       total={count ?? 0}
       mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
       // The name other volunteers see when this device has a receipt open.
-      myName={myName ?? volunteerName(auth.user?.email) ?? "—"}
+      myName={myName ?? volunteerName(user?.email) ?? "—"}
+      names={names}
+      daily={(daily.data ?? []) as DailyTotal[]}
+      unpaid={(unpaidRows.data ?? []) as { amount: number; collection_date: string }[]}
     />
   );
 }

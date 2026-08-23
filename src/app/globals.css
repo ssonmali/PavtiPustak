@@ -27,6 +27,13 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-positive: var(--positive);
+  --color-info: var(--info);
+  --color-pending: var(--pending);
+  --color-positive-ink: var(--positive-ink);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-ink: var(--whatsapp-ink);
+  --color-pending-ink: var(--pending-ink);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -64,13 +71,31 @@
   /* Deep saffron — festive without being a highlighter. */
   --primary: oklch(0.56 0.16 48);
   --primary-foreground: oklch(0.99 0.01 85);
-  --secondary: oklch(0.955 0.022 80);
+  --secondary: oklch(0.9 0.04 80);
   --secondary-foreground: oklch(0.32 0.05 50);
   --muted: oklch(0.965 0.014 80);
   --muted-foreground: oklch(0.52 0.03 60);
-  --accent: oklch(0.945 0.035 78);
+  --accent: oklch(0.88 0.05 78);
   --accent-foreground: oklch(0.3 0.06 48);
   --destructive: oklch(0.55 0.2 27);
+  /* Money states, so a figure reads before it is read: held / projected /
+     still owed. Validated as a set against this surface with the palette
+     checker — all-pairs CVD ΔE 15.5, normal-vision ΔE 20.5, both above the
+     8 and 15 gates.
+
+     These are fills and swatches, never text. Amber dark enough to clear
+     4.5:1 as text turns olive and collides with the green (ΔE 13.8, and 3.1
+     under protan), so numbers stay in ink and the coloured mark beside them
+     carries the state. */
+  --positive: oklch(0.48 0.13 150);
+  --info: oklch(0.55 0.13 245);
+  --pending: oklch(0.68 0.13 85);
+  /* The same two states as ink, stepped darker so they clear 4.5:1 as text on
+     a card: green 5.59:1, amber 4.83:1. Only ever used where a sign or a word
+     already carries the meaning — green and red are the confusable pair, so
+     colour here is the second reading, never the first. */
+  --positive-ink: oklch(0.5 0.13 150);
+  --pending-ink: oklch(0.55 0.105 85);
   --border: oklch(0.9 0.018 75);
   --input: oklch(0.9 0.018 75);
   --ring: oklch(0.56 0.16 48);
@@ -82,13 +107,19 @@
   --chart-4: oklch(0.72 0.15 85);
   --chart-5: oklch(0.55 0.16 300);
 
+  /* A soft green wash rather than WhatsApp's full-strength brand green, which
+     shouted next to the saffron. Explicit fills rather than an alpha tint, so
+     the text contrast is a plain pair to check: 5.87:1 here, 6.85:1 in dark. */
+  --whatsapp: oklch(0.93 0.06 155);
+  --whatsapp-ink: oklch(0.45 0.11 155);
+
   --radius: 0.75rem;
 
   --sidebar: oklch(0.975 0.012 82);
   --sidebar-foreground: oklch(0.21 0.025 55);
   --sidebar-primary: oklch(0.56 0.16 48);
   --sidebar-primary-foreground: oklch(0.99 0.01 85);
-  --sidebar-accent: oklch(0.945 0.035 78);
+  --sidebar-accent: oklch(0.88 0.05 78);
   --sidebar-accent-foreground: oklch(0.3 0.06 48);
   --sidebar-border: oklch(0.9 0.018 75);
   --sidebar-ring: oklch(0.56 0.16 48);
@@ -117,13 +148,21 @@
   --popover-foreground: oklch(0.97 0.008 85);
   --primary: oklch(0.74 0.15 62);
   --primary-foreground: oklch(0.2 0.03 50);
-  --secondary: oklch(0.29 0.02 60);
+  --secondary: oklch(0.33 0.03 60);
   --secondary-foreground: oklch(0.95 0.01 85);
   --muted: oklch(0.27 0.015 60);
   --muted-foreground: oklch(0.72 0.025 70);
-  --accent: oklch(0.32 0.035 55);
+  --accent: oklch(0.36 0.04 55);
   --accent-foreground: oklch(0.95 0.02 80);
   --destructive: oklch(0.68 0.19 25);
+  /* Re-stepped for the dark card rather than flipped: the light values sit
+     outside the dark lightness band. All-pairs normal-vision ΔE 17.1. */
+  --positive: oklch(0.56 0.13 150);
+  --info: oklch(0.62 0.12 245);
+  --pending: oklch(0.66 0.13 85);
+  /* Lighter than the light-mode ink, not darker: green 5.56:1, amber 6.49:1. */
+  --positive-ink: oklch(0.72 0.13 150);
+  --pending-ink: oklch(0.78 0.13 85);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.74 0.15 62);
@@ -134,11 +173,14 @@
   --chart-4: oklch(0.78 0.14 85);
   --chart-5: oklch(0.65 0.16 300);
 
+  --whatsapp: oklch(0.34 0.06 155);
+  --whatsapp-ink: oklch(0.82 0.12 155);
+
   --sidebar: oklch(0.2 0.015 60);
   --sidebar-foreground: oklch(0.97 0.008 85);
   --sidebar-primary: oklch(0.74 0.15 62);
   --sidebar-primary-foreground: oklch(0.2 0.03 50);
-  --sidebar-accent: oklch(0.32 0.035 55);
+  --sidebar-accent: oklch(0.36 0.04 55);
   --sidebar-accent-foreground: oklch(0.95 0.02 80);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.74 0.15 62);
@@ -281,7 +323,8 @@
     inset-inline: 0;
     top: 0;
     height: 2px;
-    background: var(--brand-gradient);
+    /* Brand saffron unless a card names its own state colour. */
+    background: var(--accent-line, var(--brand-gradient));
     opacity: 0.9;
   }
 

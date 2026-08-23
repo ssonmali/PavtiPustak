@@ -10,6 +10,12 @@ export {
   type OutboxEntry,
   type OutboxKind,
 } from "./db";
-export { localId, mergeOutbox, pendingCount, type LocalReceipt } from "./merge";
+export {
+  localId,
+  mergeOutbox,
+  pickBase,
+  pendingCount,
+  type LocalReceipt,
+} from "./merge";
 export { flushOutbox, type FlushResult } from "./sync";
 export { useOfflineReceipts, useOnline } from "./use-offline-receipts";

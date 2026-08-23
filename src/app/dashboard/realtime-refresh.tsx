@@ -26,9 +26,9 @@ export function RealtimeRefresh() {
         className={cn(
           "size-2 rounded-full",
           live
-            ? "bg-emerald-500"
+            ? "bg-positive"
             : status === "connecting"
-              ? "animate-pulse bg-amber-500"
+              ? "animate-pulse bg-pending"
               : "bg-muted-foreground/40",
         )}
       />
