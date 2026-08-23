@@ -102,22 +102,32 @@ export function Overview({
     [unpaidDays, period],
   );
 
+  /**
+   * Each money figure wears the colour of its state, so the row can be read
+   * before it is read: a projection, cash in hand, money still owed. The
+   * receipt count stays uncoloured — it is a tally, not an amount, and giving
+   * it a fourth hue would mean colour no longer tracked the state of money.
+   */
   const stats = [
     {
       // Everything recorded, received or not — what the mandal is counting on.
       label: t("stats.estimated"),
       value: formatAmount(total + unpaid),
       icon: Sigma,
+      tone: "info" as const,
     },
-    { label: t("stats.total"), value: formatAmount(total), icon: IndianRupee },
+    {
+      label: t("stats.total"),
+      value: formatAmount(total),
+      icon: IndianRupee,
+      tone: "positive" as const,
+    },
     { label: t("stats.receipts"), value: String(count), icon: ReceiptIcon },
     {
       label: t("stats.unpaid"),
       value: formatAmount(unpaid),
       icon: Clock,
-      // Money the mandal does not hold, so it does not wear the same weight as
-      // the collected figure beside it.
-      muted: true,
+      tone: "pending" as const,
       hint: unpaidCount
         ? t("chart.receiptsCount", { count: unpaidCount })
         : undefined,
@@ -141,10 +151,24 @@ export function Overview({
       {/* Collected less spent. Shown even at zero spend so the figure is a
           fixture of the dashboard rather than something that appears once the
           first expense is recorded. */}
-      <Card className="card-elevated accent-top">
+      <Card
+        className={cn(
+          "card-elevated accent-top",
+          balance < 0
+            ? "[--accent-line:var(--destructive)]"
+            : "[--accent-line:var(--positive)]",
+        )}
+      >
         <CardHeader>
           <CardDescription className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+            <span
+              className={cn(
+                "flex size-7 items-center justify-center rounded-lg",
+                balance < 0
+                  ? "bg-destructive/12 text-destructive"
+                  : "bg-positive/12 text-positive",
+              )}
+            >
               <Wallet className="size-3.5" />
             </span>
             {t("balance.title")}
@@ -199,21 +223,37 @@ export function Overview({
       </Card>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {stats.map(({ label, value, icon: Icon, muted, hint }) => (
-          <Card key={label} className="card-elevated accent-top">
+        {stats.map(({ label, value, icon: Icon, tone, hint }) => (
+          <Card
+            key={label}
+            className={cn(
+              "card-elevated accent-top",
+              tone === "info" && "[--accent-line:var(--info)]",
+              tone === "positive" && "[--accent-line:var(--positive)]",
+              tone === "pending" && "[--accent-line:var(--pending)]",
+            )}
+          >
             <CardHeader>
               <CardDescription className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                {/* The label sits beside the swatch, so the colour is a second
+                    reading of the state and never the only one. */}
+                <span
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-lg",
+                    tone === "info" && "bg-info/12 text-info",
+                    tone === "positive" && "bg-positive/12 text-positive",
+                    tone === "pending" && "bg-pending/15 text-pending",
+                    !tone && "bg-accent text-accent-foreground",
+                  )}
+                >
                   <Icon className="size-3.5" />
                 </span>
                 {label}
               </CardDescription>
-              <CardTitle
-                className={cn(
-                  "text-2xl font-semibold tabular-nums sm:text-3xl",
-                  muted && "text-muted-foreground",
-                )}
-              >
+              {/* The figure stays in ink. These hues are picked to be told
+                  apart as marks, and none of them clears 4.5:1 as text in
+                  both themes. */}
+              <CardTitle className="text-2xl font-semibold tabular-nums sm:text-3xl">
                 {value}
               </CardTitle>
               {hint ? (

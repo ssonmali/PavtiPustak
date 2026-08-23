@@ -27,6 +27,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-positive: var(--positive);
+  --color-info: var(--info);
+  --color-pending: var(--pending);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -71,6 +74,18 @@
   --accent: oklch(0.945 0.035 78);
   --accent-foreground: oklch(0.3 0.06 48);
   --destructive: oklch(0.55 0.2 27);
+  /* Money states, so a figure reads before it is read: held / projected /
+     still owed. Validated as a set against this surface with the palette
+     checker — all-pairs CVD ΔE 15.5, normal-vision ΔE 20.5, both above the
+     8 and 15 gates.
+
+     These are fills and swatches, never text. Amber dark enough to clear
+     4.5:1 as text turns olive and collides with the green (ΔE 13.8, and 3.1
+     under protan), so numbers stay in ink and the coloured mark beside them
+     carries the state. */
+  --positive: oklch(0.48 0.13 150);
+  --info: oklch(0.55 0.13 245);
+  --pending: oklch(0.68 0.13 85);
   --border: oklch(0.9 0.018 75);
   --input: oklch(0.9 0.018 75);
   --ring: oklch(0.56 0.16 48);
@@ -124,6 +139,11 @@
   --accent: oklch(0.32 0.035 55);
   --accent-foreground: oklch(0.95 0.02 80);
   --destructive: oklch(0.68 0.19 25);
+  /* Re-stepped for the dark card rather than flipped: the light values sit
+     outside the dark lightness band. All-pairs normal-vision ΔE 17.1. */
+  --positive: oklch(0.56 0.13 150);
+  --info: oklch(0.62 0.12 245);
+  --pending: oklch(0.66 0.13 85);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.74 0.15 62);
@@ -281,7 +301,8 @@
     inset-inline: 0;
     top: 0;
     height: 2px;
-    background: var(--brand-gradient);
+    /* Brand saffron unless a card names its own state colour. */
+    background: var(--accent-line, var(--brand-gradient));
     opacity: 0.9;
   }
 
