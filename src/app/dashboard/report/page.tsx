@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Receipt } from "@/lib/types";
 import { formatAmount, formatDate, formatDateTime } from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
+import { cn } from "@/lib/utils";
 import { ReportToolbar } from "./report-toolbar";
 import { parseRange, parseStatus, type ReportRange } from "./report-range";
 
@@ -59,11 +60,39 @@ export default async function ReportPage({
   // What the Excel export and the row cap notice count.
   const receipts = status === "all" ? all : status === "Paid" ? paid : unpaid;
 
+  const periodLabel = rangeLabel(range, locale, t("period.all"));
+
   const sections = [
     { key: "Paid" as const, rows: paid, label: t("status.paidOnly") },
     { key: "Unpaid" as const, rows: unpaid, label: t("status.unpaidOnly") },
   ].filter((s) => (status === "all" ? s.rows.length > 0 : s.key === status));
-  const periodLabel = rangeLabel(range, locale, t("period.all"));
+
+  /**
+   * The summary describes what is actually printed. A money column for a
+   * status the report excludes would sit next to a row count that does not
+   * include it — the collected total beside a count of unpaid receipts.
+   */
+  const summary = [
+    { label: t("report.period"), value: periodLabel },
+    { label: t("stats.receipts"), value: String(receipts.length), num: true },
+    ...(status === "Unpaid"
+      ? []
+      : [
+          {
+            label: t("stats.total"),
+            value: formatAmount(total),
+            num: true,
+            strong: true,
+          },
+        ]),
+    ...(status !== "Paid" && expected > 0
+      ? [{ label: t("due.expected"), value: formatAmount(expected), num: true }]
+      : []),
+    {
+      label: t("report.generated"),
+      value: formatDateTime(new Date().toISOString(), locale),
+    },
+  ];
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 print:max-w-none">
@@ -107,22 +136,24 @@ export default async function ReportPage({
         <table className="print-grid mb-4 w-full text-sm">
           <thead>
             <tr>
-              <th>{t("report.period")}</th>
-              <th>{t("stats.receipts")}</th>
-              <th>{t("stats.total")}</th>
-              {expected > 0 ? <th>{t("due.expected")}</th> : null}
-              <th>{t("report.generated")}</th>
+              {summary.map((cell) => (
+                <th key={cell.label}>{cell.label}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>{periodLabel}</td>
-              <td className="tabular-nums">{receipts.length}</td>
-              <td className="font-bold tabular-nums">{formatAmount(total)}</td>
-              {expected > 0 ? (
-                <td className="tabular-nums">{formatAmount(expected)}</td>
-              ) : null}
-              <td>{formatDateTime(new Date().toISOString(), locale)}</td>
+              {summary.map((cell) => (
+                <td
+                  key={cell.label}
+                  className={cn(
+                    cell.num && "tabular-nums",
+                    cell.strong && "font-bold",
+                  )}
+                >
+                  {cell.value}
+                </td>
+              ))}
             </tr>
           </tbody>
         </table>

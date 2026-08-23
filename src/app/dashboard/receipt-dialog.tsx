@@ -108,6 +108,22 @@ function ReceiptDialogBody({
   const [status, setStatus] = React.useState<string>(
     receipt?.payment_status ?? "Paid",
   );
+  /**
+   * How far back the due-date picker may go.
+   *
+   * Normally today — a promise is about the future. But an overdue pledge has a
+   * due date already in the past, and locking the picker at today would leave
+   * its own selected day unpickable: re-dating it would mean jumping forward
+   * first. So the floor drops to whichever is earlier.
+   */
+  const earliestDue = (() => {
+    const today = new Date();
+    const existing = receipt?.due_on
+      ? parseDateValue(receipt.due_on)
+      : undefined;
+    return existing && existing < today ? existing : today;
+  })();
+
   // Defaults a week out: a pledge with no plausible date is one nobody chases.
   const [dueDate, setDueDate] = React.useState<Date | undefined>(() => {
     if (receipt?.due_on) return parseDateValue(receipt.due_on);
@@ -466,8 +482,9 @@ function ReceiptDialogBody({
                       defaultMonth={dueDate}
                       captionLayout="dropdown"
                       // The opposite of the collection date: a promise is about
-                      // the future, so only the past is off-limits here.
-                      disabled={{ before: new Date() }}
+                      // the future, so the past is off-limits — except back to
+                      // an existing overdue date. See earliestDue.
+                      disabled={{ before: earliestDue }}
                       autoFocus
                     />
                   </PopoverContent>
