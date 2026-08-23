@@ -526,14 +526,6 @@ export function ReceiptsTable({
                     <span className="tabular-nums">{receipt.phone_number}</span>
                     <span aria-hidden>·</span>
                     <span>{formatDate(receipt.collection_date, locale)}</span>
-                    {receipt.payment_status === "Unpaid" ? (
-                      <UnpaidBadge
-                        dueOn={receipt.due_on}
-                        today={today}
-                        label={t("status.unpaidBadge")}
-                        title={dueTitle(receipt.due_on)}
-                      />
-                    ) : null}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
@@ -546,9 +538,16 @@ export function ReceiptsTable({
                   >
                     {formatAmount(receipt.amount)}
                   </span>
-                  {receipt.payment_status === "Paid" ? (
+                  {receipt.payment_status === "Unpaid" ? (
+                    <UnpaidBadge
+                      dueOn={receipt.due_on}
+                      today={today}
+                      label={t("status.unpaidBadge")}
+                      title={dueTitle(receipt.due_on)}
+                    />
+                  ) : (
                     <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
-                  ) : null}
+                  )}
                 </div>
               </div>
 
