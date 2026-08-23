@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { ReceiptText } from "lucide-react";
+import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getMyName } from "@/lib/volunteer-names";
 import { todayInIst, volunteerName } from "@/lib/receipt-utils";
@@ -15,17 +16,15 @@ import type { Receipt } from "@/lib/types";
 export default async function DashboardLayout({
   children,
 }: LayoutProps<"/dashboard">) {
-  // proxy.ts is an optimistic gate only — re-verify on the server.
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
   const today = todayInIst();
 
-  const [{ locale }, myName, { data: dueToday }] = await Promise.all([
+  // All four together rather than the auth check first: proxy.ts has already
+  // gated this path, so waiting on a second validation before even starting the
+  // other reads added a round-trip to every dashboard load. getMyName() shares
+  // the same cached user, so this is still one validation.
+  const [user, { locale }, myName, { data: dueToday }] = await Promise.all([
+    getUser(),
     getDictionary(),
     getMyName(),
     // Pledges due exactly today, for the bell — overdue-but-older pledges
@@ -37,6 +36,9 @@ export default async function DashboardLayout({
       .eq("due_on", today)
       .order("amount", { ascending: false }),
   ]);
+
+  // proxy.ts is an optimistic gate only — this is the authoritative check.
+  if (!user) redirect("/login");
 
   return (
     <I18nProvider locale={locale}>

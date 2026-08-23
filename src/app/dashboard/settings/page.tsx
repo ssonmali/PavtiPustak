@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/auth";
 import { getMyName } from "@/lib/volunteer-names";
 import { getDictionary } from "@/lib/i18n/server";
 import { volunteerName } from "@/lib/receipt-utils";
@@ -8,13 +8,7 @@ import { NameForm } from "@/components/name-form";
 export const metadata = { title: "Your name · Pavti Pustak" };
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const [
-    {
-      data: { user },
-    },
-    name,
-  ] = await Promise.all([supabase.auth.getUser(), getMyName()]);
+  const [user, name] = await Promise.all([getUser(), getMyName()]);
 
   const { t } = await getDictionary();
   const email = user?.email ?? "";

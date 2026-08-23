@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { NameMap } from "@/lib/types";
 
@@ -13,7 +15,7 @@ import type { NameMap } from "@/lib/types";
  * Deliberately not a Server Action — these are reads used during render, and
  * marking them `"use server"` would publish them as POST endpoints for nothing.
  */
-export async function getVolunteerNames(): Promise<NameMap> {
+export const getVolunteerNames = cache(async (): Promise<NameMap> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("volunteer_names")
@@ -24,16 +26,19 @@ export async function getVolunteerNames(): Promise<NameMap> {
     map[row.email.toLowerCase()] = row.display_name;
   }
   return map;
-}
+});
 
-/** The signed-in volunteer's own name, or null if they have not set one. */
-export async function getMyName() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+/**
+ * The signed-in volunteer's own name, or null if they have not set one.
+ *
+ * Cached per request: the header renders it and so does any page that needs it,
+ * and without this each caller repeated both the auth call and the query.
+ */
+export const getMyName = cache(async () => {
+  const user = await getUser();
   if (!user?.email) return null;
 
+  const supabase = await createClient();
   const { data } = await supabase
     .from("volunteer_names")
     .select("display_name")
@@ -41,4 +46,4 @@ export async function getMyName() {
     .maybeSingle();
 
   return data?.display_name ?? null;
-}
+});

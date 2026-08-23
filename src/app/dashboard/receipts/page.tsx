@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/auth";
 import { getMyName } from "@/lib/volunteer-names";
 import { volunteerName } from "@/lib/receipt-utils";
 import type { DailyTotal, Receipt } from "@/lib/types";
@@ -10,7 +11,7 @@ export const metadata = { title: "Receipts · Pavti Pustak" };
 export default async function ReceiptsPage() {
   const supabase = await createClient();
 
-  const [{ data, error, count }, myName, { data: auth }, daily, unpaidRows] =
+  const [{ data, error, count }, myName, user, daily, unpaidRows] =
     await Promise.all([
       // First page only; the client appends further pages on demand.
       supabase
@@ -20,7 +21,7 @@ export default async function ReceiptsPage() {
         .order("receipt_number", { ascending: false })
         .range(0, 49),
       getMyName(),
-      supabase.auth.getUser(),
+      getUser(),
       supabase
         .from("receipt_daily_totals")
         .select("*")
@@ -51,7 +52,7 @@ export default async function ReceiptsPage() {
       total={count ?? 0}
       mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
       // The name other volunteers see when this device has a receipt open.
-      myName={myName ?? volunteerName(auth.user?.email) ?? "—"}
+      myName={myName ?? volunteerName(user?.email) ?? "—"}
       daily={(daily.data ?? []) as DailyTotal[]}
       unpaid={(unpaidRows.data ?? []) as { amount: number; collection_date: string }[]}
     />
