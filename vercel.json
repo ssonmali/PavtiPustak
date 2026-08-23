@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/keepalive",
+      "comment": "Keeps the free-tier Supabase project from pausing after 7 days idle. 06:00 UTC = 11:30 IST.",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

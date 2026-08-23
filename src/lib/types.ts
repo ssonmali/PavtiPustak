@@ -95,7 +95,10 @@ export type Database = {
       volunteer_totals: { Row: VolunteerTotal; Relationships: [] };
       donor_directory: { Row: Donor; Relationships: [] };
     };
-    Functions: Record<never, never>;
+    Functions: {
+      /** Trivial round-trip used by the daily keep-alive; touches no table. */
+      ping: { Args: Record<string, never>; Returns: string };
+    };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
   };

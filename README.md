@@ -44,6 +44,12 @@ Apply the SQL in `supabase/` in numeric order first — see [DEPLOYMENT.md](DEPL
 Tests run under a non-IST timezone in CI on purpose: date handling must not
 depend on the host zone.
 
+## Keeping the free tier awake
+
+Supabase pauses an idle free-tier project after 7 days, and it does not wake on
+its own. `vercel.json` declares a daily cron against `/api/keepalive` to prevent
+that. See [DEPLOYMENT.md](DEPLOYMENT.md) step 7.
+
 ## Deployment
 
 See [DEPLOYMENT.md](DEPLOYMENT.md).

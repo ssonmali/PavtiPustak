@@ -11,6 +11,8 @@ re-runnable.
 | `supabase/02-audit-and-shared-editing.sql` | Shared editing + audit log trigger |
 | `supabase/03-realtime.sql` | Realtime publication + replica identity |
 | `supabase/04-views-and-locking.sql` | Aggregate views, `updated_at`, creator email |
+| `supabase/05-realtime-fix.sql` | Replica identity + audit publication |
+| `supabase/06-ping.sql` | `ping()` for the daily keep-alive |
 
 Then run `supabase/verify.sql` — it lists the policies, the trigger, and the
 audit row count so you can confirm everything landed.
@@ -32,6 +34,7 @@ account cannot log in. There is no public sign-up by design; also turn off
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the `sb_publishable_…` key |
    | `NEXT_PUBLIC_MANDAL_NAME` | your mandal's name, e.g. `श्री गणेश मंडळ` |
+   | `CRON_SECRET` | any long random string — see step 7 |
 
    Never add the `sb_secret_…` key. The app does not use it, and a
    `NEXT_PUBLIC_` variable is shipped to the browser.
@@ -60,13 +63,45 @@ sign-in and password-recovery limits to suit a mandal of a few volunteers —
 nobody legitimately needs 30 login attempts an hour. This is a dashboard
 setting, not application code, which is why it is not in the repo.
 
+## 7. Keep the project awake
+
+Supabase pauses a free-tier project after **7 days without database activity**,
+and a paused project does **not** wake up when someone opens the site — it must
+be restored by hand from the dashboard. For a mandal that collects a few weeks a
+year, that means finding out it is down at a donor's doorstep.
+
+`vercel.json` already declares a daily cron hitting `/api/keepalive`, which runs
+one trivial `select now()` and resets the clock. Nothing to configure beyond:
+
+1. Deploy (crons are registered from `vercel.json` at deploy time — they do not
+   run on preview deployments, only production).
+2. Run `supabase/06-ping.sql`.
+3. Set `CRON_SECRET` in Vercel to any long random string. Vercel sends it as a
+   bearer token; the route rejects mismatches. If you leave it unset the route
+   still works and stays open, which is harmless — it only reads the clock.
+4. Verify by opening `https://your-app.vercel.app/api/keepalive`. Expect
+   `{"ok":true,"dbTime":"…"}`. A 503 tells you which migration is missing.
+
+Vercel's Hobby plan allows one cron job at daily granularity, which is exactly
+what this needs.
+
+**Do not assume it is working.** A cron that quietly stops leaves you paused
+while you believe you are covered. Either check the endpoint occasionally, or
+point a free uptime monitor at it — the route answers 503 when the database is
+unreachable, so a monitor will actually tell you.
+
+If the project does pause: dashboard → open the project → **Restore project** →
+wait a couple of minutes. No data is lost; pausing is not deletion. Do this the
+day *before* a collection round, not during one.
+
 ## Known limits
 
 - **Password reset needs email.** Supabase's built-in SMTP is rate-limited to a
   handful of messages per hour and may land in spam. For reliable delivery,
   configure custom SMTP under **Project Settings → Auth → SMTP**.
-- **Free-tier projects pause after 7 days of inactivity.** If the mandal only
-  uses this during Ganeshotsav, restore it from the dashboard beforehand.
+- **Free-tier pausing** is handled by the daily cron in step 7. Without that
+  cron — or if it fails — the project pauses after 7 idle days and needs a manual
+  restore from the dashboard.
 - **`receipt_number` can have gaps.** Sequences do not roll back, so a failed
   insert burns a number. Do not promise the treasurer a gapless series.
 - **Offline support only runs in a production build.** The service worker is
