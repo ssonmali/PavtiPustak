@@ -20,6 +20,10 @@ const buttonVariants = cva(
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        // A flat fill rather than the brand gradient: the default variant
+        // paints a background-image, which no background-color can override.
+        whatsapp:
+          "bg-whatsapp text-whatsapp-foreground shadow-[var(--elevation-sm)] hover:shadow-[var(--elevation-md)] hover:brightness-105 active:brightness-95 active:translate-y-px",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

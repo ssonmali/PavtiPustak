@@ -454,11 +454,19 @@ export function ReceiptsTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {/* A receipt thanks someone for money received, so it
+                          cannot be sent for a pledge. The title says why the
+                          button is dead rather than leaving it a mystery. */}
                       <Button
                         size="sm"
-                        variant="outline"
+                        disabled={receipt.payment_status === "Unpaid"}
                         onClick={() => sendWhatsApp(receipt)}
-                        title={t("table.sendTitle", { name: receipt.donor_name })}
+                        title={
+                          receipt.payment_status === "Unpaid"
+                            ? t("status.cannotSend")
+                            : t("table.sendTitle", { name: receipt.donor_name })
+                        }
+                        variant="whatsapp"
                       >
                         <MessageCircle /> {t("table.send")}
                       </Button>
@@ -588,7 +596,7 @@ export function ReceiptsTable({
                   </Button>
                 ) : (
                   <Button
-                    variant="outline"
+                    variant="whatsapp"
                     className="flex-1"
                     onClick={() => sendWhatsApp(receipt)}
                   >

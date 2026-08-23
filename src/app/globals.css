@@ -31,6 +31,8 @@
   --color-info: var(--info);
   --color-pending: var(--pending);
   --color-positive-ink: var(--positive-ink);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-foreground: var(--whatsapp-foreground);
   --color-pending-ink: var(--pending-ink);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -105,6 +107,13 @@
   --chart-4: oklch(0.72 0.15 85);
   --chart-5: oklch(0.55 0.16 300);
 
+  /* WhatsApp's own green, so the button is recognised before it is read. Kept
+     identical in both themes because a filled button carries its own
+     background and foreground: dark ink on this green is 8.6:1, where the
+     white text the brand is usually drawn with would be 2:1. */
+  --whatsapp: #25d366;
+  --whatsapp-foreground: #0b1f1a;
+
   --radius: 0.75rem;
 
   --sidebar: oklch(0.975 0.012 82);
@@ -164,6 +173,9 @@
   --chart-3: oklch(0.7 0.13 165);
   --chart-4: oklch(0.78 0.14 85);
   --chart-5: oklch(0.65 0.16 300);
+
+  --whatsapp: #25d366;
+  --whatsapp-foreground: #0b1f1a;
 
   --sidebar: oklch(0.2 0.015 60);
   --sidebar-foreground: oklch(0.97 0.008 85);
