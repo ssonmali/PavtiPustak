@@ -21,6 +21,7 @@ import {
   markReceiptPaid,
 } from "@/app/actions/receipts";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
+import type { Editors } from "@/lib/use-editing-presence";
 import {
   formatAmount,
   formatDate,
@@ -120,6 +121,19 @@ function UnpaidBadge({
   );
 }
 
+/**
+ * Someone else has this row open. Shown before the edit is attempted, so a
+ * volunteer can wait rather than discover the clash at save time.
+ */
+function EditingBadge({ label }: { label: string }) {
+  return (
+    <span className="mt-0.5 flex items-center gap-1 text-xs font-normal text-muted-foreground">
+      <Pencil aria-hidden className="size-3 shrink-0" />
+      {label}
+    </span>
+  );
+}
+
 type QueueFn = (
   entry: Omit<OutboxEntry, "localId" | "queuedAt" | "attempts">,
 ) => Promise<void>;
@@ -130,15 +144,20 @@ export function ReceiptsTable({
   total,
   online = true,
   queue,
+  editors,
+  setPresence,
 }: {
   receipts: LocalReceipt[];
   mandalName: string;
-  /** Mirrors the dashboard period so the PDF report covers the same window. */
   /** Total rows on the server, when the list is paginated. */
   total?: number;
   online?: boolean;
   /** Present when writes should be queued instead of sent. */
   queue?: QueueFn;
+  /** Receipt id → other volunteers with it open right now. */
+  editors: Editors;
+  /** Announces which receipt this device has open. */
+  setPresence: (receiptId: string | null) => void;
 }) {
   const { t, locale } = useI18n();
   const [query, setQuery] = React.useState("");
@@ -191,9 +210,40 @@ export function ReceiptsTable({
   }
 
   function openEdit(receipt: LocalReceipt) {
+    // Advisory only — the save is still guarded by the updated_at check. This
+    // just means nobody types out an edit that is about to lose a race.
+    const others = editors[receipt.id];
+    if (others?.length) {
+      toast.warning(t("lock.beingEdited", { who: others.join(", ") }));
+    }
     setEditing(receipt);
     setDialogOpen(true);
   }
+
+  /**
+   * The row being edited may vanish under us — someone else deletes it while
+   * the dialog is open. Derived rather than pushed into state, so the dialog
+   * closes without an effect writing state during a render pass.
+   */
+  const editingGone = Boolean(
+    dialogOpen &&
+      editing &&
+      editing.pending !== "create" &&
+      online &&
+      !all.some((r) => r.id === editing.id),
+  );
+
+  // Only the notice needs an effect. The dialog is already closed by the line
+  // above, and `editing`/`dialogOpen` are overwritten by every path that opens
+  // it again, so there is nothing to reset — and nothing to write from here.
+  React.useEffect(() => {
+    if (editingGone) toast.error(t("lock.deletedAnon"));
+  }, [editingGone, t]);
+
+  // Tell the other volunteers which receipt is open on this device.
+  React.useEffect(() => {
+    setPresence(dialogOpen && editing && !editingGone ? editing.id : null);
+  }, [dialogOpen, editing, editingGone, setPresence]);
 
   /** Today on the mandal's calendar, for deciding what is overdue. */
   const today = todayInIst();
@@ -341,6 +391,13 @@ export function ReceiptsTable({
                   </TableCell>
                   <TableCell className="font-medium">
                     {receipt.donor_name}
+                    {editors[receipt.id]?.length ? (
+                      <EditingBadge
+                        label={t("lock.badge", {
+                          who: editors[receipt.id].join(", "),
+                        })}
+                      />
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     <span
@@ -445,6 +502,13 @@ export function ReceiptsTable({
                   <p className="wrap-anywhere font-medium">
                     {receipt.donor_name}
                   </p>
+                  {editors[receipt.id]?.length ? (
+                    <EditingBadge
+                      label={t("lock.badge", {
+                        who: editors[receipt.id].join(", "),
+                      })}
+                    />
+                  ) : null}
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1 tabular-nums">
                       {receipt.pending === "create" ? (
@@ -557,7 +621,7 @@ export function ReceiptsTable({
       </div>
 
       <ReceiptDialog
-        open={dialogOpen}
+        open={dialogOpen && !editingGone}
         onOpenChange={setDialogOpen}
         receipt={editing}
         online={online}

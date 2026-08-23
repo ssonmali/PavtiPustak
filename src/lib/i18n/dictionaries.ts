@@ -95,6 +95,10 @@ const en = {
   "offline.storageBlocked": "This browser is blocking local storage, so the receipt could not be saved offline. Try again once you have signal, or turn off private browsing.",
   "loading": "Loading…",
 
+  "lock.beingEdited": "{who} has this receipt open. Save last and you may overwrite their change.",
+  "lock.badge": "{who} is editing",
+  "lock.deleted": "{who} deleted this receipt while you had it open.",
+  "lock.deletedAnon": "This receipt was deleted while you had it open.",
   "realtime.live": "Live — synced across devices",
   "realtime.polling": "Updating periodically — live sync unavailable",
 
@@ -363,6 +367,10 @@ const mr: Record<MessageKey, string> = {
   "offline.storageBlocked": "हा ब्राउझर स्थानिक साठा अडवत आहे, त्यामुळे पावती ऑफलाइन जतन झाली नाही. नेटवर्क आल्यावर पुन्हा प्रयत्न करा.",
   "loading": "लोड होत आहे…",
 
+  "lock.beingEdited": "{who} यांनी ही पावती उघडली आहे. नंतर जतन केल्यास त्यांचा बदल पुसला जाऊ शकतो.",
+  "lock.badge": "{who} बदल करत आहेत",
+  "lock.deleted": "तुम्ही उघडलेली पावती {who} यांनी काढून टाकली.",
+  "lock.deletedAnon": "तुम्ही उघडलेली पावती काढून टाकली गेली.",
   "realtime.live": "थेट — सर्व उपकरणांवर अद्ययावत",
   "realtime.polling": "अधून मधून अद्ययावत — थेट सिंक उपलब्ध नाही",
 

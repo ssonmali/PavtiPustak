@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { Receipt } from "@/lib/types";
 import { useI18n } from "@/lib/i18n/client";
 import { useOfflineReceipts, type FlushResult } from "@/lib/offline";
+import { useEditingPresence } from "@/lib/use-editing-presence";
 import { Card, CardContent } from "@/components/ui/card";
 import { OfflineBadge } from "@/components/offline-badge";
 import { ReceiptsTable } from "../receipts-table";
@@ -19,14 +20,18 @@ export function ReceiptsView({
   receipts,
   mandalName,
   total,
+  myName,
 }: {
   receipts: Receipt[];
   mandalName: string;
   total: number;
+  /** This volunteer's display name, published to the other editors. */
+  myName: string;
 }) {
   const { t } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
   const [status, setStatus] = React.useState<StatusFilter>("all");
+  const { editors, setEditing: setPresence } = useEditingPresence(myName);
 
   const onFlush = React.useCallback(
     (result: FlushResult) => {
@@ -96,6 +101,8 @@ export function ReceiptsView({
             total={online && status === "all" ? total : undefined}
             online={online}
             queue={queue}
+            editors={editors}
+            setPresence={setPresence}
           />
         </CardContent>
       </Card>
