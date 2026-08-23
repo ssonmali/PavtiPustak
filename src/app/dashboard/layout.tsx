@@ -49,7 +49,7 @@ export default async function DashboardLayout({
             </div>
             <div className="mr-auto min-w-0">
               <p className="truncate font-display text-[0.95rem] leading-tight font-semibold tracking-tight">
-                {process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal"}
+                {process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
               </p>
               {/* The name doubles as the way into the one setting there is. */}
               <Link

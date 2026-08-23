@@ -17,7 +17,7 @@ export default async function ReceiptSlipPage({
   const { id } = await params;
   const supabase = await createClient();
   const { locale, t } = await getDictionary();
-  const mandalName = process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal";
+  const mandalName = process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal";
 
   const [{ data }, names] = await Promise.all([
     supabase.from("receipts").select("*").eq("id", id).maybeSingle(),

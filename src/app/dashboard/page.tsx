@@ -82,7 +82,7 @@ export default async function DashboardPage() {
         (unpaidRows.data ?? []) as { amount: number; collection_date: string }[]
       }
       due={(due.data ?? []) as Receipt[]}
-      mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal"}
+      mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
       names={names}
     />
   );

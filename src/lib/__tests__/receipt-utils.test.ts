@@ -156,13 +156,13 @@ describe("pledgeReminderUrl", () => {
   };
 
   it("does not quote a receipt number for money not received", () => {
-    const text = decodeURIComponent(pledgeReminderUrl(pledge, "श्री गणेश मंडळ"));
+    const text = decodeURIComponent(pledgeReminderUrl(pledge, "श्री गणेश मित्र मंडळ"));
     expect(text).not.toContain(String(pledge.receipt_number));
     expect(text).not.toContain("आभार");
   });
 
   it("names the expected date and the amount", () => {
-    const text = decodeURIComponent(pledgeReminderUrl(pledge, "श्री गणेश मंडळ"));
+    const text = decodeURIComponent(pledgeReminderUrl(pledge, "श्री गणेश मित्र मंडळ"));
     expect(text).toContain("₹501");
     // Against the formatter, not a literal: ICU renders September as "Sept"
     // in en-IN, and that is not what this test is about.
@@ -178,7 +178,7 @@ describe("pledgeReminderUrl", () => {
 
 describe("whatsappUrl", () => {
   it("prefixes the country code and encodes the message", () => {
-    const url = whatsappUrl(receipt, "श्री गणेश मंडळ");
+    const url = whatsappUrl(receipt, "श्री गणेश मित्र मंडळ");
     expect(url.startsWith("https://wa.me/919876543210?text=")).toBe(true);
     expect(url).not.toContain(" ");
     expect(decodeURIComponent(url)).toContain("सुनील पाटील");

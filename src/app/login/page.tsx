@@ -26,7 +26,7 @@ export default async function LoginPage({
             <ReceiptText className="size-6" />
           </div>
           <h1 className="font-display text-2xl tracking-tight">
-            {process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal"}
+            {process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
           </h1>
           <p className="text-sm text-muted-foreground">{t("auth.bookName")}</p>
         </div>

@@ -32,7 +32,7 @@ export default async function ReportPage({
 
   const supabase = await createClient();
   const { locale, t } = await getDictionary();
-  const mandalName = process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal";
+  const mandalName = process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal";
 
   let query = supabase
     .from("receipts")

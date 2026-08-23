@@ -45,7 +45,7 @@ against the one in the JWT, so nobody can rename a colleague.
    |---|---|
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the `sb_publishable_…` key |
-   | `NEXT_PUBLIC_MANDAL_NAME` | your mandal's name, e.g. `श्री गणेश मंडळ` |
+   | `NEXT_PUBLIC_MANDAL_NAME` | your mandal's name, e.g. `श्री गणेश मित्र मंडळ` |
    | `CRON_SECRET` | any long random string — see step 7 |
 
    Never add the `sb_secret_…` key. The app does not use it, and a

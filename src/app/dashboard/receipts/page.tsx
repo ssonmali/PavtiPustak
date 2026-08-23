@@ -31,7 +31,7 @@ export default async function ReceiptsPage() {
     <ReceiptsView
       receipts={(data ?? []) as Receipt[]}
       total={count ?? 0}
-      mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Ganesh Mandal"}
+      mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
     />
   );
 }
