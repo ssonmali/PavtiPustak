@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Receipt } from "@/lib/types";
 import { formatAmount, formatDate } from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
-import { PrintBar } from "../../report/print-button";
+import { PrintBar } from "../../print-bar";
 
 export const metadata = { title: "Receipt · Pavti Pustak" };
 

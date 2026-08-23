@@ -111,6 +111,13 @@ day *before* a collection round, not during one.
 - **Offline caching stores pages on the device.** A volunteer's phone keeps the
   last version of each page it opened, so treat a shared phone as it would be
   treated with any other ledger. Signing out clears the cached pages.
+- **`write-excel-file` is patched.** It numbers custom cell formats from 100,
+  but the OOXML spec reserves 0–163 for Excel's built-ins, and Excel responds
+  with "we found a problem with some content" and offers to repair the file.
+  `patches/write-excel-file+4.1.1.patch` moves the base to 164; `postinstall`
+  reapplies it, so a plain `npm install` on Vercel is enough. If the patch ever
+  fails to apply after a version bump, the Excel export will start prompting for
+  repair again — that is the symptom to look for.
 - **No error monitoring is wired up.** Errors go to the Vercel function logs
   with a digest shown to the user. If you want alerting, add Sentry — it needs
   an account and a DSN, so it was left out deliberately.

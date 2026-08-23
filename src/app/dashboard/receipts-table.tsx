@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  Download,
   Loader2,
   MessageCircle,
   MoreHorizontal,
@@ -15,16 +14,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteReceipt, fetchReceipts } from "@/app/actions/receipts";
-import { exportReceiptsToExcel } from "@/lib/export-excel";
-import { dictionaries } from "@/lib/i18n/dictionaries";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
 import {
   formatAmount,
   formatDate,
-  receiptsToCsv,
   whatsappUrl,
 } from "@/lib/receipt-utils";
-import { FileSpreadsheet, FileText } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { ReceiptDialog } from "./receipt-dialog";
 import {
@@ -91,7 +86,6 @@ type QueueFn = (
 export function ReceiptsTable({
   receipts,
   mandalName,
-  periodDays = 0,
   total,
   online = true,
   queue,
@@ -99,7 +93,6 @@ export function ReceiptsTable({
   receipts: LocalReceipt[];
   mandalName: string;
   /** Mirrors the dashboard period so the PDF report covers the same window. */
-  periodDays?: number;
   /** Total rows on the server, when the list is paginated. */
   total?: number;
   online?: boolean;
@@ -168,37 +161,6 @@ export function ReceiptsTable({
     window.open(whatsappUrl(receipt, mandalName), "_blank", "noopener");
   }
 
-  async function exportExcel() {
-    if (!filtered.length) {
-      toast.error(t("toast.nothingToExport"));
-      return;
-    }
-    await exportReceiptsToExcel(filtered, dictionaries[locale], mandalName);
-    toast.success(t("toast.exported", { count: filtered.length }));
-  }
-
-  /** Opens the print-ready report; the browser's dialog saves it as PDF. */
-  function openPdf() {
-    window.open(`/dashboard/report?days=${periodDays}`, "_blank", "noopener");
-  }
-
-  function exportCsv() {
-    if (!filtered.length) {
-      toast.error(t("toast.nothingToExport"));
-      return;
-    }
-    const blob = new Blob([receiptsToCsv(filtered)], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `pavti-pustak-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success(t("toast.exported", { count: filtered.length }));
-  }
-
   /** Queues the delete on the device; returns false if it could not be stored. */
   async function queueDelete(receipt: LocalReceipt) {
     if (!queue) return false;
@@ -252,31 +214,9 @@ export function ReceiptsTable({
             className="pl-8"
           />
         </div>
-        <div className="flex gap-2 sm:ml-auto [&>*]:flex-1 sm:[&>*]:flex-none">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="outline" className="w-full sm:w-auto">
-                  <Download /> {t("table.export")}
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={exportExcel}>
-                <FileSpreadsheet /> {t("export.excel")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={openPdf}>
-                <FileText /> {t("export.pdf")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportCsv}>
-                <Download /> {t("export.csv")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button onClick={openCreate} className="w-full sm:w-auto">
-            <Plus /> {t("table.new")}
-          </Button>
-        </div>
+        <Button onClick={openCreate} className="w-full sm:ml-auto sm:w-auto">
+          <Plus /> {t("table.new")}
+        </Button>
       </div>
 
       {/* Phones get the card list below; the table starts at sm. */}

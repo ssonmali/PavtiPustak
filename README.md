@@ -1,14 +1,15 @@
 # पावती पुस्तक · Pavti Pustak
 
-Vargani (donation) receipt management for a Ganesh Mandal. Volunteers record
-donations on their phones, WhatsApp a receipt to the donor, and the treasurer
-exports the ledger for accounting.
+Vargani (contribution) receipt management for a Ganesh Mandal. Volunteers record
+contributions on their phones, WhatsApp a receipt to the donor, and the treasurer
+prints the ledger for accounting.
 
 ## Features
 
 - **Receipts** — create, edit, delete, with backdating for previous collections
 - **WhatsApp** — one tap sends a bilingual thank-you via the `wa.me` intent
-- **Exports** — Excel (.xlsx), a print-ready PDF report, per-donor slips, CSV
+- **Print / PDF** — a ruled report for today, a custom date range, or all time,
+  plus a printable slip per receipt
 - **Overview** — daily collection chart split by Cash/UPI, per-volunteer totals
 - **Activity log** — every change, by whom, with a field-level diff
 - **Bilingual** — Marathi (default) and English

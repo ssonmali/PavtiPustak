@@ -5,8 +5,8 @@ import {
   formatDate,
   formatDateShort,
   formatDateTime,
-  receiptsToCsv,
   toDateValue,
+  utcMidnight,
   whatsappUrl,
 } from "@/lib/receipt-utils";
 import type { Receipt } from "@/lib/types";
@@ -60,20 +60,18 @@ describe("formatAmount", () => {
   });
 });
 
-describe("receiptsToCsv", () => {
-  it("starts with a BOM so Excel renders Marathi names", () => {
-    expect(receiptsToCsv([receipt]).startsWith("﻿")).toBe(true);
+describe("utcMidnight", () => {
+  it("lands on UTC midnight, not local midnight", () => {
+    expect(utcMidnight("2026-08-01").toISOString()).toBe(
+      "2026-08-01T00:00:00.000Z",
+    );
   });
 
-  it("neutralises formula injection in donor names", () => {
-    const csv = receiptsToCsv([{ ...receipt, donor_name: "=cmd()|calc" }]);
-    // Quote-prefixed, so Excel treats it as text rather than a formula.
-    expect(csv).toContain('"\'=cmd()|calc"');
-  });
-
-  it("escapes embedded quotes", () => {
-    const csv = receiptsToCsv([{ ...receipt, donor_name: 'A "B" C' }]);
-    expect(csv).toContain('"A ""B"" C"');
+  it("keeps the day a spreadsheet serial number resolves to", () => {
+    // getTime()/86400000 + days-before-unix-epoch is how xlsx serials are
+    // derived; a fractional result means the sheet shows the previous day.
+    const serial = utcMidnight("2026-08-01").getTime() / 86_400_000 + 25_569;
+    expect(serial).toBe(46_235);
   });
 });
 

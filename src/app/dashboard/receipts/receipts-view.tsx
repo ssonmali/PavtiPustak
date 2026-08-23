@@ -68,7 +68,6 @@ export function ReceiptsView({
           <ReceiptsTable
             receipts={visible}
             mandalName={mandalName}
-            periodDays={period}
             // Pagination only makes sense against the live server list.
             total={online ? total : undefined}
             online={online}

@@ -174,9 +174,34 @@
     margin: 14mm;
   }
 
+  /* Paper is white whatever the theme is. Without the colour reset, printing
+     from dark mode puts near-white text on a white page. */
   html,
   body {
     background: #fff !important;
+  }
+
+  body,
+  body * {
+    color: #000 !important;
+    background-color: transparent !important;
+  }
+
+  /*
+   * Overlays are screen furniture. These are PORTALLED to document.body, which
+   * puts them outside any `print:hidden` wrapper — so they have to be excluded
+   * by slot, not by position in the tree. An open Export menu was printing.
+   */
+  [data-sonner-toaster],
+  [data-slot="dialog-overlay"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-overlay"],
+  [data-slot="alert-dialog-content"],
+  [data-slot^="dropdown-menu"],
+  [data-slot^="select"],
+  [data-slot^="popover"],
+  [data-slot^="tooltip"] {
+    display: none !important;
   }
 
   /* Keep rows intact and repeat the header on every page. */
@@ -334,4 +359,54 @@
 @theme inline {
   /* Display face, used via `font-display` on headings. */
   --font-display: var(--font-display), Georgia, serif;
+}
+
+/* ---------------------------------------------------------------------------
+   The report's ruled grid. Bordered on every side so a treasurer can read
+   across a row on paper. It is on screen too — the page a volunteer
+   proof-reads should be the page that comes out of the printer — so it wears
+   theme tokens here and forced ink-on-white under @media print.
+   --------------------------------------------------------------------------- */
+.print-grid {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.print-grid th,
+.print-grid td {
+  border: 1px solid var(--border);
+  padding: 5px 7px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.print-grid thead th,
+.print-grid tbody th[scope="row"] {
+  font-weight: 700;
+  background: var(--muted);
+}
+
+.print-grid tfoot td {
+  border-top: 2px solid var(--foreground);
+  font-weight: 700;
+}
+
+@media print {
+  .print-grid th,
+  .print-grid td {
+    border-color: #999;
+  }
+
+  .print-grid thead th,
+  .print-grid tbody th[scope="row"] {
+    /* !important to win against the blanket background reset above. */
+    background-color: #eee !important;
+    /* Without this, browsers strip table backgrounds when printing. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-grid tfoot td {
+    border-top-color: #333;
+  }
 }

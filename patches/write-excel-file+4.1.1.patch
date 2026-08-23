@@ -1,0 +1,26 @@
+diff --git a/node_modules/write-excel-file/commonjs/xlsx/initializeStyles.js b/node_modules/write-excel-file/commonjs/xlsx/initializeStyles.js
+index af7103f..7cf952e 100644
+--- a/node_modules/write-excel-file/commonjs/xlsx/initializeStyles.js
++++ b/node_modules/write-excel-file/commonjs/xlsx/initializeStyles.js
+@@ -17,7 +17,7 @@ function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol"
+ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+ // There seem to be about 100 "built-in" formats in Excel.
+ // https://docs.microsoft.com/en-us/previous-versions/office/developer/office-2010/ee857658(v=office.14)?redirectedfrom=MSDN
+-var FORMAT_ID_STARTS_FROM = exports.FORMAT_ID_STARTS_FROM = 100;
++var FORMAT_ID_STARTS_FROM = exports.FORMAT_ID_STARTS_FROM = 164;
+ function initializeStyles(defaultFont) {
+   var formats = [];
+   var formatIdByFormat = {};
+diff --git a/node_modules/write-excel-file/modules/xlsx/initializeStyles.js b/node_modules/write-excel-file/modules/xlsx/initializeStyles.js
+index 711771a..a1f513a 100644
+--- a/node_modules/write-excel-file/modules/xlsx/initializeStyles.js
++++ b/node_modules/write-excel-file/modules/xlsx/initializeStyles.js
+@@ -10,7 +10,7 @@ import hasBorder from './helpers/hasBorder.js';
+ 
+ // There seem to be about 100 "built-in" formats in Excel.
+ // https://docs.microsoft.com/en-us/previous-versions/office/developer/office-2010/ee857658(v=office.14)?redirectedfrom=MSDN
+-export var FORMAT_ID_STARTS_FROM = 100;
++export var FORMAT_ID_STARTS_FROM = 164;
+ export default function initializeStyles(defaultFont) {
+   var formats = [];
+   var formatIdByFormat = {};

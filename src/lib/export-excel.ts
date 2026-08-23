@@ -3,6 +3,7 @@ import writeXlsxFile, {
   type SheetData,
 } from "write-excel-file/browser";
 import type { Receipt } from "@/lib/types";
+import { utcMidnight } from "@/lib/receipt-utils";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 /**
@@ -14,9 +15,13 @@ export async function exportReceiptsToExcel(
   receipts: Receipt[],
   dict: Dictionary,
   mandalName: string,
+  /** Appended to the filename so a range is identifiable on disk. */
+  slug = new Date().toISOString().slice(0, 10),
 ) {
   const header: Row = [
-    { value: dict["table.no"], fontWeight: "bold" },
+    // The spreadsheet stands alone, so the column says what the number is —
+    // wrapped onto two lines rather than widening the column to fit it.
+    { value: dict["slip.number"], fontWeight: "bold", wrap: true },
     { value: dict["table.donor"], fontWeight: "bold" },
     { value: dict["table.amount"], fontWeight: "bold", align: "right" },
     { value: dict["table.mobile"], fontWeight: "bold" },
@@ -31,7 +36,11 @@ export async function exportReceiptsToExcel(
     // Kept as text so Excel doesn't strip the leading digit or use sci notation.
     { type: String, value: r.phone_number },
     { type: String, value: dict[`method.${r.payment_method}`] },
-    { type: Date, value: parseDate(r.collection_date), format: "dd/mm/yyyy" },
+    {
+      type: Date,
+      value: utcMidnight(r.collection_date),
+      format: "dd/mm/yyyy",
+    },
   ]);
 
   const total = receipts.reduce((sum, r) => sum + Number(r.amount), 0);
@@ -48,7 +57,7 @@ export async function exportReceiptsToExcel(
 
   await writeXlsxFile(data, {
     columns: [
-      { width: 8 },
+      { width: 9 },
       { width: 28 },
       { width: 14 },
       { width: 16 },
@@ -58,11 +67,5 @@ export async function exportReceiptsToExcel(
     // Excel rejects : \ / ? * [ ] in sheet names, and caps them at 31 chars.
     sheet: mandalName.replace(/[:\\/?*[\]]/g, " ").slice(0, 30) || "Receipts",
     stickyRowsCount: 1,
-  }).toFile(`pavti-pustak-${new Date().toISOString().slice(0, 10)}.xlsx`);
-}
-
-/** Local-calendar parse; `new Date(iso)` would shift the day in IST. */
-function parseDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  }).toFile(`pavti-pustak-${slug}.xlsx`);
 }

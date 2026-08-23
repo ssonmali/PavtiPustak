@@ -46,6 +46,14 @@ export function dayOf(iso: string) {
   }).format(new Date(iso));
 }
 
+/**
+ * Today in the mandal's zone. Used on the server, where the process clock is
+ * UTC and `new Date()` would roll the day over five and a half hours early.
+ */
+export function todayInIst() {
+  return dayOf(new Date().toISOString());
+}
+
 /** Just the clock time of an instant, for grouped lists that show the day once. */
 export function formatTime(iso: string, locale: "mr" | "en" = "en") {
   return new Date(iso).toLocaleTimeString(locale === "mr" ? "mr-IN" : "en-IN", {
@@ -77,6 +85,18 @@ export function toDateValue(date: Date) {
   return `${date.getFullYear()}-${m}-${d}`;
 }
 
+/**
+ * A date-only column as UTC midnight.
+ *
+ * Spreadsheet serial numbers are counted from `getTime()`, which is UTC — so a
+ * local-midnight Date in IST lands at 18:30 the previous day and Excel displays
+ * the day before the one that was recorded.
+ */
+export function utcMidnight(isoDate: string) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
 /** Bilingual thank-you note, opened through the wa.me web intent. */
 export function whatsappUrl(receipt: Receipt, mandalName: string) {
   const message = [
@@ -98,40 +118,4 @@ export function whatsappUrl(receipt: Receipt, mandalName: string) {
 
   // 91 = India country code; phone_number is stored as 10 digits.
   return `https://wa.me/91${receipt.phone_number}?text=${encodeURIComponent(message)}`;
-}
-
-const CSV_HEADERS = [
-  "Receipt No",
-  "Donor Name",
-  "Amount",
-  "Phone",
-  "Payment Method",
-  "Collection Date",
-  "Recorded At",
-] as const;
-
-/** Guards against CSV/formula injection when Excel opens the file. */
-function csvCell(value: string | number) {
-  const raw = String(value ?? "");
-  const safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
-
-export function receiptsToCsv(receipts: Receipt[]) {
-  const rows = receipts.map((r) =>
-    [
-      r.receipt_number,
-      r.donor_name,
-      Number(r.amount).toFixed(2),
-      r.phone_number,
-      r.payment_method,
-      r.collection_date,
-      formatDateTime(r.created_at),
-    ]
-      .map(csvCell)
-      .join(","),
-  );
-
-  // BOM so Excel renders Marathi donor names correctly.
-  return `﻿${CSV_HEADERS.map(csvCell).join(",")}\n${rows.join("\n")}\n`;
 }
