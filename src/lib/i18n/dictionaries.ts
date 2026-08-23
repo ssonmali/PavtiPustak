@@ -127,7 +127,8 @@ const en = {
   "stats.donors": "Contributors",
   "stats.today": "Today",
   "stats.unpaid": "Yet to receive",
-  "stats.volunteers": "Volunteers",
+  "volunteers.title": "Collection by volunteer",
+  "volunteers.subtitle": "Who recorded how much.",
   "table.loadMore": "Load more",
   "table.loadedOf": "{shown} of {total}",
 
@@ -392,7 +393,8 @@ const mr: Record<MessageKey, string> = {
   "stats.donors": "वर्गणीदार",
   "stats.today": "आज",
   "stats.unpaid": "येणे बाकी",
-  "stats.volunteers": "स्वयंसेवक",
+  "volunteers.title": "स्वयंसेवकानुसार जमा",
+  "volunteers.subtitle": "कोणी किती नोंदवले.",
   "table.loadMore": "अधिक पहा",
   "table.loadedOf": "{total} पैकी {shown}",
 

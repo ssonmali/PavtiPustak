@@ -7,16 +7,17 @@ import {
   Sigma,
   Receipt as ReceiptIcon,
   TriangleAlert,
-  Users,
   Wallet,
 } from "lucide-react";
 import type {
   DailyTotal,
   ExpenseDailyTotal,
+  NameMap,
   PledgeTotals,
   Receipt,
+  VolunteerTotal,
 } from "@/lib/types";
-import { formatAmount } from "@/lib/receipt-utils";
+import { displayName, formatAmount } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import {
@@ -37,22 +38,23 @@ import {
 
 export function Overview({
   daily,
-  volunteerCount,
+  volunteers,
   expenseDays,
   pledges,
   unpaidDays,
   due,
   mandalName,
+  names,
 }: {
   daily: DailyTotal[];
-  /** Only the count is shown; the per-volunteer breakdown was removed. */
-  volunteerCount: number;
+  volunteers: VolunteerTotal[];
   expenseDays: ExpenseDailyTotal[];
   pledges: PledgeTotals | null;
   /** Unpaid receipt amounts with the date they were recorded. */
   unpaidDays: { amount: number; collection_date: string }[];
   due: Receipt[];
   mandalName: string;
+  names: NameMap;
 }) {
   const { t } = useI18n();
   const [period, setPeriod] = React.useState<Period>(0);
@@ -119,11 +121,6 @@ export function Overview({
       hint: unpaidCount
         ? t("chart.receiptsCount", { count: unpaidCount })
         : undefined,
-    },
-    {
-      label: t("stats.volunteers"),
-      value: String(volunteerCount),
-      icon: Users,
     },
   ];
 
@@ -201,7 +198,7 @@ export function Overview({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, muted, hint }) => (
           <Card key={label} className="card-elevated accent-top">
             <CardHeader>
@@ -237,6 +234,45 @@ export function Overview({
           </CardHeader>
           <CardContent>
             <DailyCollections days={visible} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {volunteers.length > 0 ? (
+        <Card className="card-elevated">
+          <CardHeader>
+            <CardTitle>{t("volunteers.title")}</CardTitle>
+            <CardDescription>{t("volunteers.subtitle")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2">
+              {volunteers.map((v) => {
+                const share = total
+                  ? Math.round((Number(v.total) / total) * 100)
+                  : 0;
+                return (
+                  <li key={v.volunteer} className="flex flex-col gap-1">
+                    <div className="flex items-baseline gap-2 text-sm">
+                      <span className="wrap-anywhere min-w-0 flex-1 truncate">
+                        {displayName(v.volunteer, names)}
+                      </span>
+                      <span className="tabular-nums">
+                        {formatAmount(v.total)}
+                      </span>
+                      <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">
+                        {t("chart.receiptsCount", { count: v.receipt_count })}
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-[image:var(--brand-gradient)]"
+                        style={{ width: `${share}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </CardContent>
         </Card>
       ) : null}
