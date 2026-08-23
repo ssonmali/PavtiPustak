@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { receiptSchema } from "@/lib/schemas";
-import type { Receipt } from "@/lib/types";
+import type { PaymentMethod, Receipt } from "@/lib/types";
 import { displayName } from "@/lib/receipt-utils";
 import { getVolunteerNames } from "@/lib/volunteer-names";
 
@@ -119,12 +119,19 @@ export async function updateReceipt(
  * collected figure and leaves the reminder list. The due date is cleared to
  * satisfy the constraint that only unpaid rows carry one.
  */
-export async function markReceiptPaid(id: string): Promise<ActionResult> {
+export async function markReceiptPaid(
+  id: string,
+  paymentMethod: PaymentMethod,
+): Promise<ActionResult> {
   const { supabase } = await requireUser();
 
   const { data, error } = await supabase
     .from("receipts")
-    .update({ payment_status: "Paid", due_on: null })
+    .update({
+      payment_status: "Paid",
+      due_on: null,
+      payment_method: paymentMethod,
+    })
     .eq("id", id)
     .select("id");
 

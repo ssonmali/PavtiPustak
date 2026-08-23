@@ -21,6 +21,7 @@ import {
   markReceiptPaid,
 } from "@/app/actions/receipts";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
+import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/types";
 import type { Editors } from "@/lib/use-editing-presence";
 import {
   formatAmount,
@@ -192,6 +193,8 @@ export function ReceiptsTable({
   const [deleting, setDeleting] = React.useState(false);
   /** Id of the pledge currently being marked received. */
   const [marking, setMarking] = React.useState<string | null>(null);
+  /** Pledge waiting for the volunteer to say how it was actually paid. */
+  const [toMarkPaid, setToMarkPaid] = React.useState<LocalReceipt | undefined>();
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -256,8 +259,11 @@ export function ReceiptsTable({
       : t("status.dueOn", { date });
   };
 
-  /** Marks a pledge received from the list, without opening the edit form. */
-  async function markPaid(receipt: LocalReceipt) {
+  /**
+   * Marks a pledge received from the list, without opening the edit form.
+   * How it was actually paid isn't known until now, so the caller supplies it.
+   */
+  async function markPaid(receipt: LocalReceipt, method: PaymentMethod) {
     if (receipt.pending === "create") {
       toast.error(t("offline.noSend"));
       return;
@@ -265,7 +271,7 @@ export function ReceiptsTable({
     setMarking(receipt.id);
     let result;
     try {
-      result = await markReceiptPaid(receipt.id);
+      result = await markReceiptPaid(receipt.id, method);
     } catch {
       setMarking(null);
       toast.error(t("error.body"));
@@ -452,7 +458,7 @@ export function ReceiptsTable({
                         <DropdownMenuContent align="end">
                           {receipt.payment_status === "Unpaid" ? (
                             <DropdownMenuItem
-                              onClick={() => void markPaid(receipt)}
+                              onClick={() => setToMarkPaid(receipt)}
                               disabled={marking === receipt.id}
                             >
                               <Check /> {t("status.markPaid")}
@@ -555,7 +561,7 @@ export function ReceiptsTable({
                 {receipt.payment_status === "Unpaid" ? (
                   <Button
                     className="flex-1"
-                    onClick={() => void markPaid(receipt)}
+                    onClick={() => setToMarkPaid(receipt)}
                     disabled={marking === receipt.id}
                   >
                     {marking === receipt.id ? (
@@ -657,6 +663,46 @@ export function ReceiptsTable({
             >
               {deleting ? t("delete.deleting") : t("delete.confirm")}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(toMarkPaid)}
+        onOpenChange={(open) => {
+          if (!open) setToMarkPaid(undefined);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("status.chooseMethod")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("status.chooseMethodBody", {
+                name: toMarkPaid?.donor_name ?? "",
+                amount: toMarkPaid ? formatAmount(toMarkPaid.amount) : "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={marking === toMarkPaid?.id}>
+              {t("form.cancel")}
+            </AlertDialogCancel>
+            {PAYMENT_METHODS.map((m) => (
+              <Button
+                key={m}
+                disabled={marking === toMarkPaid?.id}
+                onClick={async () => {
+                  if (!toMarkPaid) return;
+                  await markPaid(toMarkPaid, m);
+                  setToMarkPaid(undefined);
+                }}
+              >
+                {marking === toMarkPaid?.id ? (
+                  <Loader2 className="animate-spin" />
+                ) : null}
+                {t(`method.${m}`)}
+              </Button>
+            ))}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

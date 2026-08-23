@@ -11,7 +11,16 @@ import {
   pledgeReminderUrl,
   todayInIst,
 } from "@/lib/receipt-utils";
-import type { Receipt } from "@/lib/types";
+import { PAYMENT_METHODS, type PaymentMethod, type Receipt } from "@/lib/types";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,17 +47,18 @@ export function DuePanel({
 }) {
   const { t, locale } = useI18n();
   const [paying, setPaying] = React.useState<string | null>(null);
+  const [toMarkPaid, setToMarkPaid] = React.useState<Receipt | undefined>();
 
   if (pledges.length === 0) return null;
 
   const today = todayInIst();
   const total = pledges.reduce((sum, p) => sum + Number(p.amount), 0);
 
-  async function markPaid(receipt: Receipt) {
+  async function markPaid(receipt: Receipt, method: PaymentMethod) {
     setPaying(receipt.id);
     let result;
     try {
-      result = await markReceiptPaid(receipt.id);
+      result = await markReceiptPaid(receipt.id, method);
     } catch {
       setPaying(null);
       toast.error(t("error.body"));
@@ -132,7 +142,7 @@ export function DuePanel({
                   <Button
                     size="sm"
                     className="flex-1 sm:flex-none"
-                    onClick={() => void markPaid(p)}
+                    onClick={() => setToMarkPaid(p)}
                     disabled={paying === p.id}
                   >
                     {paying === p.id ? (
@@ -148,6 +158,46 @@ export function DuePanel({
           })}
         </ul>
       </CardContent>
+
+      <AlertDialog
+        open={Boolean(toMarkPaid)}
+        onOpenChange={(open) => {
+          if (!open) setToMarkPaid(undefined);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("status.chooseMethod")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("status.chooseMethodBody", {
+                name: toMarkPaid?.donor_name ?? "",
+                amount: toMarkPaid ? formatAmount(toMarkPaid.amount) : "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={paying === toMarkPaid?.id}>
+              {t("form.cancel")}
+            </AlertDialogCancel>
+            {PAYMENT_METHODS.map((m) => (
+              <Button
+                key={m}
+                disabled={paying === toMarkPaid?.id}
+                onClick={async () => {
+                  if (!toMarkPaid) return;
+                  await markPaid(toMarkPaid, m);
+                  setToMarkPaid(undefined);
+                }}
+              >
+                {paying === toMarkPaid?.id ? (
+                  <Loader2 className="animate-spin" />
+                ) : null}
+                {t(`method.${m}`)}
+              </Button>
+            ))}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
