@@ -153,12 +153,6 @@ export function ExpensesView({
         </p>
       ) : null}
 
-      <CategoryBreakdown
-        rows={breakdown}
-        selected={category}
-        onSelect={setCategory}
-      />
-
       <Card className="card-elevated">
         <CardContent>
           <div className="flex flex-col gap-3">
@@ -297,6 +291,12 @@ export function ExpensesView({
           </div>
         </CardContent>
       </Card>
+
+      <CategoryBreakdown
+        rows={breakdown}
+        selected={category}
+        onSelect={setCategory}
+      />
 
       <Dialog
         open={dialogOpen}
