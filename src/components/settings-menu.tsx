@@ -16,6 +16,7 @@ import { setLocale } from "@/app/actions/locale";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
 import { NameForm } from "@/components/name-form";
+import { clearPrivateCache } from "@/components/service-worker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -143,7 +144,15 @@ export function SettingsMenu({
             <User /> {t("nav.settings")}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => startTransition(() => logout())}
+            onClick={() =>
+              startTransition(() => {
+                // Before the redirect: the service worker caches rendered
+                // dashboard pages, so without this the next volunteer to open
+                // the app offline on this phone sees the previous one's ledger.
+                clearPrivateCache();
+                return logout();
+              })
+            }
             disabled={pending}
           >
             <LogOut /> {t("auth.logout")}

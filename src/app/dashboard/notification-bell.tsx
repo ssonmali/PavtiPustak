@@ -18,7 +18,10 @@ import {
  * lives — it is visible from every page, and unlike a nav badge it can name
  * who without navigating anywhere first.
  */
-export function NotificationBell({ dueToday }: { dueToday: Receipt[] }) {
+/** Only what the bell renders, so the query can select just these columns. */
+type DueRow = Pick<Receipt, "id" | "donor_name" | "amount">;
+
+export function NotificationBell({ dueToday }: { dueToday: DueRow[] }) {
   const { t } = useI18n();
   const count = dueToday.length;
   // Controlled so the popover closes on navigation — Link doesn't unmount

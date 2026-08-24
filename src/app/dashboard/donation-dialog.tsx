@@ -210,7 +210,9 @@ export function DonationDialog({
               name="value"
               type="number"
               min="1"
-              step="1"
+              // The column is numeric(12,2) and the schema accepts any positive
+              // number, so step="1" would block re-saving a row worth 500.50.
+              step="0.01"
               inputMode="numeric"
               defaultValue={
                 donation?.value != null ? String(Number(donation.value)) : ""

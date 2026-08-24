@@ -11,7 +11,6 @@ import { BottomNav, SidebarNav } from "./sidebar-nav";
 import { RealtimeRefresh } from "./realtime-refresh";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
 import { NotificationBell } from "./notification-bell";
-import type { Receipt } from "@/lib/types";
 
 export default async function DashboardLayout({
   children,
@@ -29,9 +28,12 @@ export default async function DashboardLayout({
     getMyName(),
     // Pledges due exactly today, for the bell — overdue-but-older pledges
     // already had their day and don't need to keep re-alerting.
+    // Three columns rather than `*`: this runs on every dashboard page and
+    // every refresh, and the bell renders nothing else. No limit, though — the
+    // badge shows a count, so a cap here would quietly under-report it.
     supabase
       .from("receipts")
-      .select("*")
+      .select("id, donor_name, amount")
       .eq("payment_status", "Unpaid")
       .eq("due_on", today)
       .order("amount", { ascending: false }),
@@ -62,7 +64,7 @@ export default async function DashboardLayout({
               </p>
             </div>
             <RealtimeRefresh />
-            <NotificationBell dueToday={(dueToday ?? []) as Receipt[]} />
+            <NotificationBell dueToday={dueToday ?? []} />
             <SettingsMenu
               locale={locale}
               name={myName}

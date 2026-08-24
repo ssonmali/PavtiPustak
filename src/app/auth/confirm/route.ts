@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 /**
  * Exchanges the token in a Supabase email link for a session, then forwards to
@@ -16,9 +17,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     if (!error) {
-      // Only same-origin relative paths, so the link cannot redirect off-site.
-      const target = next.startsWith("/") ? next : "/dashboard";
-      return NextResponse.redirect(new URL(target, request.url));
+      // Only same-origin relative paths, so a crafted link in a real
+      // recovery email cannot land the volunteer on someone else's site.
+      return NextResponse.redirect(new URL(safeNextPath(next), request.url));
     }
   }
 

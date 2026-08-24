@@ -1,8 +1,10 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 const credentialsSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -31,8 +33,23 @@ export async function login(
     return { error: "Invalid email or password." };
   }
 
-  const next = formData.get("next");
-  redirect(typeof next === "string" && next.startsWith("/") ? next : "/dashboard");
+  redirect(safeNextPath(formData.get("next")));
+}
+
+/**
+ * The origin the recovery link should point back at.
+ *
+ * Read from the request, never from the form: a hidden `origin` field is fully
+ * controlled by anyone who POSTs this action directly, so it could aim a real
+ * password-reset email — carrying a real `token_hash` — at another host. Only
+ * Supabase's redirect allowlist stood between that and account takeover.
+ */
+async function siteOrigin() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return `${proto}://${host}`;
 }
 
 export type ResetState = { error: string | null; sent?: boolean };
@@ -46,7 +63,6 @@ export async function requestPasswordReset(
   formData: FormData,
 ): Promise<ResetState> {
   const email = String(formData.get("email") ?? "");
-  const origin = String(formData.get("origin") ?? "");
 
   if (!z.string().email().safeParse(email).success) {
     return { error: "Please enter a valid email address." };
@@ -54,7 +70,7 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/confirm?next=/reset-password`,
+    redirectTo: `${await siteOrigin()}/auth/confirm?next=/reset-password`,
   });
 
   return { error: null, sent: true };

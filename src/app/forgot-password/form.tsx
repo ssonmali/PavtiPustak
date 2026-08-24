@@ -29,13 +29,6 @@ function Fields() {
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      {/* The action needs an absolute origin to build the callback URL. */}
-      <input
-        type="hidden"
-        name="origin"
-        value={typeof window === "undefined" ? "" : window.location.origin}
-      />
-
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">{t("auth.email")}</Label>
         <Input id="email" name="email" type="email" autoComplete="email" required />
