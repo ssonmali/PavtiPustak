@@ -377,6 +377,15 @@ export function ExpensesView({
                         {e.description}
                       </span>
                       <span className="flex shrink-0 flex-col items-end gap-1">
+                        {/* Advance and remainder, without the total: the two
+                            halves already say it, and stacking three figures
+                            on a narrow card reads as three separate sums. The
+                            table keeps the total. */}
+                        {isPartPaid(e) ? (
+                          <span className="text-[0.6875rem] leading-none text-muted-foreground">
+                            {t("expenses.advanceLabel")}
+                          </span>
+                        ) : null}
                         <span
                           className={cn(
                             "font-bold tabular-nums",
@@ -385,15 +394,8 @@ export function ExpensesView({
                               "text-muted-foreground line-through",
                           )}
                         >
-                          {formatAmount(e.amount)}
+                          {formatAmount(isPartPaid(e) ? received(e) : e.amount)}
                         </span>
-                        {isPartPaid(e) ? (
-                          <span className="text-xs text-muted-foreground">
-                            {t("expenses.advancePaid", {
-                              paid: formatAmount(received(e)),
-                            })}
-                          </span>
-                        ) : null}
                         {e.payment_status === "Unpaid" ? (
                           <UnpaidBadge
                             dueOn={e.due_on}

@@ -605,26 +605,31 @@ export function ReceiptsTable({
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
+                  {/* A part-paid row shows what arrived and what is left, and
+                      drops the total: the two halves already say it, and on a
+                      narrow card three figures stacked read as three separate
+                      sums rather than one split in two. The table, which has
+                      the width for it, still carries the total. */}
+                  {isPartPaid(receipt) ? (
+                    <span className="text-[0.6875rem] leading-none text-muted-foreground">
+                      {t("slip.receivedSoFar")}
+                    </span>
+                  ) : null}
                   <span
                     className={cn(
                       "text-lg font-semibold tabular-nums",
-                      // Struck through only when none of it has arrived, as in
-                      // the table: a part-paid contribution has real money
-                      // against it, so striking the figure would misread it.
+                      // Struck through only when none of it has arrived: a
+                      // part-paid contribution has real money against it, so
+                      // striking the figure would misread it.
                       receipt.payment_status === "Unpaid" &&
                         !isPartPaid(receipt) &&
                         "text-muted-foreground line-through",
                     )}
                   >
-                    {formatAmount(receipt.amount)}
+                    {formatAmount(
+                      isPartPaid(receipt) ? received(receipt) : receipt.amount,
+                    )}
                   </span>
-                  {isPartPaid(receipt) ? (
-                    <span className="text-xs text-muted-foreground">
-                      {t("status.paidOfTotal", {
-                        paid: formatAmount(received(receipt)),
-                      })}
-                    </span>
-                  ) : null}
                   {receipt.payment_status === "Unpaid" ? (
                     <UnpaidBadge
                       dueOn={receipt.due_on}
