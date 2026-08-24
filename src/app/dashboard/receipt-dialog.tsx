@@ -17,6 +17,7 @@ import {
 } from "@/lib/types";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
 import { formatAmount, formatDate, toDateValue } from "@/lib/receipt-utils";
+import { toDevanagariName } from "@/lib/devanagari-name";
 import { useI18n } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -139,6 +140,19 @@ function ReceiptDialogBody({
   const [showMatches, setShowMatches] = React.useState(false);
   const phoneRef = React.useRef<HTMLInputElement>(null);
 
+  /**
+   * The Marathi spelling that goes on the receipt image.
+   *
+   * It tracks the English name as it is typed, until the volunteer edits it —
+   * from then on it is theirs and this stops overwriting it, because a guess
+   * silently replacing a correction is the one behaviour that would make the
+   * field pointless. Clearing it hands control back.
+   */
+  const [nameMr, setNameMr] = React.useState(receipt?.donor_name_mr ?? "");
+  const [nameMrEdited, setNameMrEdited] = React.useState(
+    Boolean(receipt?.donor_name_mr),
+  );
+
   // Duplicate confirmation
   const [dup, setDup] = React.useState<{
     amount: number;
@@ -150,8 +164,17 @@ function ReceiptDialogBody({
   /** Looks up past donors as the volunteer types, debounced. */
   function onDonorInput(value: string) {
     setDonorQuery(value);
+    // Keep the Marathi suggestion in step with the English name, unless it has
+    // been corrected by hand.
+    if (!nameMrEdited) setNameMr(toDevanagariName(value));
     if (isEdit) return;
     setShowMatches(true);
+  }
+
+  function onNameMrInput(value: string) {
+    setNameMr(value);
+    // Blank means "go back to suggesting"; anything else is the volunteer's.
+    setNameMrEdited(value.trim().length > 0);
   }
 
   React.useEffect(() => {
@@ -178,12 +201,23 @@ function ReceiptDialogBody({
     setShowMatches(false);
     // Auto-fill the number we already have for this donor.
     if (phoneRef.current) phoneRef.current.value = donor.phone_number;
+    // A spelling corrected on an earlier receipt is reused rather than
+    // re-guessed — that is the whole point of storing it.
+    if (donor.donor_name_mr) {
+      setNameMr(donor.donor_name_mr);
+      setNameMrEdited(true);
+    } else {
+      setNameMr(toDevanagariName(donor.donor_name));
+      setNameMrEdited(false);
+    }
   }
 
   /** Reads the form into the shape the outbox stores. */
   function fieldsFrom(formData: FormData) {
     return {
       donor_name: String(formData.get("donor_name") ?? "").trim(),
+      donor_name_mr:
+        String(formData.get("donor_name_mr") ?? "").trim() || null,
       amount: Number(formData.get("amount") ?? 0),
       phone_number: String(formData.get("phone_number") ?? "")
         .replace(/[\s-]/g, "")
@@ -342,6 +376,26 @@ function ReceiptDialogBody({
                 ))}
               </ul>
             ) : null}
+          </div>
+
+          {/* The name as it will appear on the receipt the donor receives.
+              Suggested from the English spelling and editable, because English
+              cannot express ट vs त or ळ vs ल — "Patil" is पाटील, and nothing
+              in the letters says so. */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="donor_name_mr">{t("form.donorNameMr")}</Label>
+            <Input
+              id="donor_name_mr"
+              name="donor_name_mr"
+              value={nameMr}
+              onChange={(e) => onNameMrInput(e.target.value)}
+              placeholder={t("form.donorNameMrPlaceholder")}
+              autoComplete="off"
+              lang="mr"
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("form.donorNameMrHint")}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

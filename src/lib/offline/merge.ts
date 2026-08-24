@@ -66,6 +66,7 @@ export function mergeOutbox(
         // row is a complete Receipt for rendering purposes.
         payment_status: entry.fields.payment_status ?? "Paid",
         due_on: entry.fields.due_on ?? null,
+        donor_name_mr: entry.fields.donor_name_mr ?? null,
         pending: "create",
       });
     }

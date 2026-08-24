@@ -29,6 +29,7 @@ export type OutboxEntry = {
    */
   fields?: {
     donor_name: string;
+    donor_name_mr?: string | null;
     amount: number;
     phone_number: string;
     payment_method: "Cash" | "UPI";

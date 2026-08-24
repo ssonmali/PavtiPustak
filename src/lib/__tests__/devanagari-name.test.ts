@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toDevanagariName } from "@/lib/devanagari-name";
+import { marathiDonor } from "@/lib/receipt-utils";
 
 describe("toDevanagariName", () => {
   it("leaves a name already in Devanagari exactly as typed", () => {
@@ -63,5 +64,26 @@ describe("toDevanagariName", () => {
   it("handles a mixed-script name by leaving it alone", () => {
     // Half-typed in Marathi is still the volunteer's intent, not ours.
     expect(toDevanagariName("रमेश Patil")).toBe("रमेश Patil");
+  });
+});
+
+describe("marathiDonor", () => {
+  const base = { donor_name: "Ramesh Patil" };
+
+  it("prefers a spelling the volunteer corrected", () => {
+    // The whole point of storing it: the guess must never win over a person.
+    expect(marathiDonor({ ...base, donor_name_mr: "रमेश पाटिल" })).toBe(
+      "रमेश पाटिल",
+    );
+  });
+
+  it("falls back to transliterating when none was stored", () => {
+    expect(marathiDonor({ ...base, donor_name_mr: null })).toBe("रमेश पाटील");
+  });
+
+  it("treats a blank stored value as absent", () => {
+    // An empty field must not blank the name on the receipt.
+    expect(marathiDonor({ ...base, donor_name_mr: "   " })).toBe("रमेश पाटील");
+    expect(marathiDonor({ ...base, donor_name_mr: "" })).toBe("रमेश पाटील");
   });
 });

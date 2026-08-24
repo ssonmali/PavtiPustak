@@ -20,6 +20,11 @@ function toFormData(entry: OutboxEntry) {
   if (!entry.fields) return formData;
 
   formData.set("donor_name", entry.fields.donor_name);
+  // Conditional for the same reason as the status fields below: an entry queued
+  // by a build from before this column existed simply has nothing to send.
+  if (entry.fields.donor_name_mr) {
+    formData.set("donor_name_mr", entry.fields.donor_name_mr);
+  }
   formData.set("amount", String(entry.fields.amount));
   formData.set("phone_number", entry.fields.phone_number);
   formData.set("payment_method", entry.fields.payment_method);

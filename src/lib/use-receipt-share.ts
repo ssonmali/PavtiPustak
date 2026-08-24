@@ -9,6 +9,7 @@ import {
   formatAmountMarathi,
   formatDate,
   formatNumberMarathi,
+  marathiDonor,
   whatsappUrl,
 } from "@/lib/receipt-utils";
 import { drawReceiptImage, type ReceiptImageData } from "@/lib/receipt-image";
@@ -96,10 +97,9 @@ export function useReceiptShare(mandalName: string, names: NameMap) {
         address: ADDRESS,
         title: tMarathi("slip.title"),
         donorLabel: tMarathi("slip.received"),
-        // Rendered in Devanagari for the image only; the stored name is
-        // untouched. See devanagari-name.ts for what that can and cannot get
-        // right — a name typed in Marathi passes straight through.
-        donorName: toDevanagariName(receipt.donor_name),
+        // The volunteer's corrected spelling if there is one, otherwise a
+        // transliteration. The stored English name is untouched either way.
+        donorName: marathiDonor(receipt),
         amountLabel: tMarathi("slip.amount"),
         amount: formatAmountMarathi(receipt.amount),
         rows: [

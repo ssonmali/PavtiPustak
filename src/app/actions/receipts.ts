@@ -31,6 +31,7 @@ async function requireUser() {
 function fieldsFrom(formData: FormData) {
   return receiptSchema.safeParse({
     donor_name: formData.get("donor_name"),
+    donor_name_mr: formData.get("donor_name_mr") ?? undefined,
     amount: formData.get("amount"),
     phone_number: formData.get("phone_number"),
     payment_method: formData.get("payment_method"),
@@ -168,6 +169,7 @@ export async function searchDonors(term: string) {
   return (data ?? []) as {
     donor_name: string;
     phone_number: string;
+    donor_name_mr: string | null;
     lifetime_total: number;
     receipt_count: number;
     last_collection: string;

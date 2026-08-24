@@ -19,6 +19,14 @@ export const receiptSchema = z.object({
     .trim()
     .min(2, "Donor name is required.")
     .max(120, "Donor name is too long."),
+  // Optional: blank means the app transliterates donor_name for the image
+  // instead. Handled as a string first so "" becomes null, not a value.
+  donor_name_mr: z
+    .string()
+    .trim()
+    .max(120, "That name is too long.")
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
   amount: z.coerce
     .number({ message: "Enter a valid amount." })
     .positive("Amount must be greater than zero.")

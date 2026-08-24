@@ -14,6 +14,11 @@ export type Receipt = {
   id: string;
   receipt_number: number;
   donor_name: string;
+  /**
+   * Optional Marathi spelling, for the shared image. Null means "nobody has
+   * corrected this", and the app transliterates `donor_name` on the fly.
+   */
+  donor_name_mr: string | null;
   /** numeric(12,2) — supabase-js hands this back as a JS number. */
   amount: number;
   phone_number: string;
@@ -135,6 +140,8 @@ export type PledgeTotals = {
 export type Donor = {
   donor_name: string;
   phone_number: string;
+  /** Carried through so a corrected spelling is reused, not re-guessed. */
+  donor_name_mr: string | null;
   lifetime_total: number;
   receipt_count: number;
   last_collection: string;
@@ -144,6 +151,7 @@ export type Donor = {
 export type ReceiptInput = Pick<
   Receipt,
   | "donor_name"
+  | "donor_name_mr"
   | "amount"
   | "phone_number"
   | "payment_method"

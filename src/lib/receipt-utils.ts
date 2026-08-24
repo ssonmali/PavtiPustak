@@ -1,4 +1,5 @@
 import type { NameMap, Receipt } from "@/lib/types";
+import { toDevanagariName } from "@/lib/devanagari-name";
 
 const inr = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -160,13 +161,22 @@ export function volunteerName(email: string | null | undefined) {
 /** NEXT_PUBLIC_* is inlined at build time, so this reads on server and client alike. */
 const MANDAL_ADDRESS = process.env.NEXT_PUBLIC_MANDAL_ADDRESS ?? null;
 
+/**
+ * The donor's name as the Marathi messages and the receipt image should show
+ * it: the spelling a volunteer corrected if there is one, otherwise a
+ * transliteration of what was typed.
+ */
+export function marathiDonor(receipt: Pick<Receipt, "donor_name" | "donor_name_mr">) {
+  return receipt.donor_name_mr?.trim() || toDevanagariName(receipt.donor_name);
+}
+
 /** Marathi thank-you note, opened through the wa.me web intent. */
 export function whatsappUrl(receipt: Receipt, mandalName: string) {
   const message = [
     `🙏 ${mandalName} 🙏`,
     ...(MANDAL_ADDRESS ? [`     ${MANDAL_ADDRESS}`] : []),
     "",
-    `आदरणीय ${receipt.donor_name},`,
+    `आदरणीय ${marathiDonor(receipt)},`,
     `आपल्या वर्गणीसाठी मनःपूर्वक आभार! 🌺`,
     "",
     `पावती क्रमांक: ${receipt.receipt_number}`,
@@ -197,7 +207,7 @@ export function pledgeReminderUrl(receipt: Receipt, mandalName: string) {
   const message = [
     `🙏 *${mandalName}* 🙏`,
     "",
-    `प्रिय ${receipt.donor_name},`,
+    `प्रिय ${marathiDonor(receipt)},`,
     `आपण कबूल केलेली *${formatAmount(receipt.amount)}* वर्गणी`,
     due ? `*${due}* पर्यंत अपेक्षित आहे.` : `अपेक्षित आहे.`,
     `सोयीनुसार देण्याची विनंती. 🌺`,
