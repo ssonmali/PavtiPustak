@@ -15,13 +15,14 @@ import { Label } from "@/components/ui/label";
 import { exportReceiptsToExcel } from "@/lib/export-excel";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
-import type { Receipt } from "@/lib/types";
+import type { Donation, Receipt } from "@/lib/types";
 import type { ReportRange } from "./report-range";
 
 type Labels = {
   statusAll: string;
   statusPaid: string;
   statusUnpaid: string;
+  statusDonation: string;
   today: string;
   all: string;
   from: string;
@@ -52,19 +53,22 @@ export function ReportToolbar({
   status,
   labels,
   receipts,
+  donations,
   mandalName,
 }: {
   range: ReportRange;
-  status: "all" | "Paid" | "Unpaid";
+  status: "all" | "Paid" | "Unpaid" | "Donation";
   labels: Labels;
   /** The rows on the page, so Excel exports exactly what is printed. */
   receipts: Receipt[];
+  /** Exported as its own sheet — never merged into the receipts total. */
+  donations: Donation[];
   mandalName: string;
 }) {
   const { t, locale } = useI18n();
 
   async function exportExcel() {
-    if (receipts.length === 0) {
+    if (receipts.length === 0 && donations.length === 0) {
       toast.error(t("toast.nothingToExport"));
       return;
     }
@@ -73,8 +77,11 @@ export function ReportToolbar({
       dictionaries[locale],
       mandalName,
       rangeSlug(range),
+      donations,
     );
-    toast.success(t("toast.exported", { count: receipts.length }));
+    toast.success(
+      t("toast.exported", { count: receipts.length + donations.length }),
+    );
   }
 
   /**
@@ -105,6 +112,7 @@ export function ReportToolbar({
     { key: "all", label: labels.statusAll },
     { key: "Paid", label: labels.statusPaid },
     { key: "Unpaid", label: labels.statusUnpaid },
+    { key: "Donation", label: labels.statusDonation },
   ] as const;
 
   return (

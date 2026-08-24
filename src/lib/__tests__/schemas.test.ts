@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expenseSchema, receiptSchema } from "@/lib/schemas";
+import { donationSchema, expenseSchema, receiptSchema } from "@/lib/schemas";
 
 const valid = {
   donor_name: "Sunil Patil",
@@ -145,6 +145,54 @@ describe("expenseSchema", () => {
   it("rejects a malformed date", () => {
     expect(
       expenseSchema.safeParse({ ...valid, spent_on: "22/08/2026" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("donationSchema", () => {
+  const valid = {
+    donor_name: "Sunil Patil",
+    phone_number: "9876543210",
+    item: "5kg rice",
+    donation_date: "2026-08-22",
+  };
+
+  it("accepts a well-formed donation with no value", () => {
+    const parsed = donationSchema.parse(valid);
+    expect(parsed.value).toBeNull();
+  });
+
+  it("treats a blank value as null rather than zero", () => {
+    expect(donationSchema.parse({ ...valid, value: "" }).value).toBeNull();
+    expect(donationSchema.parse({ ...valid, value: "500" }).value).toBe(500);
+  });
+
+  it("rejects a zero or negative value when one is given", () => {
+    expect(
+      donationSchema.safeParse({ ...valid, value: "0" }).success,
+    ).toBe(false);
+    expect(
+      donationSchema.safeParse({ ...valid, value: "-50" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a blank item", () => {
+    expect(
+      donationSchema.safeParse({ ...valid, item: " " }).success,
+    ).toBe(false);
+  });
+
+  it("normalises a phone number the same way a receipt does", () => {
+    expect(
+      donationSchema.parse({ ...valid, phone_number: "+91 98765 43210" })
+        .phone_number,
+    ).toBe("9876543210");
+  });
+
+  it("rejects a malformed date", () => {
+    expect(
+      donationSchema.safeParse({ ...valid, donation_date: "22/08/2026" })
+        .success,
     ).toBe(false);
   });
 });

@@ -16,7 +16,7 @@ const en = {
   "auth.submit": "Sign in",
   "auth.submitting": "Signing in…",
   "auth.logout": "Logout",
-  "auth.bookName": "Pavti Pustak",
+  "auth.bookName": "SGMM Pustak",
 
   // Dashboard shell
   "nav.overview": "Overview",
@@ -123,6 +123,8 @@ const en = {
   "activity.contributions": "Contributions",
   "activity.expenses": "Expenses",
   "activity.expenseLabel": "Expense",
+  "activity.donations": "Donation box",
+  "activity.donationNo": "Donation #{number}",
   "activity.filterAll": "All",
   "activity.filterCreated": "Created",
   "activity.filterEdits": "Edited",
@@ -300,6 +302,29 @@ const en = {
   "chart.range": "{from} — {to}",
   "chart.busiestDay": "Busiest day",
   "chart.dailyAverage": "Daily average",
+
+  // Donation box — in-kind/informal donations, kept fully separate from
+  // the vargani and expense totals.
+  "donation.title": "Donation box",
+  "donation.subtitle": "In-kind donations, logged separately from vargani and expenses.",
+  "donation.new": "New donation",
+  "donation.edit": "Edit donation",
+  "donation.empty": "No donations logged yet.",
+  "donation.number": "No.",
+  "donation.donor": "Donator",
+  "donation.mobileOptional": "Mobile (optional)",
+  "donation.item": "What was donated",
+  "donation.itemPlaceholder": "5kg rice, flowers, decoration cloth",
+  "donation.value": "Estimated value (₹, optional)",
+  "donation.valuePlaceholder": "500",
+  "donation.date": "Date",
+  "donation.badge": "Donation",
+  "donation.save": "Save donation",
+  "donation.saved": "Donation saved.",
+  "donation.conflict": "Someone else changed this donation. Reopen it to see their version.",
+  "donation.deleted": "Donation #{number} deleted.",
+  "donation.deleteTitle": "Delete this donation?",
+  "donation.deleteBody": "{name}'s donation of {item} will be removed permanently. This cannot be undone.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -312,7 +337,7 @@ const mr: Record<MessageKey, string> = {
   "auth.submit": "प्रवेश करा",
   "auth.submitting": "प्रवेश करत आहे…",
   "auth.logout": "बाहेर पडा",
-  "auth.bookName": "पावती पुस्तक",
+  "auth.bookName": "SGMM पुस्तक",
 
   "nav.overview": "आढावा",
   "nav.receipts": "पावत्या",
@@ -416,6 +441,8 @@ const mr: Record<MessageKey, string> = {
   "activity.contributions": "वर्गणी",
   "activity.expenses": "खर्च",
   "activity.expenseLabel": "खर्च",
+  "activity.donations": "दान पेटी",
+  "activity.donationNo": "दान क्र. {number}",
   "activity.filterAll": "सर्व",
   "activity.filterCreated": "नोंदवलेल्या",
   "activity.filterEdits": "बदललेल्या",
@@ -582,6 +609,27 @@ const mr: Record<MessageKey, string> = {
   "chart.range": "{from} — {to}",
   "chart.busiestDay": "सर्वाधिक जमा",
   "chart.dailyAverage": "दैनिक सरासरी",
+
+  "donation.title": "दान पेटी",
+  "donation.subtitle": "वस्तुरूप देणग्या, वर्गणी आणि खर्चापासून वेगळ्या नोंदवलेल्या.",
+  "donation.new": "नवीन दान",
+  "donation.edit": "दान बदला",
+  "donation.empty": "अजून कोणतेही दान नोंदवलेले नाही.",
+  "donation.number": "क्र.",
+  "donation.donor": "दाता",
+  "donation.mobileOptional": "मोबाईल (ऐच्छिक)",
+  "donation.item": "काय दान केले",
+  "donation.itemPlaceholder": "५ किलो तांदूळ, फुले, सजावट कापड",
+  "donation.value": "अंदाजे किंमत (₹, ऐच्छिक)",
+  "donation.valuePlaceholder": "५००",
+  "donation.date": "दिनांक",
+  "donation.badge": "दान",
+  "donation.save": "दान जतन करा",
+  "donation.saved": "दान जतन झाले.",
+  "donation.conflict": "हे दान दुसऱ्याने बदलले आहे. पुन्हा उघडून पाहा.",
+  "donation.deleted": "दान क्र. {number} काढले.",
+  "donation.deleteTitle": "हे दान काढायचे?",
+  "donation.deleteBody": "{name} यांचे {item} हे दान कायमचे काढले जाईल. हे पूर्वीसारखे करता येणार नाही.",
 };
 
 export const dictionaries: Record<Locale, Record<MessageKey, string>> = {

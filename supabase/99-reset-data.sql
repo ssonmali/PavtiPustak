@@ -13,6 +13,7 @@
 -- Emptied:
 --   public.receipts        public.receipt_audit
 --   public.expenses        public.expense_audit
+--   public.donations       public.donation_audit
 --
 -- TRUNCATE rather than DELETE, for two reasons. The audit triggers fire
 -- `after delete ... for each row`, so a DELETE would write one "deleted" audit
@@ -34,7 +35,9 @@ truncate table
   public.receipts,
   public.receipt_audit,
   public.expenses,
-  public.expense_audit
+  public.expense_audit,
+  public.donations,
+  public.donation_audit
   restart identity;
 
 commit;
@@ -47,5 +50,9 @@ union all
 select 'expenses',             count(*) from public.expenses
 union all
 select 'expense_audit',        count(*) from public.expense_audit
+union all
+select 'donations',            count(*) from public.donations
+union all
+select 'donation_audit',       count(*) from public.donation_audit
 union all
 select 'volunteer_names (kept)', count(*) from public.volunteer_names;

@@ -4,7 +4,7 @@ import type { Expense } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExpensesView } from "./expenses-view";
 
-export const metadata = { title: "Expenses · Pavti Pustak" };
+export const metadata = { title: "Expenses · SGMM Pustak" };
 
 /** Generous for a mandal, but the cap is surfaced rather than silent. */
 const MAX_ROWS = 1000;

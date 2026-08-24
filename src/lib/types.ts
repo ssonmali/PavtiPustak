@@ -66,6 +66,33 @@ export type ExpenseInput = Pick<
   "description" | "amount" | "category" | "payment_method" | "spent_on" | "note"
 >;
 
+/**
+ * A row of `public.donations` — the donation box. Kept fully separate from
+ * receipts and expenses: an in-kind item log, not a cash ledger, so `value`
+ * is an optional note for the record rather than a figure ever totalled
+ * alongside contributions.
+ */
+export type Donation = {
+  id: string;
+  donation_number: number;
+  donor_name: string;
+  phone_number: string | null;
+  item: string;
+  value: number | null;
+  /** `YYYY-MM-DD`, may be backdated like a receipt. */
+  donation_date: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  created_by_email: string | null;
+};
+
+/** Columns the volunteer fills in; the rest are server-assigned. */
+export type DonationInput = Pick<
+  Donation,
+  "donor_name" | "phone_number" | "item" | "value" | "donation_date"
+>;
+
 /** One row of `public.expense_daily_totals`. */
 export type ExpenseDailyTotal = {
   spent_on: string;
@@ -153,11 +180,11 @@ export type VolunteerName = {
 export type NameMap = Record<string, string>;
 
 /** Which ledger an activity entry belongs to. */
-export type ActivityEntity = "receipt" | "expense";
+export type ActivityEntity = "receipt" | "expense" | "donation";
 
 /**
- * One row of `public.activity_log` — receipt and expense audit rows in a single
- * ordered feed.
+ * One row of `public.activity_log` — receipt, expense, and donation audit rows
+ * in a single ordered feed.
  *
  * `before`/`after` are whole-row snapshots of two differently shaped tables, so
  * they are read as loose records and narrowed per entity when rendering.
@@ -194,6 +221,12 @@ export type Database = {
         Update: Partial<ExpenseInput>;
         Relationships: [];
       };
+      donations: {
+        Row: Donation;
+        Insert: DonationInput & { user_id: string };
+        Update: Partial<DonationInput>;
+        Relationships: [];
+      };
       volunteer_names: {
         Row: VolunteerName;
         Insert: Pick<VolunteerName, "email" | "display_name">;
@@ -218,6 +251,22 @@ export type Database = {
       };
       receipt_audit: {
         Row: AuditEntry;
+        // Written only by the database trigger, never from the client.
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      donation_audit: {
+        Row: {
+          id: number;
+          donation_id: string | null;
+          action: AuditAction;
+          actor_id: string | null;
+          actor_email: string | null;
+          changed_at: string;
+          before: Record<string, unknown> | null;
+          after: Record<string, unknown> | null;
+        };
         // Written only by the database trigger, never from the client.
         Insert: never;
         Update: never;

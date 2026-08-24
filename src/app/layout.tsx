@@ -37,9 +37,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Pavti Pustak",
+  title: "SGMM Pustak",
   description: "Vargani receipt management for the mandal.",
-  appleWebApp: { capable: true, title: "Pavti Pustak", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "SGMM Pustak", statusBarStyle: "default" },
   icons: {
     icon: [
       { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },

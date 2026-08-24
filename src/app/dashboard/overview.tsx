@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type {
   DailyTotal,
+  Donation,
   ExpenseDailyTotal,
   NameMap,
   PledgeTotals,
@@ -28,6 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DailyCollections } from "./daily-collections";
+import { DonationBox } from "./donation-box";
 import { DuePanel } from "./due-panel";
 import {
   ALL_TIME,
@@ -45,6 +47,7 @@ export function Overview({
   pledges,
   unpaidDays,
   due,
+  donations,
   mandalName,
   names,
 }: {
@@ -55,6 +58,7 @@ export function Overview({
   /** Unpaid receipt amounts with the date they were recorded. */
   unpaidDays: { amount: number; collection_date: string }[];
   due: Receipt[];
+  donations: Donation[];
   mandalName: string;
   names: NameMap;
 }) {
@@ -321,6 +325,9 @@ export function Overview({
         </Card>
       ) : null}
 
+      {/* Fully separate from every figure above: neither the balance, nor
+          the collected total, nor any stat tile ever includes these rows. */}
+      <DonationBox donations={donations} />
     </div>
   );
 }

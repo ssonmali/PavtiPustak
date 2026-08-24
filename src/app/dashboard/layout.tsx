@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ReceiptText } from "lucide-react";
+import Image from "next/image";
 import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getMyName } from "@/lib/volunteer-names";
@@ -46,9 +46,13 @@ export default async function DashboardLayout({
       <div className="flex min-h-full flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 print:hidden">
           <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
-            <div className="brand-tile flex size-9 shrink-0 items-center justify-center rounded-xl text-primary-foreground">
-              <ReceiptText className="size-4.5" />
-            </div>
+            <Image
+              src="/idol.jpg"
+              alt=""
+              width={36}
+              height={36}
+              className="size-9 shrink-0 rounded-xl object-cover"
+            />
             <div className="mr-auto min-w-0">
               <p className="truncate font-display text-[0.95rem] leading-tight font-semibold tracking-tight">
                 {process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}

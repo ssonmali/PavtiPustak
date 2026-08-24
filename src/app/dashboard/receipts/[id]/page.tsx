@@ -7,7 +7,7 @@ import { displayName, formatAmount, formatDate } from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { PrintBar } from "../../print-bar";
 
-export const metadata = { title: "Receipt · Pavti Pustak" };
+export const metadata = { title: "Receipt · SGMM Pustak" };
 
 /** A single donor-facing slip, sized for A5 so two fit on a sheet. */
 export default async function ReceiptSlipPage({
