@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Check, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteExpense, markExpensePaid } from "@/app/actions/expenses";
 import { useI18n } from "@/lib/i18n/client";
@@ -350,18 +350,34 @@ export function ExpensesView({
                           {formatDate(e.spent_on, locale)}
                         </TableCell>
                         <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                          {/* Settling a bill is the action a volunteer comes
+                              to this row for, so it is a button rather than
+                              two taps into a menu — and it names the sum, so
+                              nothing is recorded as paid unseen. */}
+                          {outstanding(e) > 0 ? (
+                            <Button
+                              size="sm"
+                              onClick={() => setToMarkPaid(e)}
+                              disabled={marking === e.id}
+                            >
+                              {marking === e.id ? (
+                                <Loader2 className="animate-spin" />
+                              ) : (
+                                <Check />
+                              )}
+                              {t("expenses.payRemaining", {
+                                amount: formatAmount(outstanding(e)),
+                              })}
+                            </Button>
+                          ) : null}
                           <RowActions
                             onEdit={() => openEdit(e)}
                             onDelete={() => setToDelete(e)}
-                            onMarkPaid={
-                              e.payment_status === "Unpaid"
-                                ? () => setToMarkPaid(e)
-                                : undefined
-                            }
-                            markPaidLabel={t("expenses.markPaid")}
                             editLabel={t("table.edit")}
                             deleteLabel={t("table.delete")}
                           />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -434,7 +450,7 @@ export function ExpensesView({
                         )}
                       </span>
                     </div>
-                    <div className="mt-1.5 flex items-center gap-2">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
                       <Badge variant="outline">
                         {t(`category.${e.category}`)}
                       </Badge>
@@ -442,16 +458,27 @@ export function ExpensesView({
                         {t(`method.${e.payment_method}`)} ·{" "}
                         {formatDate(e.spent_on, locale)}
                       </span>
-                      <span className="ml-auto">
+                      {outstanding(e) > 0 ? (
+                        <Button
+                          size="sm"
+                          className="ml-auto"
+                          onClick={() => setToMarkPaid(e)}
+                          disabled={marking === e.id}
+                        >
+                          {marking === e.id ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <Check />
+                          )}
+                          {t("expenses.payRemaining", {
+                            amount: formatAmount(outstanding(e)),
+                          })}
+                        </Button>
+                      ) : null}
+                      <span className={outstanding(e) > 0 ? "" : "ml-auto"}>
                         <RowActions
                           onEdit={() => openEdit(e)}
                           onDelete={() => setToDelete(e)}
-                          onMarkPaid={
-                            e.payment_status === "Unpaid"
-                              ? () => setToMarkPaid(e)
-                              : undefined
-                          }
-                          markPaidLabel={t("expenses.markPaid")}
                           editLabel={t("table.edit")}
                           deleteLabel={t("table.delete")}
                         />
@@ -565,16 +592,11 @@ export function ExpensesView({
 function RowActions({
   onEdit,
   onDelete,
-  onMarkPaid,
-  markPaidLabel,
   editLabel,
   deleteLabel,
 }: {
   onEdit: () => void;
   onDelete: () => void;
-  /** Present only for a bill that is not settled yet. */
-  onMarkPaid?: () => void;
-  markPaidLabel: string;
   editLabel: string;
   deleteLabel: string;
 }) {
@@ -588,11 +610,6 @@ function RowActions({
         }
       />
       <DropdownMenuContent align="end">
-        {onMarkPaid ? (
-          <DropdownMenuItem onClick={onMarkPaid}>
-            <Check /> {markPaidLabel}
-          </DropdownMenuItem>
-        ) : null}
         <DropdownMenuItem onClick={onEdit}>
           <Pencil /> {editLabel}
         </DropdownMenuItem>

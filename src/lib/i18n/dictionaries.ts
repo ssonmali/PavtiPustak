@@ -69,7 +69,9 @@ const en = {
   "expenses.dueOnTitle": "To be paid by {date}",
   "expenses.overdue": "Overdue since {date}",
   "expenses.owed": "Remaining to pay",
-  "expenses.markPaid": "Mark paid",
+  // Names the sum in the button, so settling a bill from the list never means
+  // guessing what is about to be recorded as paid.
+  "expenses.payRemaining": "Pay {amount}",
   "expenses.markedPaid": "Marked as paid.",
   "expenses.chooseMethod": "How was it paid?",
   "category.Decoration": "Decoration",
@@ -406,7 +408,7 @@ const mr: Record<MessageKey, string> = {
   "expenses.dueOnTitle": "{date} पर्यंत देणे",
   "expenses.overdue": "{date} पासून थकीत",
   "expenses.owed": "देणे बाकी",
-  "expenses.markPaid": "दिली म्हणून नोंदवा",
+  "expenses.payRemaining": "{amount} द्या",
   "expenses.markedPaid": "दिली म्हणून नोंदवले.",
   "expenses.chooseMethod": "कशी दिली?",
   "category.Decoration": "सजावट",

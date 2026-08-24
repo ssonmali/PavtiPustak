@@ -635,15 +635,21 @@ export function ReceiptsTable({
               </div>
 
               <div className="mt-3 flex gap-2">
-                {/* The two live in the same slot, one per state, so they are
-                    sized identically: button labels never wrap (whitespace-
-                    nowrap is in the variant), so the longer wording alone made
-                    the unpaid card's action wider than the paid card's and the
-                    ghost buttons beside it shifted between rows. The short
-                    label is what keeps them the same width. */}
+                {/* One primary action per state, and the two must come out the
+                    same width. `flex-1` alone does not do it: a flex item's
+                    min-width is its content, button labels never wrap
+                    (whitespace-nowrap is in the variant), and once the three
+                    buttons beside it had taken their share there was less room
+                    left on a narrow phone than "Received" needs — so it grew
+                    past its share while the shorter "Send" did not.
+
+                    So: `basis-0` with `min-w-0` pins both to the same share
+                    whatever the label, and Edit drops its text to match the
+                    print and delete buttons already beside it, which frees the
+                    room that made the overflow possible in the first place. */}
                 {receipt.payment_status === "Unpaid" ? (
                   <Button
-                    className="flex-1"
+                    className="min-w-0 flex-1 basis-0"
                     onClick={() => setToMarkPaid(receipt)}
                     disabled={marking === receipt.id}
                   >
@@ -657,7 +663,7 @@ export function ReceiptsTable({
                 ) : (
                   <Button
                     variant="whatsapp"
-                    className="flex-1"
+                    className="min-w-0 flex-1 basis-0"
                     disabled={sending === receipt.id}
                     onClick={() => sendWhatsApp(receipt)}
                   >
@@ -669,8 +675,13 @@ export function ReceiptsTable({
                     {t("table.send")}
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => openEdit(receipt)}>
-                  <Pencil /> {t("table.edit")}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("table.edit")}
+                  onClick={() => openEdit(receipt)}
+                >
+                  <Pencil />
                 </Button>
                 <Button
                   variant="ghost"
