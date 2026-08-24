@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowLeft, FileSpreadsheet, FileText, Printer } from "lucide-react";
+import {
+  ArrowDownUp,
+  ArrowLeft,
+  FileSpreadsheet,
+  FileText,
+  Printer,
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,6 +22,18 @@ import { dictionaries } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
 import type { Donation, Expense, Receipt } from "@/lib/types";
 import type { ReportRange, ReportStatus } from "./report-range";
+import { SORT_KEYS, type SortKey } from "../sort-rows";
+
+/** The dictionary takes literal keys, so each order's label is looked up. */
+const SORT_LABELS = {
+  "date-desc": "sort.newest",
+  "date-asc": "sort.oldest",
+  "amount-desc": "sort.amountHigh",
+  "amount-asc": "sort.amountLow",
+  "name-asc": "sort.az",
+  "number-asc": "sort.numberAsc",
+  "number-desc": "sort.numberDesc",
+} as const;
 
 type Labels = {
   statusAll: string;
@@ -23,6 +41,7 @@ type Labels = {
   statusUnpaid: string;
   statusDonation: string;
   statusExpense: string;
+  sort: string;
   today: string;
   all: string;
   from: string;
@@ -51,6 +70,7 @@ function rangeSlug({ from, to }: ReportRange) {
 export function ReportToolbar({
   range,
   status,
+  sort,
   labels,
   receipts,
   donations,
@@ -59,6 +79,8 @@ export function ReportToolbar({
 }: {
   range: ReportRange;
   status: ReportStatus;
+  /** The printed order, carried in the URL like the range and the status. */
+  sort: SortKey;
   labels: Labels;
   /** The rows on the page, so Excel exports exactly what is printed. */
   receipts: Receipt[];
@@ -101,7 +123,7 @@ export function ReportToolbar({
    * A link for one part of the selection that keeps the other part. Without
    * this, choosing "Unpaid" and then "Today" would silently drop the status.
    */
-  const keep = (over: { range?: string; status?: string }) => {
+  const keep = (over: { range?: string; status?: string; sort?: string }) => {
     const p = new URLSearchParams();
     const nextRange = over.range ?? range.key;
     if (nextRange === "today") p.set("range", "today");
@@ -112,6 +134,10 @@ export function ReportToolbar({
     const nextStatus =
       over.status ?? (status === "all" ? "" : status.toLowerCase());
     if (nextStatus) p.set("status", nextStatus);
+    // Kept alongside the others, or picking a date range would silently reset
+    // the printed order to oldest-first.
+    const nextSort = over.sort ?? sort;
+    if (nextSort !== "date-asc") p.set("sort", nextSort);
     const qs = p.toString();
     return qs ? `/dashboard/report?${qs}` : "/dashboard/report";
   };
@@ -161,6 +187,26 @@ export function ReportToolbar({
         </DropdownMenu>
       </div>
 
+      {/* Sorted by link, not by client state: the URL stays the whole
+          description of what is on the page, so a print job can be
+          bookmarked or reloaded in the order it was checked in. */}
+      <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/40 p-1.5">
+        <span className="flex items-center gap-1.5 px-1.5 text-xs text-muted-foreground">
+          <ArrowDownUp className="size-3.5" /> {labels.sort}
+        </span>
+        {SORT_KEYS.map((key) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={sort === key ? "secondary" : "ghost"}
+            nativeButton={false}
+            render={<Link href={keep({ sort: key })} />}
+          >
+            {t(SORT_LABELS[key])}
+          </Button>
+        ))}
+      </div>
+
       <form
         // The date fields are uncontrolled, so a range picked elsewhere has to
         // arrive as a fresh instance; changing defaultValue in place is ignored.
@@ -206,6 +252,9 @@ export function ReportToolbar({
 
         {status === "all" ? null : (
           <input type="hidden" name="status" value={status.toLowerCase()} />
+        )}
+        {sort === "date-asc" ? null : (
+          <input type="hidden" name="sort" value={sort} />
         )}
 
         <div className="flex flex-wrap items-end gap-2 p-3">

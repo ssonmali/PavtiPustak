@@ -202,6 +202,7 @@ export function ReceiptsTable({
       date: (r) => r.collection_date,
       amount: (r) => r.amount,
       name: (r) => r.donor_name,
+      number: (r) => r.receipt_number,
     }, locale);
   }, [all, query, sort, locale]);
 

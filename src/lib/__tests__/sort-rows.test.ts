@@ -17,6 +17,45 @@ const rows: Row[] = [
 
 const names = (out: Row[]) => out.map((r) => r.name);
 
+/** The same rows with a serial number, as receipts carry one. */
+type Numbered = Row & { number: number };
+const numbered: Numbered[] = [
+  { date: "2026-09-02", amount: 500, name: "Chitra", number: 2 },
+  { date: "2026-09-05", amount: 90, name: "Anita", number: 3 },
+  { date: "2026-08-30", amount: 2500, name: "Bhalchandra", number: 1 },
+];
+const NUMBERED_FIELDS: SortFields<Numbered> = {
+  ...FIELDS,
+  number: (r) => r.number,
+};
+
+describe("sortRows by serial number", () => {
+  it("puts the receipt book in order", () => {
+    expect(
+      sortRows(numbered, "number-asc", NUMBERED_FIELDS).map((r) => r.number),
+    ).toEqual([1, 2, 3]);
+    expect(
+      sortRows(numbered, "number-desc", NUMBERED_FIELDS).map((r) => r.number),
+    ).toEqual([3, 2, 1]);
+  });
+
+  // An expenses ledger has no serial to sort by. Falling back to the default
+  // is a defined order; leaving the rows as they arrived is not.
+  it("falls back to newest first when the ledger has no number", () => {
+    expect(names(sortRows(rows, "number-asc", FIELDS))).toEqual([
+      "Anita",
+      "Chitra",
+      "Bhalchandra",
+    ]);
+  });
+
+  it("sorts a copy, leaving the caller's array alone", () => {
+    const before = numbered.map((r) => r.number);
+    sortRows(numbered, "number-asc", NUMBERED_FIELDS);
+    expect(numbered.map((r) => r.number)).toEqual(before);
+  });
+});
+
 describe("sortRows", () => {
   it("defaults to newest first", () => {
     expect(names(sortRows(rows, DEFAULT_SORT, FIELDS))).toEqual([

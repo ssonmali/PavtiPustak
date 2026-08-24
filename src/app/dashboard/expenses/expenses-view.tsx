@@ -62,9 +62,17 @@ import { PaidPill, UnpaidBadge } from "../money-badges";
 import { PaidProgress } from "../paid-progress";
 import { ExpenseDialog } from "./expense-dialog";
 import { SortFilter } from "../sort-filter";
-import { DEFAULT_SORT, sortRows, type SortKey } from "../sort-rows";
+import {
+  DEFAULT_SORT,
+  SORT_KEYS,
+  sortRows,
+  type SortKey,
+} from "../sort-rows";
 import { CategoryBreakdown } from "./category-breakdown";
 import { categoryTotals } from "./category-totals";
+
+/** Everything but the receipt-number orders, which an expense cannot answer. */
+const EXPENSE_SORT_KEYS = SORT_KEYS.filter((k) => !k.startsWith("number-"));
 
 export function ExpensesView({
   expenses,
@@ -252,7 +260,13 @@ export function ExpensesView({
                   className="pl-8"
                 />
               </div>
-              <SortFilter value={sort} onChange={setSort} />
+              {/* An expense has no serial number, so those two orders are not
+                offered here rather than silently doing something else. */}
+            <SortFilter
+              value={sort}
+              onChange={setSort}
+              keys={EXPENSE_SORT_KEYS}
+            />
             </div>
             <CustomDateRange period={period} onChange={setPeriod} />
 

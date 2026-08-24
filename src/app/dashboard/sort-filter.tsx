@@ -17,15 +17,23 @@ const LABEL_KEYS = {
   "amount-desc": "sort.amountHigh",
   "amount-asc": "sort.amountLow",
   "name-asc": "sort.az",
+  "number-asc": "sort.numberAsc",
+  "number-desc": "sort.numberDesc",
 } as const;
 
 /** Sits beside the search box on the receipts and expenses ledgers. */
 export function SortFilter({
   value,
   onChange,
+  keys = SORT_KEYS,
 }: {
   value: SortKey;
   onChange: (key: SortKey) => void;
+  /**
+   * Which orders to offer. Defaults to all of them; the expenses ledger passes
+   * a narrower list because its rows carry no receipt number.
+   */
+  keys?: readonly SortKey[];
 }) {
   const { t } = useI18n();
 
@@ -51,7 +59,7 @@ export function SortFilter({
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {SORT_KEYS.map((key) => (
+        {keys.map((key) => (
           <SelectItem key={key} value={key}>
             {t(LABEL_KEYS[key])}
           </SelectItem>

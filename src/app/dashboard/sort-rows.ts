@@ -4,6 +4,10 @@ export const SORT_KEYS = [
   "amount-desc",
   "amount-asc",
   "name-asc",
+  // Serial order, which is how a paper receipt book reads and how a printed
+  // report is checked against it.
+  "number-asc",
+  "number-desc",
 ] as const;
 
 export type SortKey = (typeof SORT_KEYS)[number];
@@ -21,6 +25,13 @@ export type SortFields<T> = {
   /** Postgres numeric arrives as a string, so this is coerced, not added. */
   amount: (row: T) => number | string;
   name: (row: T) => string;
+  /**
+   * The serial number, where the ledger has one. Optional because expenses do
+   * not: a caller that offers the number sorts must supply it, and one that
+   * cannot falls back to the default order rather than returning the rows in
+   * whatever order they happened to arrive.
+   */
+  number?: (row: T) => number;
 };
 
 const byString = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -55,5 +66,15 @@ export function sortRows<T>(
       return out.sort((a, b) =>
         fields.name(a).localeCompare(fields.name(b), locale),
       );
+    case "number-asc":
+    case "number-desc": {
+      const num = fields.number;
+      // A ledger with no serial number cannot honour this; falling back to the
+      // default is a defined order, which "leave it as it came" is not.
+      if (!num) return out.sort((a, b) => byString(fields.date(b), fields.date(a)));
+      return out.sort((a, b) =>
+        key === "number-asc" ? num(a) - num(b) : num(b) - num(a),
+      );
+    }
   }
 }

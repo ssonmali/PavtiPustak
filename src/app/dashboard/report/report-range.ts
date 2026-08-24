@@ -1,4 +1,5 @@
 import { todayInIst } from "@/lib/receipt-utils";
+import { SORT_KEYS, type SortKey } from "../sort-rows";
 
 /** Presets the print toolbar offers; anything else is a custom date pair. */
 export type RangeKey = "today" | "custom" | "all";
@@ -48,6 +49,22 @@ export function parseStatus(
   if (raw === "donation") return "Donation";
   if (raw === "expense") return "Expense";
   return "all";
+}
+
+/**
+ * `?sort=` picks the printed order. Oldest first by default, which is the
+ * order the query returns and how a ledger reads on paper; anything
+ * unrecognised falls back to it rather than erroring a print job.
+ */
+export const DEFAULT_REPORT_SORT: SortKey = "date-asc";
+
+export function parseSort(
+  params: Record<string, string | string[] | undefined>,
+): SortKey {
+  const raw = Array.isArray(params.sort) ? params.sort[0] : params.sort;
+  return SORT_KEYS.includes(raw as SortKey)
+    ? (raw as SortKey)
+    : DEFAULT_REPORT_SORT;
 }
 
 export function parseRange(

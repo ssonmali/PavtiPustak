@@ -12,7 +12,13 @@ import {
 import { getDictionary } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 import { ReportToolbar } from "./report-toolbar";
-import { parseRange, parseStatus, type ReportRange } from "./report-range";
+import {
+  parseRange,
+  parseSort,
+  parseStatus,
+  type ReportRange,
+} from "./report-range";
+import { sortRows } from "../sort-rows";
 import { splitLedger } from "./split-ledger";
 
 export const metadata = { title: "Report · SGMM Pustak" };
@@ -39,6 +45,7 @@ export default async function ReportPage({
   const params = await searchParams;
   const range = parseRange(params);
   const status = parseStatus(params);
+  const sort = parseSort(params);
 
   const supabase = await createClient();
   const { locale, t } = await getDictionary();
@@ -73,10 +80,33 @@ export default async function ReportPage({
 
   const [{ data }, { data: donationData }, { data: expenseData }] =
     await Promise.all([query, donationQuery, expenseQuery]);
-  const all: Receipt[] = data ?? [];
+  // Sorted here rather than in the query so the same order applies to both
+  // ledgers and to the Excel export, which takes these arrays as they are.
+  const all: Receipt[] = sortRows(
+    (data ?? []) as Receipt[],
+    sort,
+    {
+      date: (r) => r.collection_date,
+      amount: (r) => r.amount,
+      name: (r) => r.donor_name,
+      number: (r) => r.receipt_number,
+    },
+    locale,
+  );
   // Additive: an unrun migration 11 should not break the rest of the report.
   const allDonations: Donation[] = donationData ?? [];
-  const allExpenses: Expense[] = expenseData ?? [];
+  // No `number` accessor: an expense has no serial, so the receipt-number
+  // orders fall back to the default rather than pretending to sort.
+  const allExpenses: Expense[] = sortRows(
+    (expenseData ?? []) as Expense[],
+    sort,
+    {
+      date: (e) => e.spent_on,
+      amount: (e) => e.amount,
+      name: (e) => e.description,
+    },
+    locale,
+  );
 
   // Money in the box and money still owed, not face amounts: a part-paid row
   // has already contributed some of its amount, so summing `amount` on both
@@ -309,12 +339,14 @@ export default async function ReportPage({
       <ReportToolbar
         range={range}
         status={status}
+        sort={sort}
         labels={{
           statusAll: t("status.all"),
           statusPaid: t("status.paidOnly"),
           statusUnpaid: t("status.unpaidOnly"),
           statusDonation: t("donation.badge"),
           statusExpense: t("expenses.title"),
+          sort: t("sort.label"),
           today: t("period.today"),
           all: t("period.all"),
           from: t("report.from"),
