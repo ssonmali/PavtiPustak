@@ -56,6 +56,12 @@ export const config = {
     // Everything except static assets. Each match costs an auth.getUser()
     // round-trip to Supabase, so the service worker and the manifest are
     // excluded too — they are fetched on every load and carry nothing to gate.
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|webmanifest|txt)$).*)",
+    //
+    // api/health is excluded for a second reason: it exists to answer "did a
+    // request reach the server", and running it through an auth round-trip
+    // would make that answer depend on Supabase being quick. A slow database
+    // would then time the probe out and report a working connection as
+    // offline, which is the bug the probe was added to fix.
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|api/health|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|webmanifest|txt)$).*)",
   ],
 };

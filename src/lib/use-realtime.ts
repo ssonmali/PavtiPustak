@@ -146,7 +146,10 @@ export function useRealtimeReceipts(delay = 400) {
     const interval = setInterval(
       () => {
         if (document.visibilityState !== "visible") return;
-        if (!navigator.onLine) return;
+        // No navigator.onLine guard: it reports offline on connections that
+        // are working (a VPN settling, wifi handing over), and skipping the
+        // refresh then means the ledger silently stops updating. A refresh
+        // that cannot reach the server just fails, which costs nothing.
         router.refresh();
       },
       status === "live" ? POLL_LIVE : POLL_FALLBACK,

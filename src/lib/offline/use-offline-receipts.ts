@@ -14,19 +14,110 @@ import {
 import { mergeOutbox, pickBase, type LocalReceipt } from "./merge";
 import { flushOutbox, type FlushResult } from "./sync";
 
-/** True when the browser reports no connectivity. */
+/** How long a reachability probe may take before it counts as a failure. */
+const PROBE_TIMEOUT = 4000;
+/** How often to re-probe while offline. The `online` event is not reliable. */
+const RETRY_MS = 5000;
+
+/**
+ * Did a request actually reach the server?
+ *
+ * AbortController rather than AbortSignal.timeout: this runs on whatever
+ * browser a volunteer's phone happens to have, and the older Android WebViews
+ * in that population do not have the latter.
+ */
+async function reachable() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
+  try {
+    const res = await fetch(`/api/health?t=${Date.now()}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Whether the app can actually reach the server.
+ *
+ * Deliberately not `navigator.onLine` on its own. That flag answers whether the
+ * OS thinks an interface is up, and it is wrong often enough to matter — a VPN
+ * connecting, wifi handing over to mobile data, a laptop waking — so the app
+ * was showing "offline" on a perfectly good connection.
+ *
+ * The browser's `offline` event is therefore treated as a suspicion and
+ * confirmed with a real request before anything is said to the volunteer. The
+ * bias is towards "online" on purpose: a false offline stops someone working
+ * and pushes their writes into a queue they did not ask for, while a false
+ * online costs one failed request that every write path already handles by
+ * queueing.
+ */
 export function useOnline() {
   // Assume online during SSR and the first paint, so the markup matches.
   const [online, setOnline] = React.useState(true);
+  /**
+   * The same value for the listeners to read. Depending on `online` in the
+   * effect instead would tear the whole subscription down on every change —
+   * including the retry timer that had just been armed, which left the banner
+   * up for good on exactly the devices whose `online` event never arrives.
+   */
+  const onlineRef = React.useRef(true);
 
   React.useEffect(() => {
-    const update = () => setOnline(navigator.onLine);
-    update();
-    window.addEventListener("online", update);
-    window.addEventListener("offline", update);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let checking = false;
+
+    const check = async () => {
+      // One probe at a time: the events below can arrive in a burst as an
+      // interface settles, and each would otherwise start its own request.
+      if (cancelled || checking) return;
+      checking = true;
+      const ok = await reachable();
+      checking = false;
+      if (cancelled) return;
+
+      onlineRef.current = ok;
+      setOnline(ok);
+      clearTimeout(timer);
+      // Keep looking while it is down. Waiting for the `online` event alone
+      // left the banner up after the connection came back on any device that
+      // never fired it.
+      if (!ok) timer = setTimeout(() => void check(), RETRY_MS);
+    };
+
+    const onVisible = () => {
+      // Only when there is something to find out: a phone coming out of a
+      // pocket is the usual moment to have missed an event, but probing on
+      // every tab switch would be a request for nothing.
+      if (
+        document.visibilityState === "visible" &&
+        (!navigator.onLine || !onlineRef.current)
+      ) {
+        void check();
+      }
+    };
+
+    const onEvent = () => void check();
+    window.addEventListener("online", onEvent);
+    window.addEventListener("offline", onEvent);
+    document.addEventListener("visibilitychange", onVisible);
+
+    // On mount, only when the browser claims there is no connection: if it
+    // says there is, believe it and spend no request on confirming.
+    if (!navigator.onLine) void check();
+
     return () => {
-      window.removeEventListener("online", update);
-      window.removeEventListener("offline", update);
+      cancelled = true;
+      clearTimeout(timer);
+      window.removeEventListener("online", onEvent);
+      window.removeEventListener("offline", onEvent);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
@@ -89,19 +180,17 @@ export function useOfflineReceipts({ serverRows, onFlush }: Options) {
     onFlush?.(result);
   }, [refreshOutbox, router, onFlush]);
 
-  // Drain the queue when the network returns, and once after mount in case the
-  // app was opened with writes already waiting. Deferred rather than called in
-  // the effect body so it never triggers a cascading render.
+  // Drain the queue whenever the connection is confirmed back, and once after
+  // mount in case the app was opened with writes already waiting. Keyed on
+  // `online` rather than on the browser's `online` event: that event is what
+  // this hook stopped trusting, and on a device that never fires it the queue
+  // used to sit there until the next reload. Deferred rather than called in the
+  // effect body so it never triggers a cascading render.
   React.useEffect(() => {
-    const onReconnect = () => void flush();
-    window.addEventListener("online", onReconnect);
-    const timer = setTimeout(onReconnect, 0);
-
-    return () => {
-      window.removeEventListener("online", onReconnect);
-      clearTimeout(timer);
-    };
-  }, [flush]);
+    if (!online) return;
+    const timer = setTimeout(() => void flush(), 0);
+    return () => clearTimeout(timer);
+  }, [flush, online]);
 
   const receipts: LocalReceipt[] = React.useMemo(() => {
     return mergeOutbox(pickBase(online, serverRows, cached), outbox);
