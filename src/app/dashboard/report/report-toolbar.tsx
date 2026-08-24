@@ -257,6 +257,18 @@ export function ReportToolbar({
               onChange={(e) => e.currentTarget.form?.requestSubmit()}
             />
           </div>
+
+          {/* Beside the dates rather than up by Export: status, range and
+              order all describe what gets printed, so they belong in the one
+              box. The same icon the ledgers use, driving the URL rather than
+              local state — the address stays the whole description of the
+              page, which is what makes a print job reloadable. */}
+          <span className="ml-auto">
+            <SortFilter
+              value={sort}
+              onChange={(key) => router.push(keep({ sort: key }))}
+            />
+          </span>
         </div>
       </form>
     </div>
