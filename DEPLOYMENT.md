@@ -39,14 +39,24 @@ against the one in the JWT, so nobody can rename a colleague.
 
 1. **vercel.com → Add New → Project**, import `ssonmali/PavtiPustak`.
 2. Framework preset is detected as Next.js. No build settings to change.
-3. Add three **Environment Variables** (all three environments):
+3. Add the **Environment Variables** (all three environments). The first three
+   are required; the app will not start without them.
 
    | Name | Value |
    |---|---|
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the `sb_publishable_…` key |
    | `NEXT_PUBLIC_MANDAL_NAME` | your mandal's name, e.g. `श्री गणेश मित्र मंडळ` |
+   | `NEXT_PUBLIC_MANDAL_ADDRESS` | printed on the receipt the donor receives |
+   | `NEXT_PUBLIC_MANDAL_PRESIDENT` | signature line on the receipt |
+   | `NEXT_PUBLIC_MANDAL_VICE_PRESIDENT` | second signature line |
+   | `NEXT_PUBLIC_RECEIPT_WATERMARK` | `/idol.jpg`, or unset for no watermark |
    | `CRON_SECRET` | any long random string — see step 7 |
+
+   The four receipt variables are optional in the sense that the build
+   succeeds without them — but each is silently omitted when unset, so
+   forgetting them sends donors a receipt with no address and no signatures.
+   That is the easiest thing here to not notice, so set them now.
 
    Never add the `sb_secret_…` key. The app does not use it, and a
    `NEXT_PUBLIC_` variable is shipped to the browser.
