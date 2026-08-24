@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  ArrowDownUp,
-  ArrowLeft,
-  FileSpreadsheet,
-  FileText,
-  Printer,
-} from "lucide-react";
+import { ArrowLeft, FileSpreadsheet, FileText, Printer } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,18 +17,8 @@ import { dictionaries } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
 import type { Donation, Expense, Receipt } from "@/lib/types";
 import type { ReportRange, ReportStatus } from "./report-range";
-import { SORT_KEYS, type SortKey } from "../sort-rows";
-
-/** The dictionary takes literal keys, so each order's label is looked up. */
-const SORT_LABELS = {
-  "date-desc": "sort.newest",
-  "date-asc": "sort.oldest",
-  "amount-desc": "sort.amountHigh",
-  "amount-asc": "sort.amountLow",
-  "name-asc": "sort.az",
-  "number-asc": "sort.numberAsc",
-  "number-desc": "sort.numberDesc",
-} as const;
+import { type SortKey } from "../sort-rows";
+import { SortFilter } from "../sort-filter";
 
 type Labels = {
   statusAll: string;
@@ -41,7 +26,6 @@ type Labels = {
   statusUnpaid: string;
   statusDonation: string;
   statusExpense: string;
-  sort: string;
   today: string;
   all: string;
   from: string;
@@ -91,6 +75,7 @@ export function ReportToolbar({
   mandalName: string;
 }) {
   const { t, locale } = useI18n();
+  const router = useRouter();
 
   async function exportExcel() {
     if (
@@ -167,11 +152,17 @@ export function ReportToolbar({
         >
           <ArrowLeft /> {labels.back}
         </Button>
+        <span className="ml-auto">
+          <SortFilter
+            value={sort}
+            onChange={(key) => router.push(keep({ sort: key }))}
+          />
+        </span>
 
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button size="sm" className="ml-auto">
+              <Button size="sm">
                 <Printer /> {labels.export}
               </Button>
             }
@@ -185,26 +176,6 @@ export function ReportToolbar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-
-      {/* Sorted by link, not by client state: the URL stays the whole
-          description of what is on the page, so a print job can be
-          bookmarked or reloaded in the order it was checked in. */}
-      <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/40 p-1.5">
-        <span className="flex items-center gap-1.5 px-1.5 text-xs text-muted-foreground">
-          <ArrowDownUp className="size-3.5" /> {labels.sort}
-        </span>
-        {SORT_KEYS.map((key) => (
-          <Button
-            key={key}
-            size="sm"
-            variant={sort === key ? "secondary" : "ghost"}
-            nativeButton={false}
-            render={<Link href={keep({ sort: key })} />}
-          >
-            {t(SORT_LABELS[key])}
-          </Button>
-        ))}
       </div>
 
       <form

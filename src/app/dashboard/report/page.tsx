@@ -346,7 +346,6 @@ export default async function ReportPage({
           statusUnpaid: t("status.unpaidOnly"),
           statusDonation: t("donation.badge"),
           statusExpense: t("expenses.title"),
-          sort: t("sort.label"),
           today: t("period.today"),
           all: t("period.all"),
           from: t("report.from"),
