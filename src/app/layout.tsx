@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Tiro_Devanagari_Marathi } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { WebAnalytics } from "@/components/web-analytics";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -65,6 +66,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             style={{ ["--width" as string]: "min(356px, calc(100vw - 1.5rem))" }}
           />
         </ThemeProvider>
+        {/* Page views only. The script is served from this origin, so it is not
+            a third-party request and no consent banner is implied. */}
+        <WebAnalytics />
       </body>
     </html>
   );

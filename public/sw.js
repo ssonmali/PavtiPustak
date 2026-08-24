@@ -69,6 +69,13 @@ self.addEventListener("fetch", (event) => {
   // Auth callbacks and the Supabase session must always hit the network.
   if (url.pathname.startsWith("/auth/")) return;
 
+  // Vercel's own endpoints, analytics among them. Its script lives at
+  // /_vercel/insights/script.js — which the asset rule below would match on the
+  // .js extension and then cache forever, on the assumption that asset
+  // filenames are hashed and immutable. That path is not hashed, so the cache
+  // would pin one version of a script Vercel updates.
+  if (url.pathname.startsWith("/_vercel/")) return;
+
   if (isAsset(url)) {
     event.respondWith(
       (async () => {
