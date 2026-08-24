@@ -3,6 +3,7 @@ import { getVolunteerNames } from "@/lib/volunteer-names";
 import { todayInIst } from "@/lib/receipt-utils";
 import type {
   DailyTotal,
+  Donation,
   ExpenseDailyTotal,
   PledgeTotals,
   Receipt,
@@ -11,14 +12,14 @@ import type {
 import { Card, CardContent } from "@/components/ui/card";
 import { Overview } from "./overview";
 
-export const metadata = { title: "Overview · Pavti Pustak" };
+export const metadata = { title: "Overview · SGMM Pustak" };
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
   // Aggregates come from views, so the dashboard stays a few hundred bytes
   // whether the mandal has 50 receipts or 50,000.
-  const [daily, volunteers, expenses, pledges, unpaidRows, due, names] =
+  const [daily, volunteers, expenses, pledges, unpaidRows, due, donations, names] =
     await Promise.all([
     supabase
       .from("receipt_daily_totals")
@@ -53,6 +54,13 @@ export default async function DashboardPage() {
       .lte("due_on", todayInIst())
       .order("due_on", { ascending: true })
       .limit(50),
+    // A low-volume log by nature — the whole box, newest first.
+    supabase
+      .from("donations")
+      .select("*")
+      .order("donation_date", { ascending: false })
+      .order("donation_number", { ascending: false })
+      .limit(500),
     getVolunteerNames(),
   ]);
 
@@ -82,6 +90,7 @@ export default async function DashboardPage() {
         (unpaidRows.data ?? []) as { amount: number; collection_date: string }[]
       }
       due={(due.data ?? []) as Receipt[]}
+      donations={(donations.data ?? []) as Donation[]}
       mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
       names={names}
     />

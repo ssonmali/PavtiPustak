@@ -5,7 +5,7 @@ import { volunteerName } from "@/lib/receipt-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { NameForm } from "@/components/name-form";
 
-export const metadata = { title: "Your name · Pavti Pustak" };
+export const metadata = { title: "Your name · SGMM Pustak" };
 
 export default async function SettingsPage() {
   const [user, name] = await Promise.all([getUser(), getMyName()]);

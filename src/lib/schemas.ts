@@ -5,6 +5,13 @@ import {
   PAYMENT_STATUSES,
 } from "@/lib/types";
 
+/** Accepts 98xxxxxxxx, +91 98xxxxxxxx, 0-prefixed, or spaced — normalised. */
+const phoneNumberSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[\s-]/g, "").replace(/^(\+91|91|0)/, ""))
+  .refine((v) => /^[6-9]\d{9}$/.test(v), "Enter a valid 10-digit mobile number.");
+
 /** Shared client + server validation for a receipt. */
 export const receiptSchema = z.object({
   donor_name: z
@@ -16,12 +23,7 @@ export const receiptSchema = z.object({
     .number({ message: "Enter a valid amount." })
     .positive("Amount must be greater than zero.")
     .max(10_000_000, "That amount looks like a typo."),
-  phone_number: z
-    .string()
-    .trim()
-    // Accept 98xxxxxxxx, +91 98xxxxxxxx, 0-prefixed, or spaced — normalised below.
-    .transform((v) => v.replace(/[\s-]/g, "").replace(/^(\+91|91|0)/, ""))
-    .refine((v) => /^[6-9]\d{9}$/.test(v), "Enter a valid 10-digit mobile number."),
+  phone_number: phoneNumberSchema,
   payment_method: z.enum(PAYMENT_METHODS, { message: "Choose a payment method." }),
   collection_date: z
     .string()
@@ -86,3 +88,59 @@ export const expenseSchema = z.object({
 });
 
 export type ExpenseFormValues = z.input<typeof expenseSchema>;
+
+/** Shared client + server validation for a donation box entry. */
+export const donationSchema = z.object({
+  donor_name: z
+    .string()
+    .trim()
+    .min(2, "Donor name is required.")
+    .max(120, "Donor name is too long."),
+  // Optional here (unlike a receipt): a donor dropping off items in person is
+  // often not asked for a number, so blank is handled as a string first, the
+  // same way as `value` below, rather than requiring a valid 10-digit number.
+  phone_number: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null))
+    .refine(
+      (v) =>
+        v === null ||
+        /^[6-9]\d{9}$/.test(v.replace(/[\s-]/g, "").replace(/^(\+91|91|0)/, "")),
+      "Enter a valid 10-digit mobile number.",
+    )
+    .transform((v) =>
+      v === null ? null : v.replace(/[\s-]/g, "").replace(/^(\+91|91|0)/, ""),
+    ),
+  item: z
+    .string()
+    .trim()
+    .min(2, "Say what was donated.")
+    .max(160, "That description is too long."),
+  // Optional: most donation-box entries are items, not cash, so a value is a
+  // note for the record rather than something required. z.coerce would turn
+  // an empty field into 0 and fail the positive check, so blank is handled
+  // as a string first, before it ever becomes a number.
+  value: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null))
+    .refine(
+      (v) => v === null || !Number.isNaN(Number(v)),
+      "Enter a valid amount.",
+    )
+    .transform((v) => (v === null ? null : Number(v)))
+    .refine((v) => v === null || v > 0, "Value must be greater than zero.")
+    .refine(
+      (v) => v === null || v <= 10_000_000,
+      "That value looks like a typo.",
+    ),
+  donation_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date.")
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Choose a valid date."),
+});
+
+export type DonationFormValues = z.input<typeof donationSchema>;

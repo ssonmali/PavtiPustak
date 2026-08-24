@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Receipt } from "@/lib/types";
+import type { Donation, Receipt } from "@/lib/types";
 import { formatAmount, formatDate, formatDateTime } from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 import { ReportToolbar } from "./report-toolbar";
 import { parseRange, parseStatus, type ReportRange } from "./report-range";
 
-export const metadata = { title: "Report · Pavti Pustak" };
+export const metadata = { title: "Report · SGMM Pustak" };
 
 /** A print report longer than this is not something anyone reads on paper. */
 const MAX_ROWS = 1000;
@@ -44,8 +44,22 @@ export default async function ReportPage({
   if (range.from) query = query.gte("collection_date", range.from);
   if (range.to) query = query.lte("collection_date", range.to);
 
-  const { data } = await query;
+  let donationQuery = supabase
+    .from("donations")
+    .select("*")
+    .order("donation_date", { ascending: true })
+    .order("donation_number", { ascending: true })
+    .limit(MAX_ROWS);
+  if (range.from) donationQuery = donationQuery.gte("donation_date", range.from);
+  if (range.to) donationQuery = donationQuery.lte("donation_date", range.to);
+
+  const [{ data }, { data: donationData }] = await Promise.all([
+    query,
+    donationQuery,
+  ]);
   const all: Receipt[] = data ?? [];
+  // Additive: an unrun migration 11 should not break the rest of the report.
+  const allDonations: Donation[] = donationData ?? [];
 
   // Printed as two sections rather than one mixed list: on paper a column of
   // amounts that silently includes money nobody paid cannot be reconciled.
@@ -57,8 +71,19 @@ export default async function ReportPage({
   const total = sum(paid);
   const expected = sum(unpaid);
 
-  // What the Excel export and the row cap notice count.
-  const receipts = status === "all" ? all : status === "Paid" ? paid : unpaid;
+  // What the Excel export and the row cap notice count. Donations are kept
+  // out of this figure — they are a different entity, exported and printed
+  // as their own section, never merged into a receipts count or total.
+  const receipts =
+    status === "all"
+      ? all
+      : status === "Paid"
+        ? paid
+        : status === "Unpaid"
+          ? unpaid
+          : [];
+  const donations =
+    status === "all" || status === "Donation" ? allDonations : [];
 
   const periodLabel = rangeLabel(range, locale, t("period.all"));
 
@@ -103,6 +128,7 @@ export default async function ReportPage({
           statusAll: t("status.all"),
           statusPaid: t("status.paidOnly"),
           statusUnpaid: t("status.unpaidOnly"),
+          statusDonation: t("donation.badge"),
           today: t("period.today"),
           all: t("period.all"),
           from: t("report.from"),
@@ -113,14 +139,15 @@ export default async function ReportPage({
           back: t("report.back"),
         }}
         receipts={receipts}
+        donations={donations}
         mandalName={mandalName}
       />
 
-      {receipts.length === MAX_ROWS && (
+      {receipts.length === MAX_ROWS || donations.length === MAX_ROWS ? (
         <p className="rounded-lg border border-border bg-muted p-3 text-sm print:hidden">
           {t("report.limit", { count: MAX_ROWS })}
         </p>
-      )}
+      ) : null}
 
       <article className="overflow-x-auto rounded-lg border bg-card p-4 text-card-foreground sm:p-6 print:overflow-visible print:rounded-none print:border-0 print:p-0">
         <header className="pb-4 text-center">
@@ -157,7 +184,7 @@ export default async function ReportPage({
           </tbody>
         </table>
 
-        {sections.length === 0 ? (
+        {sections.length === 0 && donations.length === 0 ? (
           <p className="print-grid p-6 text-center text-sm">
             {t("period.empty")}
           </p>
@@ -266,6 +293,71 @@ export default async function ReportPage({
             </div>
           </section>
         ))}
+
+        {donations.length > 0 ? (
+          <section className="mb-4 break-inside-auto">
+            {/* No grand total here: `value` is optional and often blank, so a
+                summed figure would silently understate what was actually
+                given — the count is the only thing this section can claim. */}
+            <h2 className="mb-1.5 text-sm font-bold tracking-wide uppercase">
+              {t("donation.title")}
+              <span className="ml-2 font-normal tabular-nums">
+                {t("chart.receiptsCount", { count: donations.length })}
+              </span>
+            </h2>
+
+            <table className="print-grid hidden w-full text-sm sm:table print:table">
+              <thead>
+                <tr>
+                  <th>{t("donation.number")}</th>
+                  <th>{t("donation.donor")}</th>
+                  <th>{t("table.mobile")}</th>
+                  <th>{t("donation.item")}</th>
+                  <th>{t("donation.date")}</th>
+                  <th className="text-right">{t("donation.value")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {donations.map((d) => (
+                  <tr key={d.id}>
+                    <td className="tabular-nums">{d.donation_number}</td>
+                    <td>{d.donor_name}</td>
+                    <td className="tabular-nums">{d.phone_number ?? "—"}</td>
+                    <td>{d.item}</td>
+                    <td className="whitespace-nowrap">
+                      {formatDate(d.donation_date, locale)}
+                    </td>
+                    <td className="text-right tabular-nums">
+                      {d.value != null ? formatAmount(d.value) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="flex flex-col gap-2 sm:hidden print:hidden">
+              {donations.map((d) => (
+                <div key={d.id} className="rounded-lg border p-3 text-sm">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="wrap-anywhere font-medium">
+                      {d.donor_name}
+                    </span>
+                    {d.value != null ? (
+                      <span className="shrink-0 font-bold tabular-nums">
+                        {formatAmount(d.value)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    #{d.donation_number}
+                    {d.phone_number ? ` · ${d.phone_number}` : ""} · {d.item} ·{" "}
+                    {formatDate(d.donation_date, locale)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </article>
     </div>
   );

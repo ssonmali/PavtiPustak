@@ -1,6 +1,6 @@
 import { CloudOff } from "lucide-react";
 
-export const metadata = { title: "Offline · Pavti Pustak" };
+export const metadata = { title: "Offline · SGMM Pustak" };
 
 /**
  * Cached by the service worker at install time and served when a page is

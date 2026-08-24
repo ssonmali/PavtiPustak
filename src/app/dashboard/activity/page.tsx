@@ -4,7 +4,7 @@ import type { ActivityEntry } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { ActivityList } from "./activity-list";
 
-export const metadata = { title: "Activity · Pavti Pustak" };
+export const metadata = { title: "Activity · SGMM Pustak" };
 
 export default async function ActivityPage() {
   const supabase = await createClient();

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FilePlus2, Pencil, Trash2, User, Wallet } from "lucide-react";
+import { FilePlus2, Gift, Pencil, Trash2, User, Wallet } from "lucide-react";
 import type {
   ActivityEntity,
   ActivityEntry,
@@ -53,7 +53,13 @@ const LEDGERS = [
   { key: "all", labelKey: "activity.allLedgers" },
   { key: "receipt", labelKey: "activity.contributions" },
   { key: "expense", labelKey: "activity.expenses" },
+  { key: "donation", labelKey: "activity.donations" },
 ] as const;
+
+const LEDGER_ICONS: Partial<Record<ActivityEntity, React.ElementType>> = {
+  expense: Wallet,
+  donation: Gift,
+};
 
 /**
  * Only these columns are worth showing a diff for, per entity — the two tables
@@ -79,6 +85,7 @@ const TRACKED: Record<ActivityEntity, readonly string[]> = {
     "spent_on",
     "note",
   ],
+  donation: ["donor_name", "phone_number", "item", "value", "donation_date"],
 };
 
 export function ActivityList({
@@ -122,8 +129,8 @@ export function ActivityList({
 
   const show = (field: string, value: unknown) => {
     if (value === null || value === undefined || value === "") return "—";
-    if (field === "amount") return formatAmount(Number(value));
-    if (field === "collection_date" || field === "spent_on")
+    if (field === "amount" || field === "value") return formatAmount(Number(value));
+    if (field === "collection_date" || field === "spent_on" || field === "donation_date")
       return formatDate(String(value), locale);
     if (field === "payment_method")
       return t(`method.${String(value) as "Cash" | "UPI"}`);
@@ -148,6 +155,9 @@ export function ActivityList({
       note: t("expenses.note"),
       payment_status: t("status.field"),
       due_on: t("form.dueOn"),
+      item: t("donation.item"),
+      value: t("donation.value"),
+      donation_date: t("donation.date"),
     })[field] ?? field;
 
   return (
@@ -187,18 +197,21 @@ export function ActivityList({
       {/* Which ledger first, since it changes what the rest of the filters are
           filtering. Its own row so the two levels read as a hierarchy. */}
       <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:w-fit sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
-        {LEDGERS.map(({ key, labelKey }) => (
-          <Button
-            key={key}
-            size="sm"
-            variant={ledger === key ? "secondary" : "outline"}
-            className="shrink-0 sm:border-transparent sm:shadow-none"
-            onClick={() => setLedger(key)}
-          >
-            {key === "expense" ? <Wallet /> : null}
-            {t(labelKey)}
-          </Button>
-        ))}
+        {LEDGERS.map(({ key, labelKey }) => {
+          const Icon = LEDGER_ICONS[key as ActivityEntity];
+          return (
+            <Button
+              key={key}
+              size="sm"
+              variant={ledger === key ? "secondary" : "outline"}
+              className="shrink-0 sm:border-transparent sm:shadow-none"
+              onClick={() => setLedger(key)}
+            >
+              {Icon ? <Icon /> : null}
+              {t(labelKey)}
+            </Button>
+          );
+        })}
       </div>
 
       {/* Who, what, when — all three filters in one row. */}
@@ -249,7 +262,6 @@ export function ActivityList({
                 {dayEntries.map((entry) => {
                   const Icon = ICONS[entry.action];
                   const snapshot = entry.after ?? entry.before;
-                  const isExpense = entry.entity === "expense";
                   const changes =
                     entry.action === "updated" && entry.before && entry.after
                       ? TRACKED[entry.entity].filter(
@@ -258,11 +270,45 @@ export function ActivityList({
                             String(entry.after?.[f] ?? ""),
                         )
                       : [];
-                  // Snapshots are whole rows of two differently shaped tables.
-                  const title = isExpense
-                    ? String(snapshot?.description ?? "")
-                    : String(snapshot?.donor_name ?? "");
-                  const amount = snapshot?.amount;
+
+                  // Snapshots are whole rows of three differently shaped
+                  // tables, so what to show is picked per entity rather than
+                  // read off one shared column name.
+                  const glyph =
+                    entry.entity === "expense"
+                      ? Wallet
+                      : entry.entity === "donation"
+                        ? Gift
+                        : Icon;
+                  const label =
+                    entry.entity === "expense"
+                      ? t("activity.expenseLabel")
+                      : entry.entity === "donation"
+                        ? t("activity.donationNo", {
+                            number: String(snapshot?.donation_number ?? "—"),
+                          })
+                        : t("activity.receiptNo", {
+                            number: entry.receipt_number ?? "—",
+                          });
+                  const title =
+                    entry.entity === "expense"
+                      ? String(snapshot?.description ?? "")
+                      : String(snapshot?.donor_name ?? "");
+                  // Only a donation carries a second descriptive bit (what
+                  // was given) alongside who gave it.
+                  const detail =
+                    entry.entity === "donation"
+                      ? String(snapshot?.item ?? "")
+                      : null;
+                  // A donation's value is an optional note for the record,
+                  // not money the mandal received or spent — it gets no
+                  // +/- sign and no flow colour, unlike the other two.
+                  const isDonation = entry.entity === "donation";
+                  const rawFigure = isDonation ? snapshot?.value : snapshot?.amount;
+                  const figure =
+                    rawFigure === null || rawFigure === undefined
+                      ? null
+                      : formatAmount(Number(rawFigure));
 
                   return (
                     <li
@@ -274,7 +320,7 @@ export function ActivityList({
                           {/* The ledger is readable from the icon before any
                               text is read: a wallet means money going out. */}
                           {(() => {
-                            const Glyph = isExpense ? Wallet : Icon;
+                            const Glyph = glyph;
                             return (
                               <Glyph
                                 className={cn(
@@ -301,39 +347,45 @@ export function ActivityList({
                             >
                               {t(`activity.${entry.action}`)}
                             </Badge>
-                            <span className="font-medium">
-                              {isExpense
-                                ? t("activity.expenseLabel")
-                                : t("activity.receiptNo", {
-                                    number: entry.receipt_number ?? "—",
-                                  })}
-                            </span>
+                            <span className="font-medium">{label}</span>
                             {snapshot ? (
                               <span className="wrap-anywhere text-muted-foreground">
-                                · {title} ·{" "}
-                                {/* The sign is what says which way the money
-                                    went; the colour repeats it. */}
-                                <span
-                                  className={cn(
-                                    "tabular-nums",
-                                    // A deleted row's amount is what it used to
-                                    // be. Showing it as a live inflow next to a
-                                    // red "deleted" badge would claim money that
-                                    // never landed, so it is struck instead.
-                                    entry.action === "deleted"
-                                      ? "text-muted-foreground line-through"
-                                      : isExpense
-                                        ? "text-destructive"
-                                        : "text-positive-ink",
-                                  )}
-                                >
-                                  {entry.action === "deleted"
-                                    ? ""
-                                    : isExpense
-                                      ? "\u2212"
-                                      : "+"}
-                                  {formatAmount(Number(amount ?? 0))}
-                                </span>
+                                · {title}
+                                {detail ? <> · {detail}</> : null}
+                                {figure !== null ? (
+                                  <>
+                                    {" "}
+                                    ·{" "}
+                                    {/* The sign is what says which way the
+                                        money went; the colour repeats it. A
+                                        donation's value is neither, so it
+                                        gets plain ink. */}
+                                    <span
+                                      className={cn(
+                                        "tabular-nums",
+                                        // A deleted row's amount is what it
+                                        // used to be. Showing it as a live
+                                        // inflow next to a red "deleted"
+                                        // badge would claim money that never
+                                        // landed, so it is struck instead.
+                                        entry.action === "deleted"
+                                          ? "text-muted-foreground line-through"
+                                          : isDonation
+                                            ? "text-foreground"
+                                            : entry.entity === "expense"
+                                              ? "text-destructive"
+                                              : "text-positive-ink",
+                                      )}
+                                    >
+                                      {entry.action === "deleted" || isDonation
+                                        ? ""
+                                        : entry.entity === "expense"
+                                          ? "\u2212"
+                                          : "+"}
+                                      {figure}
+                                    </span>
+                                  </>
+                                ) : null}
                               </span>
                             ) : null}
                           </p>

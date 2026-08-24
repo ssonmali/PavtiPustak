@@ -6,7 +6,7 @@ import type { DailyTotal, Receipt } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { ReceiptsView } from "./receipts-view";
 
-export const metadata = { title: "Receipts · Pavti Pustak" };
+export const metadata = { title: "Receipts · SGMM Pustak" };
 
 export default async function ReceiptsPage() {
   const supabase = await createClient();

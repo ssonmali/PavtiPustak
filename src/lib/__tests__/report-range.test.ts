@@ -65,9 +65,10 @@ describe("parseStatus", () => {
     expect(parseStatus({})).toBe("all");
   });
 
-  it("reads the two narrowing values", () => {
+  it("reads the three narrowing values", () => {
     expect(parseStatus({ status: "paid" })).toBe("Paid");
     expect(parseStatus({ status: "unpaid" })).toBe("Unpaid");
+    expect(parseStatus({ status: "donation" })).toBe("Donation");
   });
 
   it("is case-insensitive, since these end up hand-typed", () => {

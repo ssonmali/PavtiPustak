@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
-  const name = process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Pavti Pustak";
+  const name = process.env.NEXT_PUBLIC_MANDAL_NAME ?? "SGMM Pustak";
 
   return {
-    name: `${name} — पावती पुस्तक`,
-    short_name: "पावती पुस्तक",
+    name: `${name} — SGMM पुस्तक`,
+    short_name: "SGMM पुस्तक",
     description: "Vargani receipt management for the mandal.",
     start_url: "/dashboard",
     display: "standalone",
