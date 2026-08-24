@@ -198,7 +198,7 @@ export async function drawReceiptImage(
   }
 
   y = Math.min(Math.max(y + 64, IMAGE_HEIGHT - 150), IMAGE_HEIGHT - 120);
-  centred(data.thanks, `600 46px ${DISPLAY}`, "#f6c17a", 36);
+  centred(data.thanks, `600 66px ${DISPLAY}`, "#f6c17a", 36);
   if (data.footer) {
     y += 10;
     centred(data.footer, `400 26px ${SANS}`, "rgba(253, 246, 236, 0.6)", 24);
