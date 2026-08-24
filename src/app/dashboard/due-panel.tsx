@@ -33,6 +33,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { PaidPill } from "./money-badges";
 import { PaidProgress } from "./paid-progress";
 
 /**
@@ -122,11 +123,11 @@ export function DuePanel({
                           total={p.amount}
                           className="w-12"
                         />
-                        <span className="text-[0.6875rem] text-muted-foreground">
-                          {t("status.paidOfTotal", {
+                        <PaidPill
+                          label={t("status.paidOfTotal", {
                             paid: formatAmount(received(p)),
                           })}
-                        </span>
+                        />
                       </span>
                     ) : null}
                   </span>

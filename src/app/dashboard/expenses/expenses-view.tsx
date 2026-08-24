@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Clock, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Check, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteExpense, markExpensePaid } from "@/app/actions/expenses";
 import { useI18n } from "@/lib/i18n/client";
@@ -58,6 +58,7 @@ import {
   PeriodPresets,
   type Period,
 } from "../period-filter";
+import { PaidPill, UnpaidBadge } from "../money-badges";
 import { PaidProgress } from "../paid-progress";
 import { ExpenseDialog } from "./expense-dialog";
 import { SortFilter } from "../sort-filter";
@@ -315,11 +316,11 @@ export function ExpensesView({
                                 total={e.amount}
                                 className="w-14"
                               />
-                              <span className="text-xs text-positive-ink">
-                                {t("expenses.advancePaid", {
+                              <PaidPill
+                                label={t("expenses.advancePaid", {
                                   paid: formatAmount(received(e)),
                                 })}
-                              </span>
+                              />
                             </span>
                           ) : null}
                           {e.payment_status === "Unpaid" ? (
@@ -385,48 +386,52 @@ export function ExpensesView({
                         {e.description}
                       </span>
                       <span className="flex shrink-0 flex-col items-end gap-1">
-                        {/* Advance and remainder, without the total: the two
-                            halves already say it, and stacking three figures
-                            on a narrow card reads as three separate sums. The
-                            table keeps the total. */}
+                        {/* The same pair of pills the receipt card uses:
+                            advance and remainder, equal weight, no total. */}
                         {isPartPaid(e) ? (
-                          <span className="text-[0.6875rem] leading-none text-muted-foreground">
-                            {t("expenses.advanceLabel")}
-                          </span>
-                        ) : null}
-                        <span
-                          className={cn(
-                            "font-bold tabular-nums",
-                            e.payment_status === "Unpaid" &&
-                              !isPartPaid(e) &&
-                              "text-muted-foreground line-through",
-                            // Money already handed over wears collected ink.
-                            isPartPaid(e) && "text-positive-ink",
-                          )}
-                        >
-                          {formatAmount(isPartPaid(e) ? received(e) : e.amount)}
-                        </span>
-                        {isPartPaid(e) ? (
-                          <PaidProgress
-                            paid={received(e)}
-                            total={e.amount}
-                            className="w-20"
-                          />
-                        ) : null}
-                        {e.payment_status === "Unpaid" ? (
-                          <UnpaidBadge
-                            dueOn={e.due_on}
-                            today={today}
-                            label={
-                              isPartPaid(e)
-                                ? t("expenses.remainingBadge", {
-                                    amount: formatAmount(outstanding(e)),
-                                  })
-                                : t("expenses.unpaidBadge")
-                            }
-                            title={dueTitle(e.due_on)}
-                          />
-                        ) : null}
+                          <>
+                            <PaidPill
+                              label={t("expenses.advancePaid", {
+                                paid: formatAmount(received(e)),
+                              })}
+                            />
+                            <UnpaidBadge
+                              dueOn={e.due_on}
+                              today={today}
+                              label={t("expenses.remainingBadge", {
+                                amount: formatAmount(outstanding(e)),
+                              })}
+                              title={dueTitle(e.due_on)}
+                            />
+                            <PaidProgress
+                              paid={received(e)}
+                              total={e.amount}
+                              className="w-full"
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <span
+                              className={cn(
+                                "font-bold tabular-nums",
+                                // Nothing paid yet, so the figure is what was
+                                // agreed rather than what has gone out.
+                                e.payment_status === "Unpaid" &&
+                                  "text-muted-foreground line-through",
+                              )}
+                            >
+                              {formatAmount(e.amount)}
+                            </span>
+                            {e.payment_status === "Unpaid" ? (
+                              <UnpaidBadge
+                                dueOn={e.due_on}
+                                today={today}
+                                label={t("expenses.unpaidBadge")}
+                                title={dueTitle(e.due_on)}
+                              />
+                            ) : null}
+                          </>
+                        )}
                       </span>
                     </div>
                     <div className="mt-1.5 flex items-center gap-2">
@@ -554,40 +559,6 @@ export function ExpensesView({
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-}
-
-/**
- * An unpaid bill is money the mandal still has to hand over, so it is marked
- * wherever the amount appears — an amount that reads as spent when it has not
- * been is the one error worth being loud about. Mirrors the receipts table's
- * badge, down to the overdue colouring.
- */
-function UnpaidBadge({
-  dueOn,
-  today,
-  label,
-  title,
-}: {
-  dueOn: string | null;
-  today: string;
-  label: string;
-  title: string;
-}) {
-  const overdue = Boolean(dueOn) && dueOn! < today;
-  return (
-    <span
-      title={title}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
-        overdue
-          ? "border-destructive/40 bg-destructive/10 text-destructive"
-          : "border-pending/45 bg-pending/15 text-foreground",
-      )}
-    >
-      <Clock aria-hidden className="size-3" />
-      {label}
-    </span>
   );
 }
 

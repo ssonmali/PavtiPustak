@@ -10,7 +10,6 @@ import {
   CloudOff,
   Search,
   Check,
-  Clock,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +33,7 @@ import {
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { PaidPill, UnpaidBadge } from "./money-badges";
 import { PaidProgress } from "./paid-progress";
 import { ReceiptDialog } from "./receipt-dialog";
 import { SortFilter } from "./sort-filter";
@@ -91,39 +91,6 @@ function MethodBadge({
         className="size-1.5 rounded-full"
         style={{ background: method === "UPI" ? "#eb6834" : "#2a78d6" }}
       />
-      {label}
-    </span>
-  );
-}
-
-/**
- * An unpaid row is money the mandal does not have yet, so it is marked
- * wherever the amount appears — an amount that reads as collected when it has
- * not been is the one error worth being loud about.
- */
-function UnpaidBadge({
-  dueOn,
-  today,
-  label,
-  title,
-}: {
-  dueOn: string | null;
-  today: string;
-  label: string;
-  title: string;
-}) {
-  const overdue = Boolean(dueOn) && dueOn! < today;
-  return (
-    <span
-      title={title}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
-        overdue
-          ? "border-destructive/40 bg-destructive/10 text-destructive"
-          : "border-pending/45 bg-pending/15 text-foreground",
-      )}
-    >
-      <Clock aria-hidden className="size-3" />
       {label}
     </span>
   );
@@ -465,11 +432,11 @@ export function ReceiptsTable({
                           total={receipt.amount}
                           className="w-14"
                         />
-                        <span className="text-xs text-positive-ink">
-                          {t("status.paidOfTotal", {
+                        <PaidPill
+                          label={t("status.paidOfTotal", {
                             paid: formatAmount(received(receipt)),
                           })}
-                        </span>
+                        />
                       </span>
                     ) : null}
                     {receipt.payment_status === "Unpaid" ? (
@@ -613,56 +580,56 @@ export function ReceiptsTable({
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  {/* A part-paid row shows what arrived and what is left, and
-                      drops the total: the two halves already say it, and on a
-                      narrow card three figures stacked read as three separate
-                      sums rather than one split in two. The table, which has
-                      the width for it, still carries the total. */}
+                  {/* A split contribution is two pills of equal weight —
+                      arrived, and still owed — with the bar showing the
+                      proportion and no total: the halves already say it, and a
+                      third figure on a narrow card reads as a third sum. The
+                      table, which has the width, still carries the total. */}
                   {isPartPaid(receipt) ? (
-                    <span className="text-[0.6875rem] leading-none text-muted-foreground">
-                      {t("slip.receivedSoFar")}
-                    </span>
-                  ) : null}
-                  <span
-                    className={cn(
-                      "text-lg font-semibold tabular-nums",
-                      // What arrived is money in hand, so it wears the same ink
-                      // as every other collected figure in the app.
-                      isPartPaid(receipt) && "text-positive-ink",
-                      // Struck through only when none of it has arrived: a
-                      // part-paid contribution has real money against it, so
-                      // striking the figure would misread it.
-                      receipt.payment_status === "Unpaid" &&
-                        !isPartPaid(receipt) &&
-                        "text-muted-foreground line-through",
-                    )}
-                  >
-                    {formatAmount(
-                      isPartPaid(receipt) ? received(receipt) : receipt.amount,
-                    )}
-                  </span>
-                  {isPartPaid(receipt) ? (
-                    <PaidProgress
-                      paid={received(receipt)}
-                      total={receipt.amount}
-                      className="w-20"
-                    />
-                  ) : null}
-                  {receipt.payment_status === "Unpaid" ? (
-                    <UnpaidBadge
-                      dueOn={receipt.due_on}
-                      today={today}
-                      label={
-                        isPartPaid(receipt)
-                          ? t("status.partPaidBadge", {
-                              amount: formatAmount(outstanding(receipt)),
-                            })
-                          : t("status.unpaidBadge")
-                      }
-                      title={dueTitle(receipt.due_on)}
-                    />
+                    <>
+                      <PaidPill
+                        label={t("status.paidOfTotal", {
+                          paid: formatAmount(received(receipt)),
+                        })}
+                      />
+                      <UnpaidBadge
+                        dueOn={receipt.due_on}
+                        today={today}
+                        label={t("status.partPaidBadge", {
+                          amount: formatAmount(outstanding(receipt)),
+                        })}
+                        title={dueTitle(receipt.due_on)}
+                      />
+                      <PaidProgress
+                        paid={received(receipt)}
+                        total={receipt.amount}
+                        className="w-full"
+                      />
+                    </>
                   ) : (
-                    <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
+                    <>
+                      <span
+                        className={cn(
+                          "text-lg font-semibold tabular-nums",
+                          // Nothing has arrived on a pledge, so the figure is
+                          // struck: it is what was promised, not what is held.
+                          receipt.payment_status === "Unpaid" &&
+                            "text-muted-foreground line-through",
+                        )}
+                      >
+                        {formatAmount(receipt.amount)}
+                      </span>
+                      {receipt.payment_status === "Unpaid" ? (
+                        <UnpaidBadge
+                          dueOn={receipt.due_on}
+                          today={today}
+                          label={t("status.unpaidBadge")}
+                          title={dueTitle(receipt.due_on)}
+                        />
+                      ) : (
+                        <MethodBadge method={receipt.payment_method} label={t(`method.${receipt.payment_method}`)} />
+                      )}
+                    </>
                   )}
                 </div>
               </div>
