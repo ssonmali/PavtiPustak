@@ -396,12 +396,30 @@ export function ExpensesView({
                 </li>
               ) : (
                 visible.map((e) => (
-                  <li key={e.id} className="rounded-lg border p-3">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="wrap-anywhere min-w-0 text-sm font-medium">
-                        {e.description}
-                      </span>
-                      <span className="flex shrink-0 flex-col items-end gap-1">
+                  <li
+                    key={e.id}
+                    className="card-elevated rounded-xl border bg-card p-3"
+                  >
+                    {/* Laid out like the receipt card: what it was, then what
+                        it cost, then the actions on their own row. Settling a
+                        bill used to share a wrapping line with the category
+                        badge and the date, where it landed in a different
+                        place on every card. */}
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="wrap-anywhere text-sm font-medium">
+                          {e.description}
+                        </p>
+                        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <Badge variant="outline">
+                            {t(`category.${e.category}`)}
+                          </Badge>
+                          <span>{t(`method.${e.payment_method}`)}</span>
+                          <span aria-hidden>·</span>
+                          <span>{formatDate(e.spent_on, locale)}</span>
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
                         {/* The same pair of pills the receipt card uses:
                             advance and remainder, equal weight, no total. */}
                         {isPartPaid(e) ? (
@@ -429,7 +447,7 @@ export function ExpensesView({
                           <>
                             <span
                               className={cn(
-                                "font-bold tabular-nums",
+                                "text-lg font-semibold tabular-nums",
                                 // Nothing paid yet, so the figure is what was
                                 // agreed rather than what has gone out.
                                 e.payment_status === "Unpaid" &&
@@ -448,20 +466,30 @@ export function ExpensesView({
                             ) : null}
                           </>
                         )}
-                      </span>
+                      </div>
                     </div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">
-                        {t(`category.${e.category}`)}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {t(`method.${e.payment_method}`)} ·{" "}
-                        {formatDate(e.spent_on, locale)}
-                      </span>
+
+                    {e.note ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {e.note}
+                      </p>
+                    ) : null}
+                    {e.created_by_email ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {displayName(e.created_by_email, names)}
+                      </p>
+                    ) : null}
+
+                    {/* Real buttons rather than a hidden menu: on a phone
+                        there is room, and edit and delete are the same two
+                        icons the receipt card uses. `basis-0` keeps the pay
+                        button from outgrowing its share when the amount is a
+                        long one — a flex item cannot shrink below its own
+                        label, which is what made the row jump about. */}
+                    <div className="mt-3 flex gap-2">
                       {outstanding(e) > 0 ? (
                         <Button
-                          size="sm"
-                          className="ml-auto"
+                          className="min-w-0 flex-1 basis-0"
                           onClick={() => setToMarkPaid(e)}
                           disabled={marking === e.id}
                         >
@@ -475,25 +503,24 @@ export function ExpensesView({
                           })}
                         </Button>
                       ) : null}
-                      <span className={outstanding(e) > 0 ? "" : "ml-auto"}>
-                        <RowActions
-                          onEdit={() => openEdit(e)}
-                          onDelete={() => setToDelete(e)}
-                          editLabel={t("table.edit")}
-                          deleteLabel={t("table.delete")}
-                        />
-                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={outstanding(e) > 0 ? undefined : "ml-auto"}
+                        aria-label={t("table.edit")}
+                        onClick={() => openEdit(e)}
+                      >
+                        <Pencil />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={t("table.delete")}
+                        onClick={() => setToDelete(e)}
+                      >
+                        <Trash2 className="text-destructive" />
+                      </Button>
                     </div>
-                    {e.note ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {e.note}
-                      </p>
-                    ) : null}
-                    {e.created_by_email ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {displayName(e.created_by_email, names)}
-                      </p>
-                    ) : null}
                   </li>
                 ))
               )}
