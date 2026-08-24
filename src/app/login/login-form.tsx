@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { KeyRound, Loader2 } from "lucide-react";
+import { useActionState, useState } from "react";
+import { Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 import { login, type LoginState } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ function Fields({ next }: { next?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(login, {
     error: null,
   });
+  const [visible, setVisible] = useState(false);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -41,13 +42,31 @@ function Fields({ next }: { next?: string }) {
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">{t("auth.password")}</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            name="password"
+            type={visible ? "text" : "password"}
+            autoComplete="current-password"
+            className="pr-11"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setVisible((v) => !v)}
+            // The label says what the button will do, not the current state,
+            // and it is announced rather than left as a bare icon.
+            aria-label={t(visible ? "auth.hidePassword" : "auth.showPassword")}
+            aria-pressed={visible}
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {visible ? (
+              <EyeOff className="size-4" />
+            ) : (
+              <Eye className="size-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       {state.error ? (
@@ -58,13 +77,6 @@ function Fields({ next }: { next?: string }) {
           {state.error}
         </p>
       ) : null}
-
-      <a
-        href="/forgot-password"
-        className="self-start text-xs text-muted-foreground underline"
-      >
-        {t("reset.forgot")}
-      </a>
 
       <Button type="submit" size="lg" disabled={pending} className="mt-2 w-full">
         {pending ? (

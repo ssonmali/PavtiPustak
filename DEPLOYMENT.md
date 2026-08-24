@@ -57,10 +57,9 @@ against the one in the JWT, so nobody can rename a colleague.
 **Authentication → URL Configuration:**
 
 - **Site URL:** `https://your-app.vercel.app`
-- **Redirect URLs:** add `https://your-app.vercel.app/auth/confirm` and
-  `https://your-app.vercel.app/**`
-
-Without this, password-reset links bounce to `localhost:3000` and fail.
+- **Redirect URLs:** none needed. The app has no email-link flow, so you can
+  leave this empty — and if a wildcard like `https://your-app.vercel.app/**`
+  is already there, remove it. A narrow allowlist is worth keeping narrow.
 
 ## 5. Install it on the volunteers' phones
 
@@ -108,9 +107,11 @@ day *before* a collection round, not during one.
 
 ## Known limits
 
-- **Password reset needs email.** Supabase's built-in SMTP is rate-limited to a
-  handful of messages per hour and may land in spam. For reliable delivery,
-  configure custom SMTP under **Project Settings → Auth → SMTP**.
+- **No self-service password reset.** The app has no "forgot password" flow —
+  Supabase's built-in SMTP is rate-limited to a handful of messages per hour and
+  often lands in spam, so it was never dependable for a mandal. To reset a
+  volunteer's password, go to **Authentication → Users**, open the user, and set
+  a new password, then tell them in person.
 - **Free-tier pausing** is handled by the daily cron in step 7. Without that
   cron — or if it fails — the project pauses after 7 idle days and needs a manual
   restore from the dashboard.
