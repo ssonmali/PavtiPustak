@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 const credentialsSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -31,58 +32,13 @@ export async function login(
     return { error: "Invalid email or password." };
   }
 
-  const next = formData.get("next");
-  redirect(typeof next === "string" && next.startsWith("/") ? next : "/dashboard");
+  redirect(safeNextPath(formData.get("next")));
 }
 
-export type ResetState = { error: string | null; sent?: boolean };
-
-/**
- * Sends a recovery link. The response never reveals whether the address exists,
- * so this cannot be used to enumerate volunteer accounts.
- */
-export async function requestPasswordReset(
-  _prev: ResetState,
-  formData: FormData,
-): Promise<ResetState> {
-  const email = String(formData.get("email") ?? "");
-  const origin = String(formData.get("origin") ?? "");
-
-  if (!z.string().email().safeParse(email).success) {
-    return { error: "Please enter a valid email address." };
-  }
-
-  const supabase = await createClient();
-  await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/confirm?next=/reset-password`,
-  });
-
-  return { error: null, sent: true };
-}
-
-export type UpdatePasswordState = { error: string | null };
-
-export async function updatePassword(
-  _prev: UpdatePasswordState,
-  formData: FormData,
-): Promise<UpdatePasswordState> {
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm") ?? "");
-
-  if (password.length < 6) {
-    return { error: "Password must be at least 6 characters." };
-  }
-  if (password !== confirm) {
-    return { error: "Passwords do not match." };
-  }
-
-  const supabase = await createClient();
-  // Only works with the recovery session established by /auth/confirm.
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) return { error: error.message };
-
-  redirect("/dashboard");
-}
+// No self-service password reset: Supabase's built-in SMTP is rate-limited and
+// often lands in spam, so the flow never worked reliably for the mandal. An
+// admin resets a password from Authentication → Users in the Supabase
+// dashboard, which is what actually happened in practice anyway.
 
 export async function logout() {
   const supabase = await createClient();

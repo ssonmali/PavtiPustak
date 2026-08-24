@@ -5,7 +5,7 @@ import {
   deleteReceipt,
   updateReceipt,
 } from "@/app/actions/receipts";
-import { dequeue, readOutbox, setMeta, type OutboxEntry } from "./db";
+import { dequeue, enqueue, readOutbox, setMeta, type OutboxEntry } from "./db";
 
 const MAX_ATTEMPTS = 5;
 
@@ -24,6 +24,18 @@ function toFormData(entry: OutboxEntry) {
   formData.set("phone_number", entry.fields.phone_number);
   formData.set("payment_method", entry.fields.payment_method);
   formData.set("collection_date", entry.fields.collection_date);
+
+  // Without these two the schema's `.default("Paid")` takes over, and a pledge
+  // recorded offline would replay as money actually received — ₹0 collected
+  // becoming a real total, and the row vanishing from the due list. Entries
+  // queued by a build older than these fields still fall back to that default,
+  // which is why the send is conditional rather than assumed.
+  if (entry.fields.payment_status) {
+    formData.set("payment_status", entry.fields.payment_status);
+  }
+  if (entry.fields.due_on) {
+    formData.set("due_on", entry.fields.due_on);
+  }
 
   // The volunteer already decided to record this while offline; there is no
   // one to re-prompt at flush time, so the duplicate guard is pre-answered.
@@ -81,6 +93,11 @@ export async function flushOutbox(): Promise<FlushResult> {
         result.failed += 1;
         continue;
       }
+      // Persisted, not just counted locally: the count has to survive this
+      // flush or it is always 1, MAX_ATTEMPTS is never reached, and a genuinely
+      // stuck entry (an expired session throwing on every replay) blocks every
+      // receipt queued behind it forever, with no way out from the UI.
+      await enqueue({ ...entry, attempts });
       break;
     }
   }

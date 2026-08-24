@@ -99,8 +99,20 @@ export default async function ReportPage({
    */
   const summary = [
     { label: t("report.period"), value: periodLabel },
-    { label: t("stats.receipts"), value: String(receipts.length), num: true },
-    ...(status === "Unpaid"
+    // On the Donation report there are no receipts to count, so the row names
+    // what is actually on the page rather than reporting a truthful zero.
+    status === "Donation"
+      ? {
+          label: t("donation.title"),
+          value: String(donations.length),
+          num: true,
+        }
+      : { label: t("stats.receipts"), value: String(receipts.length), num: true },
+    // Donation is excluded from both money rows for the same reason Unpaid is
+    // excluded from the collected total: this report prints no receipts at all,
+    // so a rupee figure here would sit beside "Receipts: 0" and describe rows
+    // that are not on the page.
+    ...(status === "Unpaid" || status === "Donation"
       ? []
       : [
           {
@@ -110,7 +122,7 @@ export default async function ReportPage({
             strong: true,
           },
         ]),
-    ...(status !== "Paid" && expected > 0
+    ...(status !== "Paid" && status !== "Donation" && expected > 0
       ? [{ label: t("due.expected"), value: formatAmount(expected), num: true }]
       : []),
     {

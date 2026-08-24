@@ -7,11 +7,19 @@ import { createClient } from "@/lib/supabase/client";
 export type RealtimeStatus = "connecting" | "live" | "polling";
 
 /** Safety-net refresh cadence, in ms. */
-// Even "live" gets a safety net: update and delete events depend on the
-// table's replica identity being full, which is server configuration this code
-// cannot verify.
-const POLL_LIVE = 45_000;
-const POLL_FALLBACK = 20_000; // realtime is not working; this is the mechanism
+// Even "live" gets a safety net, but a very slack one. Every tick costs a full
+// router.refresh() — the layout's queries plus the page's — on a volunteer's
+// mobile data, and when realtime is healthy it has nothing to find: the events
+// it exists to backstop are the update/delete ones that need `replica identity
+// full`, and all six subscribed tables set it. What is left is the case this
+// code genuinely cannot detect — a table missing from the publication, where
+// the channel reports SUBSCRIBED and simply never delivers. Ten minutes bounds
+// that without putting a refresh in the middle of someone's typing; returning
+// to the tab refreshes anyway, which is the moment staleness is noticed.
+const POLL_LIVE = 600_000;
+// Realtime is not working; this is the only thing keeping the page current, so
+// it is the one case worth paying for often.
+const POLL_FALLBACK = 30_000;
 
 /**
  * Keeps every volunteer's view current.
@@ -25,13 +33,6 @@ export function useRealtimeReceipts(delay = 400) {
   const router = useRouter();
   const [status, setStatus] = React.useState<RealtimeStatus>("connecting");
 
-  // Mirrored into a ref inside an effect, so the polling effect can read the
-  // latest value without re-subscribing whenever it changes.
-  const statusRef = React.useRef<RealtimeStatus>("connecting");
-  React.useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
-
   React.useEffect(() => {
     const supabase = createClient();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -39,8 +40,12 @@ export function useRealtimeReceipts(delay = 400) {
 
     const refreshSoon = () => {
       clearTimeout(timer);
-      // router.refresh() re-runs the server components and streams fresh data
-      // in without dropping local state (open dialogs, filters, scroll).
+      // Debounced, so a volunteer saving three receipts in a row costs one
+      // refresh rather than three. router.refresh() re-runs the server
+      // components and streams fresh data in without dropping local state
+      // (open dialogs, filters, scroll). Clearing only the route on screen is
+      // enough now that no page segment is cached: every other tab refetches
+      // when it is tapped anyway.
       timer = setTimeout(() => router.refresh(), delay);
     };
 
@@ -64,6 +69,18 @@ export function useRealtimeReceipts(delay = 400) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "expense_audit" },
+        refreshSoon,
+      )
+      // 11-donation-box.sql puts these in the publication so a donation logged
+      // on one phone shows on another; without them here it never did.
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "donations" },
+        refreshSoon,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "donation_audit" },
         refreshSoon,
       );
 
@@ -119,29 +136,24 @@ export function useRealtimeReceipts(delay = 400) {
 
   // Interval safety net, paused while the tab is hidden so a phone in a pocket
   // is not refreshing all evening.
+  //
+  // One interval, re-armed by `status` changing. The previous version drove
+  // this from a second `retune` interval that cleared and recreated the first
+  // one every POLL_FALLBACK — which meant a POLL_LIVE interval was always
+  // destroyed before its longer period could ever elapse, so once realtime
+  // reported healthy the safety net silently stopped firing altogether.
   React.useEffect(() => {
-    const tick = () => {
-      if (document.visibilityState !== "visible") return;
-      if (!navigator.onLine) return;
-      router.refresh();
-    };
+    const interval = setInterval(
+      () => {
+        if (document.visibilityState !== "visible") return;
+        if (!navigator.onLine) return;
+        router.refresh();
+      },
+      status === "live" ? POLL_LIVE : POLL_FALLBACK,
+    );
 
-    let interval = setInterval(tick, POLL_FALLBACK);
-
-    // Re-arm at the slower cadence once realtime reports itself healthy.
-    const retune = setInterval(() => {
-      clearInterval(interval);
-      interval = setInterval(
-        tick,
-        statusRef.current === "live" ? POLL_LIVE : POLL_FALLBACK,
-      );
-    }, POLL_FALLBACK);
-
-    return () => {
-      clearInterval(interval);
-      clearInterval(retune);
-    };
-  }, [router]);
+    return () => clearInterval(interval);
+  }, [router, status]);
 
   return status;
 }

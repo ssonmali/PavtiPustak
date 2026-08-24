@@ -97,9 +97,21 @@ self.addEventListener("fetch", (event) => {
           if (response.ok) cache.put(request, response.clone());
           return response;
         } catch {
-          // Serve the last successful copy of this exact page if we have one,
-          // so the volunteer sees their ledger instead of a blank screen.
-          const hit = await cache.match(request, { ignoreSearch: true });
+          // Serve the last successful copy of this page if we have one, so the
+          // volunteer sees their ledger instead of a blank screen.
+          //
+          // The query string is only ignored where it narrows a view that is
+          // still recognisably the same page. On the report it *defines* the
+          // figures, so a cached "1st–10th" answering a request for "11th–20th"
+          // would print totals for the wrong period with nothing to show that
+          // is what happened — there, an exact match or the offline page.
+          const url = new URL(request.url);
+          const exact = await cache.match(request);
+          const hit =
+            exact ??
+            (url.pathname === "/dashboard/report"
+              ? undefined
+              : await cache.match(request, { ignoreSearch: true }));
           if (hit) return hit;
 
           const shell = await caches.open(SHELL_CACHE);

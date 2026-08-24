@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { exportReceiptsToExcel } from "@/lib/export-excel";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
 import type { Donation, Receipt } from "@/lib/types";
@@ -72,6 +71,9 @@ export function ReportToolbar({
       toast.error(t("toast.nothingToExport"));
       return;
     }
+    // Loaded on the tap, not with the page: the xlsx writer is ~70KB of JS
+    // that most visits to this page never use — they print instead.
+    const { exportReceiptsToExcel } = await import("@/lib/export-excel");
     await exportReceiptsToExcel(
       receipts,
       dictionaries[locale],
