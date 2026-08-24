@@ -123,7 +123,7 @@ const en = {
   "activity.contributions": "Contributions",
   "activity.expenses": "Expenses",
   "activity.expenseLabel": "Expense",
-  "activity.donations": "Donation box",
+  "activity.donations": "Donation",
   "activity.donationNo": "Donation #{number}",
   "activity.filterAll": "All",
   "activity.filterCreated": "Created",
@@ -305,7 +305,7 @@ const en = {
 
   // Donation box — in-kind/informal donations, kept fully separate from
   // the vargani and expense totals.
-  "donation.title": "Donation box",
+  "donation.title": "Donation",
   "donation.subtitle": "In-kind donations, logged separately from vargani and expenses.",
   "donation.new": "New donation",
   "donation.edit": "Edit donation",
