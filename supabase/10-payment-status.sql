@@ -66,6 +66,11 @@ where payment_status = 'Paid'
 group by coalesce(created_by_email, 'unknown');
 
 -- Autocomplete offers a lifetime total, which should also mean money received.
+-- SUPERSEDED by 13-donor-name-mr.sql, which appends donor_name_mr.
+-- Replaying this file after 13 does not quietly revert the view — Postgres
+-- refuses with "cannot drop columns from view" — but it does mean this
+-- migration is no longer re-runnable on its own. Run 13 immediately after,
+-- or drop the view first if you genuinely need to rebuild from here.
 create or replace view public.donor_directory
 with (security_invoker = on) as
 select distinct on (lower(trim(donor_name)))

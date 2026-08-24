@@ -110,6 +110,27 @@ select
       and column_name = 'phone_number'
   ) as phone_nullable;  -- expect 'YES'
 
+-- 13. Marathi donor name (migration 13) ---------------------------
+-- Both must be 1. in_view is the one worth checking: without it the donor
+-- autocomplete stops reusing corrected Marathi spellings and re-guesses every
+-- time, which looks like the transliterator being bad rather than a missing
+-- column. (04 and 10 hold older definitions of this view, but replaying them
+-- after 13 errors rather than reverting it — Postgres will not drop a view
+-- column via create or replace.)
+select
+  (
+    select count(*) from information_schema.columns
+    where table_schema = 'public' and table_name = 'receipts'
+      and column_name = 'donor_name_mr'
+  ) as on_receipts,          -- expect 1
+  (
+    select count(*) from information_schema.columns
+    where table_schema = 'public' and table_name = 'donor_directory'
+      and column_name = 'donor_name_mr'
+  ) as in_view,              -- expect 1
+  (select count(*) from public.receipts where donor_name_mr is not null)
+    as names_corrected_so_far;
+
 -- The activity feed unions receipts + expenses + donations. All three arms
 -- must be present, or one ledger's history silently stops appearing.
 select 'activity feed arms' as check, entity, count(*) as entries
