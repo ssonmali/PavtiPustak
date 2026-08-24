@@ -131,6 +131,35 @@ select
   (select count(*) from public.receipts where donor_name_mr is not null)
     as names_corrected_so_far;
 
+-- 14. Partial payments, both ledgers (migrations 14 and 15) -------
+-- The generated columns are the single definition of what a row is worth, so a
+-- missing one means every money figure on that side silently falls back to face
+-- amounts. Both sums must reconcile: paid + still-owed = agreed.
+select
+  (
+    select count(*) from information_schema.columns
+    where table_schema = 'public' and table_name = 'receipts'
+      and column_name in ('paid_amount', 'amount_received', 'amount_outstanding')
+  ) as receipt_columns,        -- expect 3 (migration 14)
+  (
+    select count(*) from information_schema.columns
+    where table_schema = 'public' and table_name = 'expenses'
+      and column_name in ('payment_status', 'due_on', 'paid_amount',
+                          'amount_paid', 'amount_unpaid')
+  ) as expense_columns,        -- expect 5 (migration 15)
+  (
+    select count(*) from information_schema.views
+    where table_schema = 'public' and table_name = 'payable_totals'
+  ) as payable_view,           -- expect 1 (migration 15)
+  (
+    select count(*) from public.receipts
+    where amount_received + amount_outstanding <> amount
+  ) as receipts_not_reconciling,   -- must be 0
+  (
+    select count(*) from public.expenses
+    where amount_paid + amount_unpaid <> amount
+  ) as expenses_not_reconciling;   -- must be 0
+
 -- The activity feed unions receipts + expenses + donations. All three arms
 -- must be present, or one ledger's history silently stops appearing.
 select 'activity feed arms' as check, entity, count(*) as entries

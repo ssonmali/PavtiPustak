@@ -96,14 +96,20 @@ export function Overview({
 
   // Spending over the same window, so the balance answers "of what came in
   // during this period, what is left" rather than mixing two date ranges.
-  const spent = React.useMemo(
+  // `total` on this view is money that actually left the box, not what was
+  // committed — a bill recorded but not yet paid is reported as `unpaid` and
+  // must never be subtracted from the balance.
+  const expensesInPeriod = React.useMemo(
     () =>
       filterByPeriod(
         expenseDays.map((e) => ({ ...e, collection_date: e.spent_on })),
         period,
-      ).reduce((sum, e) => sum + Number(e.total), 0),
+      ),
     [expenseDays, period],
   );
+  const spent = expensesInPeriod.reduce((sum, e) => sum + Number(e.total), 0);
+  /** Bills recorded in this window that the mandal still has to settle. */
+  const owed = expensesInPeriod.reduce((sum, e) => sum + Number(e.unpaid), 0);
 
   const balance = total - spent;
 
@@ -237,6 +243,16 @@ export function Overview({
                 &minus;{formatAmount(spent)}
               </dd>
             </div>
+            {/* Bills committed but not settled. Beside the spent figure, never
+                inside it: the cash is still in the box. */}
+            {owed > 0 ? (
+              <div className="flex items-baseline gap-2">
+                <dt className="text-muted-foreground">{t("expenses.owed")}</dt>
+                <dd className="font-medium tabular-nums text-pending-ink">
+                  {formatAmount(owed)}
+                </dd>
+              </div>
+            ) : null}
             {pledges && Number(pledges.expected) > 0 ? (
               <div className="flex items-baseline gap-2">
                 <dt className="text-muted-foreground">{t("due.expected")}</dt>

@@ -70,12 +70,33 @@ export type Expense = {
   updated_at: string;
   user_id: string;
   created_by_email: string | null;
+  /**
+   * Whether the money has actually left the box. `Unpaid` is a bill the mandal
+   * has committed to but not settled, and is excluded from every spent figure.
+   */
+  payment_status: PaymentStatus;
+  /** When the bill is to be paid. Set if and only if the row is `Unpaid`. */
+  due_on: string | null;
+  /**
+   * How much of `amount` has been paid, for a bill settled in instalments.
+   * Read it through received() / outstanding() rather than directly, exactly as
+   * on a receipt.
+   */
+  paid_amount: number | null;
 };
 
 /** Columns the volunteer fills in; the rest are server-assigned. */
 export type ExpenseInput = Pick<
   Expense,
-  "description" | "amount" | "category" | "payment_method" | "spent_on" | "note"
+  | "description"
+  | "amount"
+  | "category"
+  | "payment_method"
+  | "spent_on"
+  | "note"
+  | "payment_status"
+  | "due_on"
+  | "paid_amount"
 >;
 
 /**
@@ -108,8 +129,24 @@ export type DonationInput = Pick<
 /** One row of `public.expense_daily_totals`. */
 export type ExpenseDailyTotal = {
   spent_on: string;
+  /** Money that actually left the box that day — not what was committed. */
   total: number;
   expense_count: number;
+  /** Still owed on bills recorded that day. Never folded into `total`. */
+  unpaid: number;
+  unpaid_count: number;
+};
+
+/**
+ * The single row of `public.payable_totals` — the expense-side mirror of
+ * PledgeTotals: what the mandal owes rather than what it is owed.
+ */
+export type PayableTotals = {
+  owed: number;
+  bill_count: number;
+  due_now: number;
+  due_today: number;
+  overdue: number;
 };
 
 /** One row of `public.receipt_daily_totals`. */
@@ -296,6 +333,7 @@ export type Database = {
       expense_daily_totals: { Row: ExpenseDailyTotal; Relationships: [] };
       activity_log: { Row: ActivityEntry; Relationships: [] };
       pledge_totals: { Row: PledgeTotals; Relationships: [] };
+      payable_totals: { Row: PayableTotals; Relationships: [] };
     };
     Functions: {
       /** Trivial round-trip used by the daily keep-alive; touches no table. */

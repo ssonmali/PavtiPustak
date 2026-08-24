@@ -14,6 +14,12 @@ function expense(partial: Partial<Expense>): Expense {
     created_by_email: "a@b.com",
     created_at: "2026-09-01T00:00:00Z",
     updated_at: "2026-09-01T00:00:00Z",
+    // The column is NOT NULL DEFAULT 'Paid', so a row from the database always
+    // carries these three. The factory matches that rather than leaving them
+    // undefined, which no real row can be.
+    payment_status: "Paid",
+    due_on: null,
+    paid_amount: null,
     ...partial,
   } as Expense;
 }
@@ -58,6 +64,26 @@ describe("categoryTotals", () => {
     ]);
 
     expect(rows[0].total).toBe(550);
+  });
+
+  // "Where the money went" has to mean money that went. A bill the mandal has
+  // committed to but not paid must not appear as spend, or the breakdown
+  // disagrees with the balance on the same page.
+  it("counts only what has actually been paid out", () => {
+    const rows = categoryTotals([
+      expense({ category: "Mandap", amount: 20000, payment_status: "Unpaid", due_on: "2026-09-10" }),
+      expense({
+        category: "Mandap",
+        amount: 10000,
+        payment_status: "Unpaid",
+        due_on: "2026-09-10",
+        paid_amount: 4000,
+      }),
+      expense({ category: "Mandap", amount: 1000 }),
+    ]);
+
+    // 0 committed + 4000 advance + 1000 settled.
+    expect(rows).toEqual([{ category: "Mandap", total: 5000, count: 3 }]);
   });
 
   it("keeps the shares summing to the whole ledger", () => {

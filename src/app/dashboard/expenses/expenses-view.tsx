@@ -1,16 +1,27 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Check, Clock, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteExpense } from "@/app/actions/expenses";
+import { deleteExpense, markExpensePaid } from "@/app/actions/expenses";
 import { useI18n } from "@/lib/i18n/client";
 import {
   displayName,
   formatAmount,
   formatDate,
+  isPartPaid,
+  outstanding,
+  received,
+  todayInIst,
 } from "@/lib/receipt-utils";
-import type { Expense, ExpenseCategory, NameMap } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import {
+  PAYMENT_METHODS,
+  type Expense,
+  type ExpenseCategory,
+  type NameMap,
+  type PaymentMethod,
+} from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,6 +83,10 @@ export function ExpensesView({
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [toDelete, setToDelete] = React.useState<Expense | undefined>();
   const [deleting, setDeleting] = React.useState(false);
+  /** Bill waiting for the volunteer to say how it was actually paid. */
+  const [toMarkPaid, setToMarkPaid] = React.useState<Expense | undefined>();
+  /** Id of the bill currently being settled. */
+  const [marking, setMarking] = React.useState<string | null>(null);
 
   // period-filter works on `collection_date`; expenses carry `spent_on`.
   const inPeriod = React.useMemo(
@@ -107,7 +122,41 @@ export function ExpensesView({
     }, locale);
   }, [inPeriod, query, category, sort, locale]);
 
-  const total = visible.reduce((sum, e) => sum + Number(e.amount), 0);
+  // Money that actually left the box, and what is still owed on the same rows.
+  // Summing `amount` here would report a committed bill as spent.
+  const total = visible.reduce((sum, e) => sum + received(e), 0);
+  const owed = visible.reduce((sum, e) => sum + outstanding(e), 0);
+
+  /** Today on the mandal's calendar, for deciding what is overdue. */
+  const today = todayInIst();
+
+  const dueTitle = (dueOn: string | null) => {
+    if (!dueOn) return t("expenses.unpaidBadge");
+    const date = formatDate(dueOn, locale);
+    return dueOn < today
+      ? t("expenses.overdue", { date })
+      : t("expenses.dueOnTitle", { date });
+  };
+
+  /** Settles a bill from the list; the method is asked for first. */
+  async function markPaid(expense: Expense, method: PaymentMethod) {
+    setMarking(expense.id);
+    let result;
+    try {
+      result = await markExpensePaid(expense.id, method);
+    } catch {
+      setMarking(null);
+      toast.error(t("error.body"));
+      return;
+    }
+    setMarking(null);
+
+    if (!result.ok) {
+      toast.error("error" in result ? result.error : t("expenses.conflict"));
+      return;
+    }
+    toast.success(t("expenses.markedPaid"));
+  }
 
   function openCreate() {
     setEditing(undefined);
@@ -156,6 +205,17 @@ export function ExpensesView({
                 {formatAmount(total)}
               </span>{" "}
               · {t("expenses.count", { count: visible.length })}
+              {/* Never added into the total beside it: one is money gone, the
+                  other money still to go. */}
+              {owed > 0 ? (
+                <>
+                  {" · "}
+                  {t("expenses.owed")}:{" "}
+                  <span className="font-medium tabular-nums text-pending-ink">
+                    {formatAmount(owed)}
+                  </span>
+                </>
+              ) : null}
             </p>
           </div>
           <Button size="sm" onClick={openCreate} className="shrink-0">
@@ -235,7 +295,41 @@ export function ExpensesView({
                           ) : null}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {formatAmount(e.amount)}
+                          <span
+                            className={
+                              // Struck through only when none of it has been
+                              // paid. A part-paid bill has real money against
+                              // it, so striking the figure would misread it.
+                              e.payment_status === "Unpaid" && !isPartPaid(e)
+                                ? "text-muted-foreground line-through"
+                                : undefined
+                            }
+                          >
+                            {formatAmount(e.amount)}
+                          </span>
+                          {isPartPaid(e) ? (
+                            <span className="block text-xs text-muted-foreground">
+                              {t("expenses.advancePaid", {
+                                paid: formatAmount(received(e)),
+                              })}
+                            </span>
+                          ) : null}
+                          {e.payment_status === "Unpaid" ? (
+                            <span className="mt-0.5 block">
+                              <UnpaidBadge
+                                dueOn={e.due_on}
+                                today={today}
+                                label={
+                                  isPartPaid(e)
+                                    ? t("expenses.remainingBadge", {
+                                        amount: formatAmount(outstanding(e)),
+                                      })
+                                    : t("expenses.unpaidBadge")
+                                }
+                                title={dueTitle(e.due_on)}
+                              />
+                            </span>
+                          ) : null}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
@@ -250,6 +344,12 @@ export function ExpensesView({
                           <RowActions
                             onEdit={() => openEdit(e)}
                             onDelete={() => setToDelete(e)}
+                            onMarkPaid={
+                              e.payment_status === "Unpaid"
+                                ? () => setToMarkPaid(e)
+                                : undefined
+                            }
+                            markPaidLabel={t("expenses.markPaid")}
                             editLabel={t("table.edit")}
                             deleteLabel={t("table.delete")}
                           />
@@ -276,8 +376,38 @@ export function ExpensesView({
                       <span className="wrap-anywhere min-w-0 text-sm font-medium">
                         {e.description}
                       </span>
-                      <span className="shrink-0 font-bold tabular-nums">
-                        {formatAmount(e.amount)}
+                      <span className="flex shrink-0 flex-col items-end gap-1">
+                        <span
+                          className={cn(
+                            "font-bold tabular-nums",
+                            e.payment_status === "Unpaid" &&
+                              !isPartPaid(e) &&
+                              "text-muted-foreground line-through",
+                          )}
+                        >
+                          {formatAmount(e.amount)}
+                        </span>
+                        {isPartPaid(e) ? (
+                          <span className="text-xs text-muted-foreground">
+                            {t("expenses.advancePaid", {
+                              paid: formatAmount(received(e)),
+                            })}
+                          </span>
+                        ) : null}
+                        {e.payment_status === "Unpaid" ? (
+                          <UnpaidBadge
+                            dueOn={e.due_on}
+                            today={today}
+                            label={
+                              isPartPaid(e)
+                                ? t("expenses.remainingBadge", {
+                                    amount: formatAmount(outstanding(e)),
+                                  })
+                                : t("expenses.unpaidBadge")
+                            }
+                            title={dueTitle(e.due_on)}
+                          />
+                        ) : null}
                       </span>
                     </div>
                     <div className="mt-1.5 flex items-center gap-2">
@@ -292,6 +422,12 @@ export function ExpensesView({
                         <RowActions
                           onEdit={() => openEdit(e)}
                           onDelete={() => setToDelete(e)}
+                          onMarkPaid={
+                            e.payment_status === "Unpaid"
+                              ? () => setToMarkPaid(e)
+                              : undefined
+                          }
+                          markPaidLabel={t("expenses.markPaid")}
                           editLabel={t("table.edit")}
                           deleteLabel={t("table.delete")}
                         />
@@ -327,6 +463,47 @@ export function ExpensesView({
         ) : null}
       </Dialog>
 
+      {/* How a bill was actually paid isn't known until the money goes out, so
+          it is asked for rather than assumed from the row. */}
+      <AlertDialog
+        open={Boolean(toMarkPaid)}
+        onOpenChange={(open) => !open && setToMarkPaid(undefined)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("expenses.chooseMethod")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {toMarkPaid
+                ? t("status.chooseMethodBody", {
+                    name: toMarkPaid.description,
+                    // The remainder, not the face amount: on a part-paid bill
+                    // that is what is about to be handed over.
+                    amount: formatAmount(outstanding(toMarkPaid)),
+                  })
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={marking === toMarkPaid?.id}>
+              {t("form.cancel")}
+            </AlertDialogCancel>
+            {PAYMENT_METHODS.map((m) => (
+              <Button
+                key={m}
+                disabled={marking === toMarkPaid?.id}
+                onClick={async () => {
+                  if (!toMarkPaid) return;
+                  await markPaid(toMarkPaid, m);
+                  setToMarkPaid(undefined);
+                }}
+              >
+                {t(`method.${m}`)}
+              </Button>
+            ))}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog
         open={Boolean(toDelete)}
         onOpenChange={(open) => !open && setToDelete(undefined)}
@@ -361,14 +538,53 @@ export function ExpensesView({
   );
 }
 
+/**
+ * An unpaid bill is money the mandal still has to hand over, so it is marked
+ * wherever the amount appears — an amount that reads as spent when it has not
+ * been is the one error worth being loud about. Mirrors the receipts table's
+ * badge, down to the overdue colouring.
+ */
+function UnpaidBadge({
+  dueOn,
+  today,
+  label,
+  title,
+}: {
+  dueOn: string | null;
+  today: string;
+  label: string;
+  title: string;
+}) {
+  const overdue = Boolean(dueOn) && dueOn! < today;
+  return (
+    <span
+      title={title}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+        overdue
+          ? "border-destructive/40 bg-destructive/10 text-destructive"
+          : "border-pending/45 bg-pending/15 text-foreground",
+      )}
+    >
+      <Clock aria-hidden className="size-3" />
+      {label}
+    </span>
+  );
+}
+
 function RowActions({
   onEdit,
   onDelete,
+  onMarkPaid,
+  markPaidLabel,
   editLabel,
   deleteLabel,
 }: {
   onEdit: () => void;
   onDelete: () => void;
+  /** Present only for a bill that is not settled yet. */
+  onMarkPaid?: () => void;
+  markPaidLabel: string;
   editLabel: string;
   deleteLabel: string;
 }) {
@@ -382,6 +598,11 @@ function RowActions({
         }
       />
       <DropdownMenuContent align="end">
+        {onMarkPaid ? (
+          <DropdownMenuItem onClick={onMarkPaid}>
+            <Check /> {markPaidLabel}
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem onClick={onEdit}>
           <Pencil /> {editLabel}
         </DropdownMenuItem>

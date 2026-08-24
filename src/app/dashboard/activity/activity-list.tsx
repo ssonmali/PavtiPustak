@@ -76,6 +76,9 @@ const TRACKED: Record<ActivityEntity, readonly string[]> = {
     // no visible change — the one edit most worth seeing in the log.
     "payment_status",
     "due_on",
+    // Recording an instalment changes only this, so without it the log would
+    // show an "edited" entry with nothing visibly different.
+    "paid_amount",
   ],
   expense: [
     "description",
@@ -84,6 +87,11 @@ const TRACKED: Record<ActivityEntity, readonly string[]> = {
     "payment_method",
     "spent_on",
     "note",
+    // Same three as a receipt: a bill can be committed, then paid in advance,
+    // then settled, and each of those is a change worth seeing.
+    "payment_status",
+    "due_on",
+    "paid_amount",
   ],
   donation: ["donor_name", "phone_number", "item", "value", "donation_date"],
 };

@@ -1,4 +1,4 @@
-import type { NameMap, Receipt } from "@/lib/types";
+import type { NameMap, PaymentStatus, Receipt } from "@/lib/types";
 import { toDevanagariName } from "@/lib/devanagari-name";
 
 const inr = new Intl.NumberFormat("en-IN", {
@@ -160,24 +160,32 @@ export function volunteerName(email: string | null | undefined) {
 
 
 /**
- * The two rules for what a receipt is worth. Everything that shows money must
- * go through these — a total that sums `amount` directly is wrong the moment a
- * contribution is part-paid, and it is wrong silently.
+ * The two rules for what a row is worth. Everything that shows money must go
+ * through these — a total that sums `amount` directly is wrong the moment a
+ * row is part-paid, and it is wrong silently.
  *
- * A receipt now carries the agreed contribution in `amount` and how much of it
- * has actually arrived in `paid_amount`. `payment_status` stays the record of
- * whether it is settled, which keeps every pre-existing row correct: a Paid row
- * has received its whole amount, and an untouched pledge has received nothing.
+ * A row carries the agreed figure in `amount` and how much of it has actually
+ * changed hands in `paid_amount`. `payment_status` stays the record of whether
+ * it is settled, which keeps every pre-existing row correct: a Paid row has
+ * moved its whole amount, and an untouched one has moved nothing.
+ *
+ * Structural rather than `Pick<Receipt, …>` on purpose: contributions coming in
+ * and bills going out follow the identical rule, so both ledgers share these
+ * four functions instead of each growing its own near-copy.
  */
-type Money = Pick<Receipt, "amount" | "paid_amount" | "payment_status">;
+export type Money = {
+  amount: number;
+  paid_amount: number | null;
+  payment_status: PaymentStatus;
+};
 
-/** Money actually in the box for this receipt. */
+/** Money actually moved for this row — in the box, or out of it. */
 export function received(r: Money): number {
   if (r.payment_status === "Paid") return Number(r.amount);
   return Number(r.paid_amount ?? 0);
 }
 
-/** Money still owed on this receipt. Zero once settled. */
+/** Money still owed on this row — to the mandal, or by it. Zero once settled. */
 export function outstanding(r: Money): number {
   if (r.payment_status === "Paid") return 0;
   return Math.max(0, Number(r.amount) - Number(r.paid_amount ?? 0));

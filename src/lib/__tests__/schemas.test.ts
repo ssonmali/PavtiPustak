@@ -110,6 +110,62 @@ describe("expenseSchema", () => {
     expect(parsed.note).toBeNull();
   });
 
+  // A bill defaults to settled, so every form and every row recorded before
+  // instalments existed still parses to the same thing it used to mean.
+  it("defaults to paid, with no due date and no advance", () => {
+    const parsed = expenseSchema.parse(valid);
+    expect(parsed.payment_status).toBe("Paid");
+    expect(parsed.due_on).toBeNull();
+    expect(parsed.paid_amount).toBeNull();
+  });
+
+  it("requires a date on a bill that is not paid yet", () => {
+    expect(
+      expenseSchema.safeParse({ ...valid, payment_status: "Unpaid" }).success,
+    ).toBe(false);
+    expect(
+      expenseSchema.safeParse({
+        ...valid,
+        payment_status: "Unpaid",
+        due_on: "2026-09-01",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("keeps a blank advance as null rather than a recorded zero", () => {
+    const parsed = expenseSchema.parse({
+      ...valid,
+      payment_status: "Unpaid",
+      due_on: "2026-09-01",
+      paid_amount: "",
+    });
+    expect(parsed.paid_amount).toBeNull();
+  });
+
+  it("rejects an advance larger than the bill", () => {
+    expect(
+      expenseSchema.safeParse({
+        ...valid,
+        payment_status: "Unpaid",
+        due_on: "2026-09-01",
+        paid_amount: "3000",
+      }).success,
+    ).toBe(false);
+  });
+
+  // Otherwise the row would carry both "fully paid" and "1000 of it paid",
+  // which the DB constraint rejects outright.
+  it("clears the due date and the advance once the bill is settled", () => {
+    const parsed = expenseSchema.parse({
+      ...valid,
+      payment_status: "Paid",
+      due_on: "2026-09-01",
+      paid_amount: "1000",
+    });
+    expect(parsed.due_on).toBeNull();
+    expect(parsed.paid_amount).toBeNull();
+  });
+
   it("stores a blank note as null, not an empty string", () => {
     expect(expenseSchema.parse({ ...valid, note: "   " }).note).toBeNull();
     expect(expenseSchema.parse({ ...valid, note: " Sharma " }).note).toBe(

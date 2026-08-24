@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { expenseSchema } from "@/lib/schemas";
+import type { PaymentMethod } from "@/lib/types";
 
 export type ExpenseResult =
   | { ok: true }
@@ -31,6 +32,9 @@ function fieldsFrom(formData: FormData) {
     payment_method: formData.get("payment_method"),
     spent_on: formData.get("spent_on"),
     note: formData.get("note") ?? undefined,
+    payment_status: formData.get("payment_status") ?? undefined,
+    due_on: formData.get("due_on") ?? undefined,
+    paid_amount: formData.get("paid_amount") ?? undefined,
   });
 }
 
@@ -78,6 +82,38 @@ export async function updateExpense(
 
   // Zero rows means the guard matched nothing: someone edited it first.
   if (!data || data.length === 0) return { ok: false, conflict: true };
+
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Settles a bill from the list, without opening the edit form — the mirror of
+ * markReceiptPaid. How it was actually paid isn't known until the money goes
+ * out, so the caller supplies the method.
+ */
+export async function markExpensePaid(
+  id: string,
+  paymentMethod: PaymentMethod,
+): Promise<ExpenseResult> {
+  const { supabase } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("expenses")
+    .update({
+      payment_status: "Paid",
+      due_on: null,
+      // Cleared along with the due date: the whole amount has now gone out, and
+      // expenses_paid_amount_range rejects a partial figure on a settled row —
+      // so leaving it set would fail on every part-paid bill.
+      paid_amount: null,
+      payment_method: paymentMethod,
+    })
+    .eq("id", id)
+    .select("id");
+
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not-found" };
 
   refresh();
   return { ok: true };

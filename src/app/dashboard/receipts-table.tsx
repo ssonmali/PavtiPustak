@@ -608,17 +608,34 @@ export function ReceiptsTable({
                   <span
                     className={cn(
                       "text-lg font-semibold tabular-nums",
+                      // Struck through only when none of it has arrived, as in
+                      // the table: a part-paid contribution has real money
+                      // against it, so striking the figure would misread it.
                       receipt.payment_status === "Unpaid" &&
+                        !isPartPaid(receipt) &&
                         "text-muted-foreground line-through",
                     )}
                   >
                     {formatAmount(receipt.amount)}
                   </span>
+                  {isPartPaid(receipt) ? (
+                    <span className="text-xs text-muted-foreground">
+                      {t("status.paidOfTotal", {
+                        paid: formatAmount(received(receipt)),
+                      })}
+                    </span>
+                  ) : null}
                   {receipt.payment_status === "Unpaid" ? (
                     <UnpaidBadge
                       dueOn={receipt.due_on}
                       today={today}
-                      label={t("status.unpaidBadge")}
+                      label={
+                        isPartPaid(receipt)
+                          ? t("status.partPaidBadge", {
+                              amount: formatAmount(outstanding(receipt)),
+                            })
+                          : t("status.unpaidBadge")
+                      }
                       title={dueTitle(receipt.due_on)}
                     />
                   ) : (
@@ -755,7 +772,9 @@ export function ReceiptsTable({
             <AlertDialogDescription>
               {t("status.chooseMethodBody", {
                 name: toMarkPaid?.donor_name ?? "",
-                amount: toMarkPaid ? formatAmount(toMarkPaid.amount) : "",
+                // The remainder, not the face amount: on a part-paid row that
+                // is the sum actually being handed over now.
+                amount: toMarkPaid ? formatAmount(outstanding(toMarkPaid)) : "",
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>

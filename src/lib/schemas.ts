@@ -118,7 +118,50 @@ export const expenseSchema = z.object({
     .max(500, "Note is too long.")
     .optional()
     .transform((v) => (v && v.length > 0 ? v : null)),
-});
+  // A bill can be committed before it is settled, and settled in instalments.
+  // The three fields and all four refinements deliberately mirror the receipt
+  // side above: one rule for money owed, whichever direction it flows.
+  payment_status: z
+    .enum(PAYMENT_STATUSES, {
+      message: "Choose whether the money has been paid.",
+    })
+    .default("Paid"),
+  due_on: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  // As with a receipt: validated as a string first, because z.coerce.number()
+  // turns a blank field into 0 and would persist a zero where null is meant.
+  paid_amount: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null))
+    .refine(
+      (v) => v === null || !Number.isNaN(Number(v)),
+      "Enter a valid amount.",
+    )
+    .transform((v) => (v === null ? null : Number(v)))
+    .refine((v) => v === null || v >= 0, "That cannot be negative."),
+})
+  .refine((v) => v.payment_status !== "Unpaid" || v.due_on !== null, {
+    message: "Choose the date the bill is to be paid.",
+    path: ["due_on"],
+  })
+  .refine((v) => v.due_on === null || /^\d{4}-\d{2}-\d{2}$/.test(v.due_on), {
+    message: "Choose a valid date.",
+    path: ["due_on"],
+  })
+  .refine((v) => v.paid_amount === null || v.paid_amount <= v.amount, {
+    message: "That is more than the bill.",
+    path: ["paid_amount"],
+  })
+  // A settled bill carries no due date and no partial figure: the whole amount
+  // has gone out, so either would be a second, contradictory record of it.
+  .transform((v) =>
+    v.payment_status === "Paid" ? { ...v, due_on: null, paid_amount: null } : v,
+  );
 
 export type ExpenseFormValues = z.input<typeof expenseSchema>;
 
