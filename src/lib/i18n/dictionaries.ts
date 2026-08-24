@@ -255,6 +255,9 @@ const en = {
   "status.unpaidOnly": "Unpaid",
   "status.noneUnpaid": "Nothing unpaid in this view.",
   "status.markPaid": "Mark received",
+  // For the phone card, where it shares a row with three other actions and has
+  // to match the width of the Send button beside it.
+  "status.markPaidShort": "Received",
   "status.markedPaid": "Marked as received.",
   "status.chooseMethod": "How was it received?",
   "status.chooseMethodBody": "{name} · {amount}",
@@ -582,6 +585,7 @@ const mr: Record<MessageKey, string> = {
   "status.unpaidOnly": "येणे बाकी",
   "status.noneUnpaid": "या यादीत येणे बाकी काही नाही.",
   "status.markPaid": "मिळाली म्हणून नोंदवा",
+  "status.markPaidShort": "मिळाली",
   "status.markedPaid": "मिळाली म्हणून नोंदवले.",
   "status.chooseMethod": "कशी मिळाली?",
   "status.chooseMethodBody": "{name} · {amount}",

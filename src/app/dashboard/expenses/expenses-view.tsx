@@ -58,6 +58,7 @@ import {
   PeriodPresets,
   type Period,
 } from "../period-filter";
+import { PaidProgress } from "../paid-progress";
 import { ExpenseDialog } from "./expense-dialog";
 import { SortFilter } from "../sort-filter";
 import { DEFAULT_SORT, sortRows, type SortKey } from "../sort-rows";
@@ -308,10 +309,17 @@ export function ExpensesView({
                             {formatAmount(e.amount)}
                           </span>
                           {isPartPaid(e) ? (
-                            <span className="block text-xs text-muted-foreground">
-                              {t("expenses.advancePaid", {
-                                paid: formatAmount(received(e)),
-                              })}
+                            <span className="mt-0.5 flex items-center justify-end gap-2">
+                              <PaidProgress
+                                paid={received(e)}
+                                total={e.amount}
+                                className="w-14"
+                              />
+                              <span className="text-xs text-positive-ink">
+                                {t("expenses.advancePaid", {
+                                  paid: formatAmount(received(e)),
+                                })}
+                              </span>
                             </span>
                           ) : null}
                           {e.payment_status === "Unpaid" ? (
@@ -392,10 +400,19 @@ export function ExpensesView({
                             e.payment_status === "Unpaid" &&
                               !isPartPaid(e) &&
                               "text-muted-foreground line-through",
+                            // Money already handed over wears collected ink.
+                            isPartPaid(e) && "text-positive-ink",
                           )}
                         >
                           {formatAmount(isPartPaid(e) ? received(e) : e.amount)}
                         </span>
+                        {isPartPaid(e) ? (
+                          <PaidProgress
+                            paid={received(e)}
+                            total={e.amount}
+                            className="w-20"
+                          />
+                        ) : null}
                         {e.payment_status === "Unpaid" ? (
                           <UnpaidBadge
                             dueOn={e.due_on}

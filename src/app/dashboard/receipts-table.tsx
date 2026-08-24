@@ -34,6 +34,7 @@ import {
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { PaidProgress } from "./paid-progress";
 import { ReceiptDialog } from "./receipt-dialog";
 import { SortFilter } from "./sort-filter";
 import { DEFAULT_SORT, sortRows, type SortKey } from "./sort-rows";
@@ -458,10 +459,17 @@ export function ReceiptsTable({
                       {formatAmount(receipt.amount)}
                     </span>
                     {isPartPaid(receipt) ? (
-                      <span className="block text-xs text-muted-foreground">
-                        {t("status.paidOfTotal", {
-                          paid: formatAmount(received(receipt)),
-                        })}
+                      <span className="mt-0.5 flex items-center justify-end gap-2">
+                        <PaidProgress
+                          paid={received(receipt)}
+                          total={receipt.amount}
+                          className="w-14"
+                        />
+                        <span className="text-xs text-positive-ink">
+                          {t("status.paidOfTotal", {
+                            paid: formatAmount(received(receipt)),
+                          })}
+                        </span>
                       </span>
                     ) : null}
                     {receipt.payment_status === "Unpaid" ? (
@@ -618,6 +626,9 @@ export function ReceiptsTable({
                   <span
                     className={cn(
                       "text-lg font-semibold tabular-nums",
+                      // What arrived is money in hand, so it wears the same ink
+                      // as every other collected figure in the app.
+                      isPartPaid(receipt) && "text-positive-ink",
                       // Struck through only when none of it has arrived: a
                       // part-paid contribution has real money against it, so
                       // striking the figure would misread it.
@@ -630,6 +641,13 @@ export function ReceiptsTable({
                       isPartPaid(receipt) ? received(receipt) : receipt.amount,
                     )}
                   </span>
+                  {isPartPaid(receipt) ? (
+                    <PaidProgress
+                      paid={received(receipt)}
+                      total={receipt.amount}
+                      className="w-20"
+                    />
+                  ) : null}
                   {receipt.payment_status === "Unpaid" ? (
                     <UnpaidBadge
                       dueOn={receipt.due_on}
@@ -650,6 +668,12 @@ export function ReceiptsTable({
               </div>
 
               <div className="mt-3 flex gap-2">
+                {/* The two live in the same slot, one per state, so they are
+                    sized identically: button labels never wrap (whitespace-
+                    nowrap is in the variant), so the longer wording alone made
+                    the unpaid card's action wider than the paid card's and the
+                    ghost buttons beside it shifted between rows. The short
+                    label is what keeps them the same width. */}
                 {receipt.payment_status === "Unpaid" ? (
                   <Button
                     className="flex-1"
@@ -661,7 +685,7 @@ export function ReceiptsTable({
                     ) : (
                       <Check />
                     )}
-                    {t("status.markPaid")}
+                    {t("status.markPaidShort")}
                   </Button>
                 ) : (
                   <Button

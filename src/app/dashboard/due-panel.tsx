@@ -8,8 +8,10 @@ import { useI18n } from "@/lib/i18n/client";
 import {
   formatAmount,
   formatDate,
+  isPartPaid,
   outstanding,
   pledgeReminderUrl,
+  received,
   todayInIst,
 } from "@/lib/receipt-utils";
 import { PAYMENT_METHODS, type PaymentMethod, type Receipt } from "@/lib/types";
@@ -31,6 +33,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { PaidProgress } from "./paid-progress";
 
 /**
  * The reminder. Pledges due today or already overdue, at the top of the
@@ -104,8 +107,28 @@ export function DuePanel({
                   <span className="wrap-anywhere min-w-0 text-sm font-medium">
                     {p.donor_name}
                   </span>
-                  <span className="shrink-0 font-semibold tabular-nums">
-                    {formatAmount(p.amount)}
+                  {/* What is still owed, not what was promised: the card total
+                      above is the sum of these, and showing the face amount
+                      here made the rows disagree with it on a part-paid
+                      pledge. */}
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="font-semibold tabular-nums text-pending-ink">
+                      {formatAmount(outstanding(p))}
+                    </span>
+                    {isPartPaid(p) ? (
+                      <span className="flex items-center gap-1.5">
+                        <PaidProgress
+                          paid={received(p)}
+                          total={p.amount}
+                          className="w-12"
+                        />
+                        <span className="text-[0.6875rem] text-muted-foreground">
+                          {t("status.paidOfTotal", {
+                            paid: formatAmount(received(p)),
+                          })}
+                        </span>
+                      </span>
+                    ) : null}
                   </span>
                 </div>
 
@@ -173,7 +196,8 @@ export function DuePanel({
             <AlertDialogDescription>
               {t("status.chooseMethodBody", {
                 name: toMarkPaid?.donor_name ?? "",
-                amount: toMarkPaid ? formatAmount(toMarkPaid.amount) : "",
+                // The remainder, which is what is being handed over now.
+                amount: toMarkPaid ? formatAmount(outstanding(toMarkPaid)) : "",
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
