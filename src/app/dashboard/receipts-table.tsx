@@ -562,6 +562,10 @@ export function ReceiptsTable({
                       })}
                     />
                   ) : null}
+                  {/* Number and phone on one line, the date on its own below
+                      it. Wrapped as one line, a long name or a queued-offline
+                      label broke the row at a different point on every card,
+                      so the date sat mid-line on one and alone on the next. */}
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1 tabular-nums">
                       {receipt.pending === "create" ? (
@@ -575,7 +579,8 @@ export function ReceiptsTable({
                     </span>
                     <span aria-hidden>·</span>
                     <span className="tabular-nums">{receipt.phone_number}</span>
-                    <span aria-hidden>·</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     <span>{formatDate(receipt.collection_date, locale)}</span>
                   </p>
                 </div>
