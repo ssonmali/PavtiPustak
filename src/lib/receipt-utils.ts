@@ -164,9 +164,9 @@ const MANDAL_ADDRESS = process.env.NEXT_PUBLIC_MANDAL_ADDRESS ?? null;
 export function whatsappUrl(receipt: Receipt, mandalName: string) {
   const message = [
     `🙏 ${mandalName} 🙏`,
-    ...(MANDAL_ADDRESS ? [`         ${MANDAL_ADDRESS}`] : []),
+    ...(MANDAL_ADDRESS ? [`     ${MANDAL_ADDRESS}`] : []),
     "",
-    ` आदरणीय ${receipt.donor_name},`,
+    `आदरणीय ${receipt.donor_name},`,
     `आपल्या वर्गणीसाठी मनःपूर्वक आभार! 🌺`,
     "",
     `पावती क्रमांक: ${receipt.receipt_number}`,
