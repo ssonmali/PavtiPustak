@@ -66,8 +66,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             style={{ ["--width" as string]: "min(356px, calc(100vw - 1.5rem))" }}
           />
         </ThemeProvider>
-        {/* Page views only. The script is served from this origin, so it is not
-            a third-party request and no consent banner is implied. */}
+        {/* Page views and Core Web Vitals. Both scripts are served from this
+            origin, so neither is a third-party request. */}
         <WebAnalytics />
       </body>
     </html>
