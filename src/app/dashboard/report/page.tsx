@@ -107,7 +107,6 @@ export default async function ReportPage({
           all: t("period.all"),
           from: t("report.from"),
           to: t("report.to"),
-          apply: t("report.apply"),
           export: t("report.export"),
           pdf: t("export.pdf"),
           excel: t("export.excel"),

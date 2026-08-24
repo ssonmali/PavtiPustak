@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { ReceiptDialog } from "./receipt-dialog";
 import { SortFilter } from "./sort-filter";
 import { DEFAULT_SORT, sortRows, type SortKey } from "./sort-rows";
+import { CustomDateRange, type Period } from "./period-filter";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -152,6 +153,8 @@ export function ReceiptsTable({
   queue,
   editors,
   setPresence,
+  period,
+  onPeriodChange,
   ref,
 }: {
   receipts: LocalReceipt[];
@@ -167,6 +170,9 @@ export function ReceiptsTable({
   editors: Editors;
   /** Announces which receipt this device has open. */
   setPresence: (receiptId: string | null) => void;
+  /** Rendered as a custom date-range row below the search/sort bar. */
+  period: Period;
+  onPeriodChange: (period: Period) => void;
   ref?: React.Ref<ReceiptsTableHandle>;
 }) {
   const { t, locale } = useI18n();
@@ -371,8 +377,8 @@ export function ReceiptsTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative sm:max-w-xs sm:flex-1">
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1 sm:max-w-xs">
           <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
@@ -383,6 +389,8 @@ export function ReceiptsTable({
         </div>
         <SortFilter value={sort} onChange={setSort} />
       </div>
+
+      <CustomDateRange period={period} onChange={onPeriodChange} />
 
       {/* Phones get the card list below; the table starts at sm. */}
       <div className="hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">

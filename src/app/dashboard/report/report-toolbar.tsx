@@ -26,7 +26,6 @@ type Labels = {
   all: string;
   from: string;
   to: string;
-  apply: string;
   export: string;
   back: string;
   pdf: string;
@@ -198,6 +197,9 @@ export function ReportToolbar({
               type="date"
               defaultValue={range.from ?? ""}
               className="w-40"
+              // Applied as soon as a date is picked — same as the custom
+              // range everywhere else in the app, no separate Apply step.
+              onChange={(e) => e.currentTarget.form?.requestSubmit()}
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -210,15 +212,9 @@ export function ReportToolbar({
               type="date"
               defaultValue={range.to ?? ""}
               className="w-40"
+              onChange={(e) => e.currentTarget.form?.requestSubmit()}
             />
           </div>
-          <Button
-            type="submit"
-            size="sm"
-            variant={range.key === "custom" ? "secondary" : "outline"}
-          >
-            {labels.apply}
-          </Button>
         </div>
       </form>
     </div>

@@ -36,15 +36,17 @@ export function SortFilter({
       // Base UI's Select is controlled; there is no hidden input to mirror
       // because this never submits.
     >
+      {/* Icon-only: sits beside the search box at any width rather than
+          wrapping below it. The chosen sort still reads as full text once
+          the dropdown is open. */}
       <SelectTrigger
         aria-label={t("sort.label")}
-        title={t("sort.label")}
-        className="w-full sm:w-52"
+        title={t(LABEL_KEYS[value] ?? "sort.newest")}
+        className="w-auto shrink-0 px-2.5"
       >
         <ArrowDownUp className="size-4 shrink-0 text-muted-foreground" />
-        {/* Base UI renders the raw value unless given a formatter, which would
-            put "date-desc" in the trigger instead of the translated label. */}
-        <SelectValue>
+        {/* Rendered for screen readers only — sighted users get the icon. */}
+        <SelectValue className="sr-only">
           {(v) => t(LABEL_KEYS[v as SortKey] ?? "sort.newest")}
         </SelectValue>
       </SelectTrigger>

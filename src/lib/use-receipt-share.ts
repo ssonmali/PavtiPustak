@@ -8,6 +8,7 @@ import {
   displayName,
   formatAmountMarathi,
   formatDate,
+  formatNumberMarathi,
   whatsappUrl,
 } from "@/lib/receipt-utils";
 import { drawReceiptImage, type ReceiptImageData } from "@/lib/receipt-image";
@@ -95,7 +96,10 @@ export function useReceiptShare(mandalName: string, names: NameMap) {
         amountLabel: tMarathi("slip.amount"),
         amount: formatAmountMarathi(receipt.amount),
         rows: [
-          { label: tMarathi("slip.number"), value: String(receipt.receipt_number) },
+          {
+            label: tMarathi("slip.number"),
+            value: formatNumberMarathi(receipt.receipt_number),
+          },
           {
             label: tMarathi("slip.date"),
             value: formatDate(receipt.collection_date, "mr"),

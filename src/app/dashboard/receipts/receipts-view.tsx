@@ -15,7 +15,7 @@ import { ReceiptsTable, type ReceiptsTableHandle } from "../receipts-table";
 import {
   ALL_TIME,
   filterByPeriod,
-  PeriodFilter,
+  PeriodPresets,
   type Period,
 } from "../period-filter";
 import {
@@ -148,7 +148,7 @@ export function ReceiptsView({
             <Plus /> {t("table.new")}
           </Button>
         </div>
-        <PeriodFilter period={period} onChange={setPeriod} />
+        <PeriodPresets period={period} onChange={setPeriod} />
       </div>
 
       <StatusFilterBar
@@ -172,6 +172,8 @@ export function ReceiptsView({
             queue={queue}
             editors={editors}
             setPresence={setPresence}
+            period={period}
+            onPeriodChange={setPeriod}
             ref={tableRef}
           />
         </CardContent>

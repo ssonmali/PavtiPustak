@@ -19,6 +19,14 @@ const inrDevanagari = new Intl.NumberFormat("mr-IN-u-nu-deva", {
 export const formatAmountMarathi = (amount: number | string) =>
   inrDevanagari.format(Number(amount));
 
+const digitsDevanagari = new Intl.NumberFormat("mr-IN-u-nu-deva", {
+  useGrouping: false,
+});
+
+/** Plain Devanagari digits, no currency symbol — for the receipt number. */
+export const formatNumberMarathi = (n: number | string) =>
+  digitsDevanagari.format(Number(n));
+
 /**
  * `2026-08-22` -> `22 Aug 2026`.
  *

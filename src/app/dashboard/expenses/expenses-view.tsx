@@ -42,8 +42,9 @@ import {
 } from "@/components/ui/table";
 import {
   ALL_TIME,
+  CustomDateRange,
   filterByPeriod,
-  PeriodFilter,
+  PeriodPresets,
   type Period,
 } from "../period-filter";
 import { ExpenseDialog } from "./expense-dialog";
@@ -161,7 +162,7 @@ export function ExpensesView({
             <Plus /> {t("expenses.new")}
           </Button>
         </div>
-        <PeriodFilter period={period} onChange={setPeriod} />
+        <PeriodPresets period={period} onChange={setPeriod} />
       </div>
 
       {truncated ? (
@@ -179,8 +180,8 @@ export function ExpensesView({
       <Card className="card-elevated">
         <CardContent>
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative sm:max-w-xs sm:flex-1">
+            <div className="flex items-center gap-2">
+              <div className="relative min-w-0 flex-1 sm:max-w-xs">
                 <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={query}
@@ -191,6 +192,7 @@ export function ExpensesView({
               </div>
               <SortFilter value={sort} onChange={setSort} />
             </div>
+            <CustomDateRange period={period} onChange={setPeriod} />
 
             {/* Phones get the card list below; the table starts at sm. */}
             <div className="hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">
