@@ -12,13 +12,17 @@ import {
   whatsappUrl,
 } from "@/lib/receipt-utils";
 import { drawReceiptImage, type ReceiptImageData } from "@/lib/receipt-image";
+import { toDevanagariName } from "@/lib/devanagari-name";
 import type { NameMap, Receipt } from "@/lib/types";
 
 /**
  * The shared image is handed to whoever the contributor forwards it to, not
  * just the volunteer who sent it — it reads in Marathi regardless of which
- * language the sender has the app set to. Names are never run through this:
- * they're proper nouns, not UI text.
+ * language the sender has the app set to.
+ *
+ * Names do not come through here — they are proper nouns, not UI text, so they
+ * go through toDevanagariName() instead, which transliterates rather than
+ * translates and leaves an already-Marathi name alone.
  */
 function tMarathi(key: MessageKey, values?: Record<string, string | number>) {
   return interpolate(dictionaries.mr[key], values);
@@ -92,7 +96,10 @@ export function useReceiptShare(mandalName: string, names: NameMap) {
         address: ADDRESS,
         title: tMarathi("slip.title"),
         donorLabel: tMarathi("slip.received"),
-        donorName: receipt.donor_name,
+        // Rendered in Devanagari for the image only; the stored name is
+        // untouched. See devanagari-name.ts for what that can and cannot get
+        // right — a name typed in Marathi passes straight through.
+        donorName: toDevanagariName(receipt.donor_name),
         amountLabel: tMarathi("slip.amount"),
         amount: formatAmountMarathi(receipt.amount),
         rows: [
@@ -111,10 +118,12 @@ export function useReceiptShare(mandalName: string, names: NameMap) {
         ],
         thanks: tMarathi("slip.thanks"),
         footer: collectedBy
-          ? `${tMarathi("slip.collectedBy")}: ${collectedBy}`
+          ? `${tMarathi("slip.collectedBy")}: ${toDevanagariName(collectedBy)}`
           : null,
-        president: PRESIDENT,
-        vicePresident: VICE_PRESIDENT,
+        // Also names, so also transliterated — a no-op when they are already
+        // set in Marathi, which is how they should be configured.
+        president: PRESIDENT ? toDevanagariName(PRESIDENT) : null,
+        vicePresident: VICE_PRESIDENT ? toDevanagariName(VICE_PRESIDENT) : null,
       };
 
       try {
