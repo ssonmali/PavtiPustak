@@ -91,8 +91,12 @@ and a paused project does **not** wake up when someone opens the site — it mus
 be restored by hand from the dashboard. For a mandal that collects a few weeks a
 year, that means finding out it is down at a donor's doorstep.
 
-`vercel.json` already declares a daily cron hitting `/api/keepalive`, which runs
-one trivial `select now()` and resets the clock. Nothing to configure beyond:
+`vercel.json` already declares a daily cron hitting `/api/keepalive` at
+`0 6 * * *` — 06:00 UTC, which is 11:30 IST — running one trivial `select now()`
+to reset the clock. (Keep that file to `path` and `schedule` only: Vercel
+validates it against a strict schema and fails the build on any extra key,
+including a `comment`, and JSON has nowhere else to put one.) Nothing to
+configure beyond:
 
 1. Deploy (crons are registered from `vercel.json` at deploy time — they do not
    run on preview deployments, only production).
