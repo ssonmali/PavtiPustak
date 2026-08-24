@@ -108,7 +108,7 @@ export async function exportReceiptsToExcel(
       ? [
           {
             data: donationsSheetData(donations, dict),
-            sheet: dict["donation.title"].slice(0, 30),
+            sheet: sheetName(dict["donation.title"], "Donation box"),
             columns: [
               { width: 7 },
               { width: 28 },
@@ -123,5 +123,5 @@ export async function exportReceiptsToExcel(
       : []),
   ];
 
-  await writeXlsxFile(sheets).toFile(`pavti-pustak-${slug}.xlsx`);
+  await writeXlsxFile(sheets).toFile(`sgmm-pustak-${slug}.xlsx`);
 }

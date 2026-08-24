@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, User } from "lucide-react";
 import { toast } from "sonner";
 import { createDonation, updateDonation } from "@/app/actions/donations";
+import { searchDonors } from "@/app/actions/receipts";
 import { useI18n } from "@/lib/i18n/client";
 import { formatDate, toDateValue } from "@/lib/receipt-utils";
-import type { Donation } from "@/lib/types";
+import type { Donation, Donor } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -45,6 +46,43 @@ export function DonationDialog({
   const [date, setDate] = React.useState<Date | undefined>(
     donation ? fromDateValue(donation.donation_date) : new Date(),
   );
+
+  // Donor autocomplete — the same donor_directory receipts use, since a past
+  // contributor is often the one dropping off an item too.
+  const [donorQuery, setDonorQuery] = React.useState(donation?.donor_name ?? "");
+  const [matches, setMatches] = React.useState<Donor[]>([]);
+  const [showMatches, setShowMatches] = React.useState(false);
+  const phoneRef = React.useRef<HTMLInputElement>(null);
+
+  function onDonorInput(value: string) {
+    setDonorQuery(value);
+    if (isEdit) return;
+    setShowMatches(true);
+  }
+
+  React.useEffect(() => {
+    if (isEdit || donorQuery.trim().length < 2) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const found = await searchDonors(donorQuery);
+      if (!cancelled) setMatches(found);
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [donorQuery, isEdit]);
+
+  const suggestions =
+    !isEdit && donorQuery.trim().length >= 2 && showMatches ? matches : [];
+
+  function pickDonor(donor: Donor) {
+    setDonorQuery(donor.donor_name);
+    setShowMatches(false);
+    if (phoneRef.current) phoneRef.current.value = donor.phone_number;
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -95,20 +133,54 @@ export function DonationDialog({
           />
         ) : null}
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="donor_name">{t("table.donor")}</Label>
+        <div className="relative flex flex-col gap-2">
+          <Label htmlFor="donor_name">{t("donation.donor")}</Label>
           <Input
             id="donor_name"
             name="donor_name"
-            defaultValue={donation?.donor_name ?? ""}
+            value={donorQuery}
+            onChange={(e) => onDonorInput(e.target.value)}
+            onBlur={() => setTimeout(() => setShowMatches(false), 150)}
             autoComplete="off"
             required
           />
+
+          {suggestions.length > 0 ? (
+            <ul className="absolute top-full right-0 left-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border bg-popover p-1 shadow-md">
+              {suggestions.map((donor) => (
+                <li key={`${donor.donor_name}-${donor.phone_number}`}>
+                  <button
+                    type="button"
+                    className="flex w-full min-h-11 flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-accent"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pickDonor(donor)}
+                  >
+                    <span className="flex w-full items-center gap-1.5 text-sm">
+                      <User className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="wrap-anywhere min-w-0 flex-1">
+                        {donor.donor_name}
+                      </span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {donor.phone_number}
+                      </span>
+                    </span>
+                    <span className="pl-5 text-xs text-muted-foreground">
+                      {t("form.donorHint", {
+                        count: donor.receipt_count,
+                        date: formatDate(donor.last_collection, locale),
+                      })}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="phone_number">{t("donation.mobileOptional")}</Label>
           <Input
+            ref={phoneRef}
             id="phone_number"
             name="phone_number"
             type="tel"
