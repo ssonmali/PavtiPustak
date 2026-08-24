@@ -1,10 +1,10 @@
 -- Pavti Pustak — wipe the ledgers, keep the volunteers
 -- Run in Supabase Dashboard > SQL Editor.
 --
--- DESTRUCTIVE AND IRREVERSIBLE. Every receipt, expense and audit entry is
--- removed. Take a backup first if there is any chance the figures are still
--- wanted: Dashboard > Database > Backups, or export the ledgers from the
--- report page as Excel while the data is still there.
+-- DESTRUCTIVE AND IRREVERSIBLE. Every receipt, expense, donation and audit
+-- entry is removed. Take a backup first if there is any chance the figures
+-- are still wanted: Dashboard > Database > Backups, or export the ledgers
+-- from the report page as Excel while the data is still there.
 --
 -- Kept:
 --   auth.users            — the volunteers' logins
@@ -24,7 +24,7 @@
 -- RESTART IDENTITY resets the receipt_number sequence, so the next receipt
 -- written is #1 again rather than continuing from the last season.
 --
--- All four in one statement so it either all happens or none of it does. The
+-- All six in one statement so it either all happens or none of it does. The
 -- audit tables deliberately hold no foreign key to the rows they describe
 -- (a receipt may be deleted while its history survives), so no CASCADE is
 -- needed here.
