@@ -152,17 +152,10 @@ export function ReportToolbar({
         >
           <ArrowLeft /> {labels.back}
         </Button>
-        <span className="ml-auto">
-          <SortFilter
-            value={sort}
-            onChange={(key) => router.push(keep({ sort: key }))}
-          />
-        </span>
-
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button size="sm">
+              <Button size="sm" className="ml-auto">
                 <Printer /> {labels.export}
               </Button>
             }
@@ -228,8 +221,8 @@ export function ReportToolbar({
           <input type="hidden" name="sort" value={sort} />
         )}
 
-        <div className="flex flex-wrap items-end gap-2 p-3">
-          <div className="flex flex-col gap-1">
+        <div className="flex items-end gap-2 p-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
             <Label htmlFor="from" className="text-xs text-muted-foreground">
               {labels.from}
             </Label>
@@ -238,13 +231,13 @@ export function ReportToolbar({
               name="from"
               type="date"
               defaultValue={range.from ?? ""}
-              className="w-40"
+              className="w-full min-w-0 sm:w-40"
               // Applied as soon as a date is picked — same as the custom
               // range everywhere else in the app, no separate Apply step.
               onChange={(e) => e.currentTarget.form?.requestSubmit()}
             />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
             <Label htmlFor="to" className="text-xs text-muted-foreground">
               {labels.to}
             </Label>
@@ -253,17 +246,11 @@ export function ReportToolbar({
               name="to"
               type="date"
               defaultValue={range.to ?? ""}
-              className="w-40"
+              className="w-full min-w-0 sm:w-40"
               onChange={(e) => e.currentTarget.form?.requestSubmit()}
             />
           </div>
-
-          {/* Beside the dates rather than up by Export: status, range and
-              order all describe what gets printed, so they belong in the one
-              box. The same icon the ledgers use, driving the URL rather than
-              local state — the address stays the whole description of the
-              page, which is what makes a print job reloadable. */}
-          <span className="ml-auto">
+          <span className="shrink-0 sm:ml-auto">
             <SortFilter
               value={sort}
               onChange={(key) => router.push(keep({ sort: key }))}
