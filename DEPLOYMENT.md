@@ -17,9 +17,17 @@ re-runnable.
 | `supabase/08-expenses.sql` | Expenses table, daily spend view, realtime |
 | `supabase/09-expense-audit.sql` | Expense audit log + the combined activity feed |
 | `supabase/10-payment-status.sql` | Paid/unpaid receipts, due dates, pledge totals |
+| `supabase/11-donation-box.sql` | Donation box table, audit log, realtime, activity feed |
+| `supabase/12-donation-phone-optional.sql` | Makes the donation phone number nullable |
 
-Then run `supabase/verify.sql` — it lists the policies, the trigger, and the
-audit row count so you can confirm everything landed.
+Run 12 even if you only just created the table. `11` opens with `create table
+if not exists`, so a project where an earlier copy of it already ran keeps the
+`not null` phone number that copy created, and the corrected version is skipped
+silently. 12 is the `alter` that fixes it, and a no-op if it is already right.
+
+Then run `supabase/verify.sql` — it checks the policies and triggers, lists
+whether all six realtime tables are actually published, and confirms
+`donations.phone_number` is nullable.
 
 ## 2. Create volunteer accounts
 
