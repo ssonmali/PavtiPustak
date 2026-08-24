@@ -7,12 +7,16 @@ import { createClient } from "@/lib/supabase/client";
 export type RealtimeStatus = "connecting" | "live" | "polling";
 
 /** Safety-net refresh cadence, in ms. */
-// Even "live" gets a safety net: update and delete events depend on the
-// table's replica identity being full, which is server configuration this code
-// cannot verify. But when realtime IS working it is the mechanism, and every
-// tick here costs a full router.refresh() — the layout's queries plus the
-// page's, on a volunteer's mobile data — so the net is deliberately slack.
-const POLL_LIVE = 120_000;
+// Even "live" gets a safety net, but a very slack one. Every tick costs a full
+// router.refresh() — the layout's queries plus the page's — on a volunteer's
+// mobile data, and when realtime is healthy it has nothing to find: the events
+// it exists to backstop are the update/delete ones that need `replica identity
+// full`, and all six subscribed tables set it. What is left is the case this
+// code genuinely cannot detect — a table missing from the publication, where
+// the channel reports SUBSCRIBED and simply never delivers. Ten minutes bounds
+// that without putting a refresh in the middle of someone's typing; returning
+// to the tab refreshes anyway, which is the moment staleness is noticed.
+const POLL_LIVE = 600_000;
 // Realtime is not working; this is the only thing keeping the page current, so
 // it is the one case worth paying for often.
 const POLL_FALLBACK = 30_000;
@@ -36,8 +40,12 @@ export function useRealtimeReceipts(delay = 400) {
 
     const refreshSoon = () => {
       clearTimeout(timer);
-      // router.refresh() re-runs the server components and streams fresh data
-      // in without dropping local state (open dialogs, filters, scroll).
+      // Debounced, so a volunteer saving three receipts in a row costs one
+      // refresh rather than three. router.refresh() re-runs the server
+      // components and streams fresh data in without dropping local state
+      // (open dialogs, filters, scroll). Clearing only the route on screen is
+      // enough now that no page segment is cached: every other tab refetches
+      // when it is tapped anyway.
       timer = setTimeout(() => router.refresh(), delay);
     };
 
