@@ -1,16 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Donation, Receipt } from "@/lib/types";
+import type { Donation, Expense, Receipt } from "@/lib/types";
 import {
   formatAmount,
   formatDate,
   formatDateTime,
+  isPartPaid,
   outstanding,
   received,
+  type Money,
 } from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 import { ReportToolbar } from "./report-toolbar";
 import { parseRange, parseStatus, type ReportRange } from "./report-range";
+import { splitLedger } from "./split-ledger";
 
 export const metadata = { title: "Report · SGMM Pustak" };
 
@@ -59,27 +62,47 @@ export default async function ReportPage({
   if (range.from) donationQuery = donationQuery.gte("donation_date", range.from);
   if (range.to) donationQuery = donationQuery.lte("donation_date", range.to);
 
-  const [{ data }, { data: donationData }] = await Promise.all([
-    query,
-    donationQuery,
-  ]);
+  let expenseQuery = supabase
+    .from("expenses")
+    .select("*")
+    .order("spent_on", { ascending: true })
+    .order("created_at", { ascending: true })
+    .limit(MAX_ROWS);
+  if (range.from) expenseQuery = expenseQuery.gte("spent_on", range.from);
+  if (range.to) expenseQuery = expenseQuery.lte("spent_on", range.to);
+
+  const [{ data }, { data: donationData }, { data: expenseData }] =
+    await Promise.all([query, donationQuery, expenseQuery]);
   const all: Receipt[] = data ?? [];
   // Additive: an unrun migration 11 should not break the rest of the report.
   const allDonations: Donation[] = donationData ?? [];
-
-  // Printed as two sections rather than one mixed list: on paper a column of
-  // amounts that silently includes money nobody paid cannot be reconciled.
-  const paid = all.filter((r) => r.payment_status === "Paid");
-  const unpaid = all.filter((r) => r.payment_status === "Unpaid");
+  const allExpenses: Expense[] = expenseData ?? [];
 
   // Money in the box and money still owed, not face amounts: a part-paid row
-  // sits in the Unpaid section but has already contributed some of its amount,
-  // so summing `amount` on both sides would print the same rupees twice.
-  const sum = (rows: Receipt[]) => rows.reduce((n, r) => n + received(r), 0);
-  const sumOutstanding = (rows: Receipt[]) =>
+  // has already contributed some of its amount, so summing `amount` on both
+  // sides of the report would print the same rupees twice.
+  const sum = (rows: Money[]) => rows.reduce((n, r) => n + received(r), 0);
+  const sumOutstanding = (rows: Money[]) =>
     rows.reduce((n, r) => n + outstanding(r), 0);
   const total = sum(all);
+
+  /**
+   * Printed as two sections rather than one mixed list: on paper a column of
+   * amounts that silently includes money nobody paid cannot be reconciled.
+   *
+   * Split on the two halves, not on payment_status: a part-paid contribution
+   * belongs in both — its received half under Received, its remainder under
+   * Unpaid — and its name carries a tag on each so the same contributor
+   * appearing twice reads as one split rather than a duplicate. Splitting on
+   * status instead left the received half out of the Received section while
+   * the summary total counted it, so the sections did not add up to the figure
+   * printed above them.
+   */
+  const { settled: paid, open: unpaid } = splitLedger(all);
+  const { settled: expensesPaid, open: expensesOwed } = splitLedger(allExpenses);
+  const spent = sum(allExpenses);
   const expected = sumOutstanding(unpaid);
+  const owed = sumOutstanding(allExpenses);
 
   // What the Excel export and the row cap notice count. Donations are kept
   // out of this figure — they are a different entity, exported and printed
@@ -94,13 +117,124 @@ export default async function ReportPage({
           : [];
   const donations =
     status === "all" || status === "Donation" ? allDonations : [];
+  const expenses =
+    status === "all" || status === "Expense" ? allExpenses : [];
 
   const periodLabel = rangeLabel(range, locale, t("period.all"));
 
+  /**
+   * One printable row, whichever ledger it came from, so the four sections are
+   * drawn by one table rather than four near-identical ones.
+   */
+  type PrintRow = {
+    id: string;
+    /** Receipt number; expenses have none, so the column is left blank. */
+    number: number | null;
+    /** Donor name or description, already carrying its split tag. */
+    title: string;
+    /** Phone number for a receipt, category for an expense. */
+    second: string;
+    /** Payment method on a settled row, the date it is expected on an open one. */
+    third: string;
+    date: string;
+    amount: number;
+  };
+
+  /** The tag that says why one name appears in both sections of a report. */
+  const tag = (name: string, partial: boolean, suffix: string) =>
+    partial ? `${name} ${suffix}` : name;
+
+  const receiptRow = (r: Receipt, section: "Paid" | "Unpaid"): PrintRow => ({
+    id: r.id,
+    number: r.receipt_number,
+    title: tag(r.donor_name, isPartPaid(r), t("report.partialTag")),
+    second: r.phone_number,
+    third:
+      section === "Unpaid"
+        ? r.due_on
+          ? formatDate(r.due_on, locale)
+          : "—"
+        : t(`method.${r.payment_method}`),
+    date: formatDate(r.collection_date, locale),
+    amount: section === "Unpaid" ? outstanding(r) : received(r),
+  });
+
+  const expenseRow = (e: Expense, section: "Paid" | "Unpaid"): PrintRow => ({
+    id: e.id,
+    number: null,
+    title: tag(
+      e.description,
+      isPartPaid(e),
+      section === "Unpaid" ? t("report.toPayTag") : t("report.advanceTag"),
+    ),
+    second: t(`category.${e.category}`),
+    third:
+      section === "Unpaid"
+        ? e.due_on
+          ? formatDate(e.due_on, locale)
+          : "—"
+        : t(`method.${e.payment_method}`),
+    date: formatDate(e.spent_on, locale),
+    amount: section === "Unpaid" ? outstanding(e) : received(e),
+  });
+
+  const receiptHead = {
+    number: t("slip.number"),
+    title: t("table.donor"),
+    second: t("table.mobile"),
+  };
+  const expenseHead = {
+    number: "",
+    title: t("expenses.description"),
+    second: t("expenses.category"),
+  };
+
   const sections = [
-    { key: "Paid" as const, rows: paid, label: t("status.paidOnly") },
-    { key: "Unpaid" as const, rows: unpaid, label: t("status.unpaidOnly") },
-  ].filter((s) => (status === "all" ? s.rows.length > 0 : s.key === status));
+    {
+      key: "Paid" as const,
+      /** Whether this section lists money still owed rather than money moved. */
+      open: false,
+      label: t("status.paidOnly"),
+      head: receiptHead,
+      rows: paid.map((r) => receiptRow(r, "Paid")),
+      totalLabel: t("report.grandTotal"),
+    },
+    {
+      key: "Unpaid" as const,
+      open: true,
+      label: t("status.unpaidOnly"),
+      head: receiptHead,
+      rows: unpaid.map((r) => receiptRow(r, "Unpaid")),
+      totalLabel: t("due.expected"),
+    },
+    {
+      key: "Expense" as const,
+      open: false,
+      label: t("report.expensesPaid"),
+      head: expenseHead,
+      rows: expensesPaid.map((e) => expenseRow(e, "Paid")),
+      totalLabel: t("expenses.total"),
+    },
+    {
+      key: "Expense" as const,
+      open: true,
+      label: t("report.expensesOwed"),
+      head: expenseHead,
+      rows: expensesOwed.map((e) => expenseRow(e, "Unpaid")),
+      totalLabel: t("expenses.owed"),
+    },
+  ]
+    .filter((s) =>
+      status === "all"
+        ? s.rows.length > 0
+        : s.key === status && s.rows.length > 0,
+    )
+    // Footed with the sum of what is printed in the column, so the figure can
+    // be checked against the rows above it by adding them up.
+    .map((s) => ({
+      ...s,
+      total: s.rows.reduce((n, r) => n + r.amount, 0),
+    }));
 
   /**
    * The summary describes what is actually printed. A money column for a
@@ -117,12 +251,22 @@ export default async function ReportPage({
           value: String(donations.length),
           num: true,
         }
-      : { label: t("stats.receipts"), value: String(receipts.length), num: true },
+      : status === "Expense"
+        ? {
+            label: t("expenses.title"),
+            value: String(expenses.length),
+            num: true,
+          }
+        : {
+            label: t("stats.receipts"),
+            value: String(receipts.length),
+            num: true,
+          },
     // Donation is excluded from both money rows for the same reason Unpaid is
     // excluded from the collected total: this report prints no receipts at all,
     // so a rupee figure here would sit beside "Receipts: 0" and describe rows
     // that are not on the page.
-    ...(status === "Unpaid" || status === "Donation"
+    ...(status === "Unpaid" || status === "Donation" || status === "Expense"
       ? []
       : [
           {
@@ -132,8 +276,27 @@ export default async function ReportPage({
             strong: true,
           },
         ]),
-    ...(status !== "Paid" && status !== "Donation" && expected > 0
+    ...(status !== "Paid" &&
+    status !== "Donation" &&
+    status !== "Expense" &&
+    expected > 0
       ? [{ label: t("due.expected"), value: formatAmount(expected), num: true }]
+      : []),
+    // Spending gets its own two cells rather than being netted off the
+    // collected figure: a report is checked by adding a column up, and a
+    // single "balance" cell cannot be checked against anything on the page.
+    ...(expenses.length > 0
+      ? [
+          {
+            label: t("expenses.total"),
+            value: formatAmount(spent),
+            num: true,
+            strong: status === "Expense",
+          },
+        ]
+      : []),
+    ...(expenses.length > 0 && owed > 0
+      ? [{ label: t("expenses.owed"), value: formatAmount(owed), num: true }]
       : []),
     {
       label: t("report.generated"),
@@ -151,6 +314,7 @@ export default async function ReportPage({
           statusPaid: t("status.paidOnly"),
           statusUnpaid: t("status.unpaidOnly"),
           statusDonation: t("donation.badge"),
+          statusExpense: t("expenses.title"),
           today: t("period.today"),
           all: t("period.all"),
           from: t("report.from"),
@@ -162,6 +326,7 @@ export default async function ReportPage({
         }}
         receipts={receipts}
         donations={donations}
+        expenses={expenses}
         mandalName={mandalName}
       />
 
@@ -213,18 +378,17 @@ export default async function ReportPage({
         ) : null}
 
         {sections.map((section) => (
-          <section key={section.key} className="mb-4 break-inside-auto">
+          <section
+            key={section.label}
+            className="mb-4 break-inside-auto"
+          >
             {/* The heading is what makes the split readable on paper; with a
                 single status selected it still names which one this is. */}
             <h2 className="mb-1.5 text-sm font-bold tracking-wide uppercase">
               {section.label}
               <span className="ml-2 font-normal tabular-nums">
                 {t("chart.receiptsCount", { count: section.rows.length })} ·{" "}
-                {formatAmount(
-                  section.key === "Unpaid"
-                    ? sumOutstanding(section.rows)
-                    : sum(section.rows),
-                )}
+                {formatAmount(section.total)}
               </span>
             </h2>
 
@@ -232,14 +396,12 @@ export default async function ReportPage({
             <table className="print-grid hidden w-full text-sm sm:table print:table">
               <thead>
                 <tr>
-                  <th>{t("slip.number")}</th>
-                  <th>{t("table.donor")}</th>
-                  <th>{t("table.mobile")}</th>
-                  {section.key === "Unpaid" ? (
-                    <th>{t("form.dueOn")}</th>
-                  ) : (
-                    <th>{t("table.method")}</th>
-                  )}
+                  <th>{section.head.number}</th>
+                  <th>{section.head.title}</th>
+                  <th>{section.head.second}</th>
+                  <th>
+                    {section.open ? t("form.dueOn") : t("table.method")}
+                  </th>
                   <th>{t("table.date")}</th>
                   <th className="text-right">{t("table.amount")}</th>
                 </tr>
@@ -247,83 +409,49 @@ export default async function ReportPage({
               <tbody>
                 {section.rows.map((r) => (
                   <tr key={r.id}>
-                    <td className="tabular-nums">{r.receipt_number}</td>
-                    <td>{r.donor_name}</td>
-                    <td className="tabular-nums">{r.phone_number}</td>
-                    {section.key === "Unpaid" ? (
-                      <td className="whitespace-nowrap">
-                        {r.due_on ? formatDate(r.due_on, locale) : "—"}
-                      </td>
-                    ) : (
-                      <td>{t(`method.${r.payment_method}`)}</td>
-                    )}
-                    <td className="whitespace-nowrap">
-                      {formatDate(r.collection_date, locale)}
-                    </td>
+                    <td className="tabular-nums">{r.number ?? ""}</td>
+                    <td>{r.title}</td>
+                    <td className="tabular-nums">{r.second}</td>
+                    <td className="whitespace-nowrap">{r.third}</td>
+                    <td className="whitespace-nowrap">{r.date}</td>
                     <td className="text-right tabular-nums">
-                      {formatAmount(
-                        section.key === "Unpaid" ? outstanding(r) : received(r),
-                      )}
+                      {formatAmount(r.amount)}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={5}>
-                    {section.key === "Unpaid"
-                      ? t("due.expected")
-                      : t("report.grandTotal")}
-                  </td>
+                  <td colSpan={5}>{section.totalLabel}</td>
                   <td className="text-right tabular-nums">
-                    {formatAmount(
-                      section.key === "Unpaid"
-                        ? sumOutstanding(section.rows)
-                        : sum(section.rows),
-                    )}
+                    {formatAmount(section.total)}
                   </td>
                 </tr>
               </tfoot>
             </table>
 
-            {/* On a phone, one card per receipt. Six columns cannot fit 360px,
-                and a report you have to scroll sideways to see the amount in is
-                not a report you can check. */}
+            {/* On a phone, one card per row. Six columns cannot fit 360px, and
+                a report you have to scroll sideways to see the amount in is not
+                a report you can check. */}
             <div className="flex flex-col gap-2 sm:hidden print:hidden">
               {section.rows.map((r) => (
                 <div key={r.id} className="rounded-lg border p-3 text-sm">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="wrap-anywhere font-medium">
-                      {r.donor_name}
-                    </span>
+                    <span className="wrap-anywhere font-medium">{r.title}</span>
                     <span className="shrink-0 font-bold tabular-nums">
                       {formatAmount(r.amount)}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    #{r.receipt_number} · {r.phone_number} ·{" "}
-                    {section.key === "Unpaid"
-                      ? ""
-                      : `${t(`method.${r.payment_method}`)} · `}
-                    {formatDate(r.collection_date, locale)}
-                    {r.due_on
-                      ? ` · ${t("form.dueOn")} ${formatDate(r.due_on, locale)}`
-                      : ""}
+                    {r.number != null ? `#${r.number} · ` : ""}
+                    {r.second} · {r.third} · {r.date}
                   </p>
                 </div>
               ))}
               <div className="flex items-baseline justify-between gap-2 border-t-2 pt-2 font-bold">
-                <span>
-                  {section.key === "Unpaid"
-                    ? t("due.expected")
-                    : t("report.grandTotal")}
-                </span>
+                <span>{section.totalLabel}</span>
                 <span className="tabular-nums">
-                  {formatAmount(
-                    section.key === "Unpaid"
-                      ? sumOutstanding(section.rows)
-                      : sum(section.rows),
-                  )}
+                  {formatAmount(section.total)}
                 </span>
               </div>
             </div>

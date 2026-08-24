@@ -314,6 +314,14 @@ const en = {
   "report.generated": "Generated on",
   "report.period": "Period",
   "report.grandTotal": "Grand total",
+  // A part-paid row is printed in both sections — its received half under
+  // Received, its remainder under Unpaid — so the name carries a tag saying
+  // why the same contributor appears twice on one sheet.
+  "report.partialTag": "(partial)",
+  "report.advanceTag": "(advance)",
+  "report.toPayTag": "(to be paid)",
+  "report.expensesPaid": "Expenses paid",
+  "report.expensesOwed": "Expenses to be paid",
   "report.print": "Print / Save as PDF",
   "report.back": "Back to dashboard",
   "report.from": "From",
@@ -636,6 +644,11 @@ const mr: Record<MessageKey, string> = {
   "report.generated": "तयार दिनांक",
   "report.period": "कालावधी",
   "report.grandTotal": "एकूण रक्कम",
+  "report.partialTag": "(अंशतः)",
+  "report.advanceTag": "(आगाऊ)",
+  "report.toPayTag": "(देणे बाकी)",
+  "report.expensesPaid": "दिलेला खर्च",
+  "report.expensesOwed": "देणे बाकी खर्च",
   "report.print": "छपाई / PDF म्हणून जतन करा",
   "report.back": "डॅशबोर्डवर परत",
   "report.from": "पासून",

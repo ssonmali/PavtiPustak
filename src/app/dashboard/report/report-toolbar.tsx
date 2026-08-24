@@ -14,14 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
-import type { Donation, Receipt } from "@/lib/types";
-import type { ReportRange } from "./report-range";
+import type { Donation, Expense, Receipt } from "@/lib/types";
+import type { ReportRange, ReportStatus } from "./report-range";
 
 type Labels = {
   statusAll: string;
   statusPaid: string;
   statusUnpaid: string;
   statusDonation: string;
+  statusExpense: string;
   today: string;
   all: string;
   from: string;
@@ -53,21 +54,28 @@ export function ReportToolbar({
   labels,
   receipts,
   donations,
+  expenses,
   mandalName,
 }: {
   range: ReportRange;
-  status: "all" | "Paid" | "Unpaid" | "Donation";
+  status: ReportStatus;
   labels: Labels;
   /** The rows on the page, so Excel exports exactly what is printed. */
   receipts: Receipt[];
   /** Exported as its own sheet — never merged into the receipts total. */
   donations: Donation[];
+  /** Likewise its own sheet: money out, never netted against money in. */
+  expenses: Expense[];
   mandalName: string;
 }) {
   const { t, locale } = useI18n();
 
   async function exportExcel() {
-    if (receipts.length === 0 && donations.length === 0) {
+    if (
+      receipts.length === 0 &&
+      donations.length === 0 &&
+      expenses.length === 0
+    ) {
       toast.error(t("toast.nothingToExport"));
       return;
     }
@@ -80,9 +88,12 @@ export function ReportToolbar({
       mandalName,
       rangeSlug(range),
       donations,
+      expenses,
     );
     toast.success(
-      t("toast.exported", { count: receipts.length + donations.length }),
+      t("toast.exported", {
+        count: receipts.length + donations.length + expenses.length,
+      }),
     );
   }
 
@@ -115,6 +126,7 @@ export function ReportToolbar({
     { key: "Paid", label: labels.statusPaid },
     { key: "Unpaid", label: labels.statusUnpaid },
     { key: "Donation", label: labels.statusDonation },
+    { key: "Expense", label: labels.statusExpense },
   ] as const;
 
   return (
