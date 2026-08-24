@@ -70,6 +70,21 @@ against the one in the JWT, so nobody can rename a colleague.
    `NEXT_PUBLIC_` variable is shipped to the browser.
 4. Deploy.
 
+### Keep the functions next to the database
+
+`vercel.json` pins `"regions": ["bom1"]` (Mumbai). This matters more than any
+code change in this repo: Vercel defaults new projects to `iad1` (Washington),
+and rendering one dashboard page makes four *sequential* trips to Supabase — the
+proxy validates the JWT, the layout validates it again, the layout reads the
+volunteer name and today's pledges, then the page runs its queries. Co-located
+those hops are ~25ms each; across the Atlantic they are ~250ms each, so the page
+spends about a second doing nothing but waiting.
+
+Set this to whichever region your Supabase project is in — check it under
+Supabase **Settings → General → Region**. `ap-south-1` is `bom1`, `us-east-1` is
+`iad1`, `eu-central-1` is `fra1`. Guessing wrong is worse than not setting it.
+The Hobby plan allows exactly one region, which is all this needs.
+
 ## 4. Point Supabase at the deployed URL
 
 **Authentication → URL Configuration:**
