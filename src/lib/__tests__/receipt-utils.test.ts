@@ -18,6 +18,7 @@ const receipt: Receipt = {
   id: "11111111-1111-1111-1111-111111111111",
   receipt_number: 47,
   donor_name_mr: null,
+  paid_amount: null,
   donor_name: "सुनील पाटील",
   amount: 501,
   phone_number: "9876543210",

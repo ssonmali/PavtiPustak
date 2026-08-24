@@ -8,6 +8,7 @@ const row = (over: Partial<Receipt> = {}): Receipt => ({
   receipt_number: 10,
   donor_name: "Sunil",
   donor_name_mr: null,
+  paid_amount: null,
   amount: 501,
   phone_number: "9876543210",
   payment_method: "Cash",

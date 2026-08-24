@@ -3,7 +3,14 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getVolunteerNames } from "@/lib/volunteer-names";
 import type { Receipt } from "@/lib/types";
-import { displayName, formatAmount, formatDate } from "@/lib/receipt-utils";
+import {
+  displayName,
+  formatAmount,
+  formatDate,
+  isPartPaid,
+  outstanding,
+  received,
+} from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { PrintBar } from "../../print-bar";
 
@@ -33,8 +40,17 @@ export default async function ReceiptSlipPage({
 
   const rows = [
     { label: t("slip.amount"), value: formatAmount(receipt.amount), strong: true },
+    // A slip handed over must never claim more arrived than did. When a
+    // contribution is part-paid the received and outstanding halves are both
+    // named, so the paper says what actually happened.
+    ...(isPartPaid(receipt)
+      ? [
+          { label: t("slip.receivedSoFar"), value: formatAmount(received(receipt)) },
+          { label: t("slip.stillDue"), value: formatAmount(outstanding(receipt)) },
+        ]
+      : []),
     // A method hasn't been chosen for a pledge — nothing has been received yet.
-    ...(receipt.payment_status === "Paid"
+    ...(received(receipt) > 0
       ? [{ label: t("slip.method"), value: t(`method.${receipt.payment_method}`) }]
       : []),
     { label: t("slip.date"), value: formatDate(receipt.collection_date, locale) },

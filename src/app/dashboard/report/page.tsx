@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Donation, Receipt } from "@/lib/types";
-import { formatAmount, formatDate, formatDateTime } from "@/lib/receipt-utils";
+import {
+  formatAmount,
+  formatDate,
+  formatDateTime,
+  outstanding,
+  received,
+} from "@/lib/receipt-utils";
 import { getDictionary } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 import { ReportToolbar } from "./report-toolbar";
@@ -66,10 +72,14 @@ export default async function ReportPage({
   const paid = all.filter((r) => r.payment_status === "Paid");
   const unpaid = all.filter((r) => r.payment_status === "Unpaid");
 
-  const sum = (rows: Receipt[]) =>
-    rows.reduce((n, r) => n + Number(r.amount), 0);
-  const total = sum(paid);
-  const expected = sum(unpaid);
+  // Money in the box and money still owed, not face amounts: a part-paid row
+  // sits in the Unpaid section but has already contributed some of its amount,
+  // so summing `amount` on both sides would print the same rupees twice.
+  const sum = (rows: Receipt[]) => rows.reduce((n, r) => n + received(r), 0);
+  const sumOutstanding = (rows: Receipt[]) =>
+    rows.reduce((n, r) => n + outstanding(r), 0);
+  const total = sum(all);
+  const expected = sumOutstanding(unpaid);
 
   // What the Excel export and the row cap notice count. Donations are kept
   // out of this figure — they are a different entity, exported and printed
@@ -210,7 +220,11 @@ export default async function ReportPage({
               {section.label}
               <span className="ml-2 font-normal tabular-nums">
                 {t("chart.receiptsCount", { count: section.rows.length })} ·{" "}
-                {formatAmount(sum(section.rows))}
+                {formatAmount(
+                  section.key === "Unpaid"
+                    ? sumOutstanding(section.rows)
+                    : sum(section.rows),
+                )}
               </span>
             </h2>
 
@@ -247,7 +261,9 @@ export default async function ReportPage({
                       {formatDate(r.collection_date, locale)}
                     </td>
                     <td className="text-right tabular-nums">
-                      {formatAmount(r.amount)}
+                      {formatAmount(
+                        section.key === "Unpaid" ? outstanding(r) : received(r),
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -260,7 +276,11 @@ export default async function ReportPage({
                       : t("report.grandTotal")}
                   </td>
                   <td className="text-right tabular-nums">
-                    {formatAmount(sum(section.rows))}
+                    {formatAmount(
+                      section.key === "Unpaid"
+                        ? sumOutstanding(section.rows)
+                        : sum(section.rows),
+                    )}
                   </td>
                 </tr>
               </tfoot>
@@ -299,7 +319,11 @@ export default async function ReportPage({
                     : t("report.grandTotal")}
                 </span>
                 <span className="tabular-nums">
-                  {formatAmount(sum(section.rows))}
+                  {formatAmount(
+                    section.key === "Unpaid"
+                      ? sumOutstanding(section.rows)
+                      : sum(section.rows),
+                  )}
                 </span>
               </div>
             </div>

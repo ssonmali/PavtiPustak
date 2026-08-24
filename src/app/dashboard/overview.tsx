@@ -18,7 +18,11 @@ import type {
   Receipt,
   VolunteerTotal,
 } from "@/lib/types";
-import { displayName, formatAmount } from "@/lib/receipt-utils";
+import {
+  displayName,
+  formatAmount,
+  outstanding,
+} from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import {
@@ -40,6 +44,15 @@ import {
   type Period,
 } from "./period-filter";
 
+/**
+ * The subset of a pledge row the overview needs: enough to derive what is
+ * still owed, which is why payment_status and paid_amount come along.
+ */
+export type UnpaidDay = Pick<
+  Receipt,
+  "amount" | "paid_amount" | "payment_status" | "collection_date"
+>;
+
 export function Overview({
   daily,
   volunteers,
@@ -56,7 +69,7 @@ export function Overview({
   expenseDays: ExpenseDailyTotal[];
   pledges: PledgeTotals | null;
   /** Unpaid receipt amounts with the date they were recorded. */
-  unpaidDays: { amount: number; collection_date: string }[];
+  unpaidDays: UnpaidDay[];
   due: Receipt[];
   donations: Donation[];
   mandalName: string;
@@ -99,14 +112,20 @@ export function Overview({
   // up with the collected figure beside it.
   const unpaid = React.useMemo(
     () =>
+      // outstanding(), not amount: a part-paid row's received half is already
+      // inside the collected total, so adding its full amount here would count
+      // that money twice — and the Estimated tile adds the two together.
       filterByPeriod(unpaidDays, period).reduce(
-        (sum, r) => sum + Number(r.amount),
+        (sum, r) => sum + outstanding(r),
         0,
       ),
     [unpaidDays, period],
   );
   const unpaidCount = React.useMemo(
-    () => filterByPeriod(unpaidDays, period).length,
+    () =>
+      // A row whose remainder has reached zero is not still owed.
+      filterByPeriod(unpaidDays, period).filter((r) => outstanding(r) > 0)
+        .length,
     [unpaidDays, period],
   );
 

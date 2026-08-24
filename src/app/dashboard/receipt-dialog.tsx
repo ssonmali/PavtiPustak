@@ -219,6 +219,11 @@ function ReceiptDialogBody({
       donor_name_mr:
         String(formData.get("donor_name_mr") ?? "").trim() || null,
       amount: Number(formData.get("amount") ?? 0),
+      // Null for a settled receipt, matching what the schema stores.
+      paid_amount:
+        String(formData.get("payment_status") ?? "Paid") === "Unpaid"
+          ? Number(formData.get("paid_amount") ?? 0) || null
+          : null,
       phone_number: String(formData.get("phone_number") ?? "")
         .replace(/[\s-]/g, "")
         .replace(/^(\+91|91|0)/, ""),
@@ -525,6 +530,28 @@ function ReceiptDialogBody({
 
             {status === "Unpaid" ? (
               <div className="flex flex-col gap-2">
+                {/* Paid in instalments: how much has arrived so far. Left
+                    blank means none of it has. The receipt cannot be sent
+                    until this reaches the full amount. */}
+                <Label htmlFor="paid_amount">{t("form.paidSoFar")}</Label>
+                <Input
+                  id="paid_amount"
+                  name="paid_amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  defaultValue={
+                    receipt?.paid_amount != null
+                      ? String(Number(receipt.paid_amount))
+                      : ""
+                  }
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("form.paidSoFarHint")}
+                </p>
+
                 <Label>{t("form.dueOn")}</Label>
                 <input
                   type="hidden"

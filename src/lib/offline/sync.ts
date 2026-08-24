@@ -41,6 +41,11 @@ function toFormData(entry: OutboxEntry) {
   if (entry.fields.due_on) {
     formData.set("due_on", entry.fields.due_on);
   }
+  // `!= null`, not truthiness: a recorded 0 is meaningful and skipping it would
+  // replay a part-paid pledge as one nobody has paid anything towards.
+  if (entry.fields.paid_amount != null) {
+    formData.set("paid_amount", String(entry.fields.paid_amount));
+  }
 
   // The volunteer already decided to record this while offline; there is no
   // one to re-prompt at flush time, so the duplicate guard is pre-answered.

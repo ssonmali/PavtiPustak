@@ -26,6 +26,10 @@ import type { Editors } from "@/lib/use-editing-presence";
 import {
   formatAmount,
   formatDate,
+  isFullyPaid,
+  isPartPaid,
+  outstanding,
+  received,
   todayInIst,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
@@ -322,9 +326,10 @@ export function ReceiptsTable({
       toast.error(t("offline.noSend"));
       return;
     }
-    // The message thanks the contributor for money received. Sending it for a
-    // pledge would be a receipt for cash nobody has handed over.
-    if (receipt.payment_status === "Unpaid") {
+    // The message thanks the contributor for money received. Sending it while
+    // any of the contribution is still outstanding would be a receipt for cash
+    // nobody has handed over — including the half of a part-paid one.
+    if (!isFullyPaid(receipt)) {
       toast.error(t("status.cannotSend"));
       return;
     }
@@ -441,19 +446,36 @@ export function ReceiptsTable({
                   <TableCell className="text-right tabular-nums">
                     <span
                       className={
-                        receipt.payment_status === "Unpaid"
+                        // Struck through only when none of it has arrived. A
+                        // part-paid contribution has real money against it, so
+                        // striking the figure would misrepresent it.
+                        receipt.payment_status === "Unpaid" &&
+                        !isPartPaid(receipt)
                           ? "text-muted-foreground line-through"
                           : undefined
                       }
                     >
                       {formatAmount(receipt.amount)}
                     </span>
+                    {isPartPaid(receipt) ? (
+                      <span className="block text-xs text-muted-foreground">
+                        {t("status.paidOfTotal", {
+                          paid: formatAmount(received(receipt)),
+                        })}
+                      </span>
+                    ) : null}
                     {receipt.payment_status === "Unpaid" ? (
                       <span className="mt-0.5 block">
                         <UnpaidBadge
                           dueOn={receipt.due_on}
                           today={today}
-                          label={t("status.unpaidBadge")}
+                          label={
+                            isPartPaid(receipt)
+                              ? t("status.partPaidBadge", {
+                                  amount: formatAmount(outstanding(receipt)),
+                                })
+                              : t("status.unpaidBadge")
+                          }
                           title={dueTitle(receipt.due_on)}
                         />
                       </span>
@@ -478,12 +500,11 @@ export function ReceiptsTable({
                       <Button
                         size="sm"
                         disabled={
-                          receipt.payment_status === "Unpaid" ||
-                          sending === receipt.id
+                          !isFullyPaid(receipt) || sending === receipt.id
                         }
                         onClick={() => sendWhatsApp(receipt)}
                         title={
-                          receipt.payment_status === "Unpaid"
+                          !isFullyPaid(receipt)
                             ? t("status.cannotSend")
                             : t("table.sendTitle", { name: receipt.donor_name })
                         }

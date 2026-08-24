@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n/client";
 import {
   formatAmount,
   formatDate,
+  outstanding,
   pledgeReminderUrl,
   todayInIst,
 } from "@/lib/receipt-utils";
@@ -52,7 +53,8 @@ export function DuePanel({
   if (pledges.length === 0) return null;
 
   const today = todayInIst();
-  const total = pledges.reduce((sum, p) => sum + Number(p.amount), 0);
+  // What is still owed across the panel, not what was originally promised.
+  const total = pledges.reduce((sum, p) => sum + outstanding(p), 0);
 
   async function markPaid(receipt: Receipt, method: PaymentMethod) {
     setPaying(receipt.id);

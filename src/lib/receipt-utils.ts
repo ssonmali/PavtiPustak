@@ -158,6 +158,47 @@ export function volunteerName(email: string | null | undefined) {
   return words.length > 0 ? words.join(" ") : email;
 }
 
+
+/**
+ * The two rules for what a receipt is worth. Everything that shows money must
+ * go through these — a total that sums `amount` directly is wrong the moment a
+ * contribution is part-paid, and it is wrong silently.
+ *
+ * A receipt now carries the agreed contribution in `amount` and how much of it
+ * has actually arrived in `paid_amount`. `payment_status` stays the record of
+ * whether it is settled, which keeps every pre-existing row correct: a Paid row
+ * has received its whole amount, and an untouched pledge has received nothing.
+ */
+type Money = Pick<Receipt, "amount" | "paid_amount" | "payment_status">;
+
+/** Money actually in the box for this receipt. */
+export function received(r: Money): number {
+  if (r.payment_status === "Paid") return Number(r.amount);
+  return Number(r.paid_amount ?? 0);
+}
+
+/** Money still owed on this receipt. Zero once settled. */
+export function outstanding(r: Money): number {
+  if (r.payment_status === "Paid") return 0;
+  return Math.max(0, Number(r.amount) - Number(r.paid_amount ?? 0));
+}
+
+/** Some money in, but not all of it — the state that needs its own rendering. */
+export function isPartPaid(r: Money): boolean {
+  return r.payment_status !== "Paid" && received(r) > 0 && outstanding(r) > 0;
+}
+
+/**
+ * Whether a receipt may be sent to the contributor.
+ *
+ * A receipt is a document saying "we received this". Sending one for a
+ * contribution that is still half outstanding hands over a false record, so the
+ * share button is gated on this rather than on payment_status alone.
+ */
+export function isFullyPaid(r: Money): boolean {
+  return outstanding(r) === 0;
+}
+
 /** NEXT_PUBLIC_* is inlined at build time, so this reads on server and client alike. */
 const MANDAL_ADDRESS = process.env.NEXT_PUBLIC_MANDAL_ADDRESS ?? null;
 
@@ -204,15 +245,25 @@ export function whatsappUrl(receipt: Receipt, mandalName: string) {
  */
 export function pledgeReminderUrl(receipt: Receipt, mandalName: string) {
   const due = receipt.due_on ? formatDate(receipt.due_on) : "";
+  // The remainder, not the agreed amount: asking someone who has already paid
+  // half for the whole thing again is the one mistake this message must not
+  // make. `paid` is named too, so the figure is checkable rather than assumed.
+  const owed = outstanding(receipt);
+  const paid = received(receipt);
   const message = [
     `🙏 *${mandalName}* 🙏`,
     "",
     `प्रिय ${marathiDonor(receipt)},`,
-    `आपण कबूल केलेली *${formatAmount(receipt.amount)}* वर्गणी`,
+    ...(paid > 0
+      ? [
+          `आपण कबूल केलेल्या *${formatAmount(receipt.amount)}* वर्गणीपैकी`,
+          `*${formatAmount(paid)}* मिळाली आहे. उर्वरित *${formatAmount(owed)}*`,
+        ]
+      : [`आपण कबूल केलेली *${formatAmount(owed)}* वर्गणी`]),
     due ? `*${due}* पर्यंत अपेक्षित आहे.` : `अपेक्षित आहे.`,
     `सोयीनुसार देण्याची विनंती. 🌺`,
     "",
-    `A gentle reminder about your pledged contribution of ${formatAmount(receipt.amount)}${due ? `, expected by ${due}` : ""}.`,
+    `A gentle reminder about the ${formatAmount(owed)} still outstanding on your pledged contribution${due ? `, expected by ${due}` : ""}.`,
     "",
     `गणपती बाप्पा मोरया! 🎉`,
   ].join("\n");

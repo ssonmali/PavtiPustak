@@ -31,6 +31,21 @@ export const receiptSchema = z.object({
     .number({ message: "Enter a valid amount." })
     .positive("Amount must be greater than zero.")
     .max(10_000_000, "That amount looks like a typo."),
+  // How much of `amount` has been received so far, for a contribution paid in
+  // instalments. Validated as a string first: z.coerce.number() turns a blank
+  // field into 0, which is indistinguishable from "nothing received yet" and
+  // would quietly persist a zero instead of a null.
+  paid_amount: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null))
+    .refine(
+      (v) => v === null || !Number.isNaN(Number(v)),
+      "Enter a valid amount.",
+    )
+    .transform((v) => (v === null ? null : Number(v)))
+    .refine((v) => v === null || v >= 0, "That cannot be negative."),
   phone_number: phoneNumberSchema,
   payment_method: z.enum(PAYMENT_METHODS, { message: "Choose a payment method." }),
   collection_date: z
@@ -62,9 +77,19 @@ export const receiptSchema = z.object({
       v.due_on === null || /^\d{4}-\d{2}-\d{2}$/.test(v.due_on),
     { message: "Choose a valid expected date.", path: ["due_on"] },
   )
-  // A paid receipt carries no due date, whatever the form happened to submit.
+  // Part-paid cannot exceed the contribution itself, or the remainder goes
+  // negative and the reminder chases a refund.
+  .refine((v) => v.paid_amount === null || v.paid_amount <= v.amount, {
+    message: "That is more than the contribution.",
+    path: ["paid_amount"],
+  })
+  // A paid receipt carries no due date, and no partial figure either: the whole
+  // amount is received, so a leftover paid_amount would be a second, redundant
+  // record of the same money.
   .transform((v) =>
-    v.payment_status === "Paid" ? { ...v, due_on: null } : v,
+    v.payment_status === "Paid"
+      ? { ...v, due_on: null, paid_amount: null }
+      : v,
   );
 
 export type ReceiptFormValues = z.input<typeof receiptSchema>;

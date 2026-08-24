@@ -10,7 +10,7 @@ import type {
   VolunteerTotal,
 } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Overview } from "./overview";
+import { Overview, type UnpaidDay } from "./overview";
 
 export const metadata = { title: "Overview · SGMM Pustak" };
 
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
     // the ledger does.
     supabase
       .from("receipts")
-      .select("amount, collection_date")
+      .select("amount, paid_amount, payment_status, collection_date")
       .eq("payment_status", "Unpaid")
       .limit(1000),
     // The reminder list: promised, and due today or already late. Capped
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
       expenseDays={(expenses.data ?? []) as ExpenseDailyTotal[]}
       pledges={(pledges.data as PledgeTotals | null) ?? null}
       unpaidDays={
-        (unpaidRows.data ?? []) as { amount: number; collection_date: string }[]
+        (unpaidRows.data ?? []) as UnpaidDay[]
       }
       due={(due.data ?? []) as Receipt[]}
       donations={(donations.data ?? []) as Donation[]}

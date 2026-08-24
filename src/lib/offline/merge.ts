@@ -67,6 +67,7 @@ export function mergeOutbox(
         payment_status: entry.fields.payment_status ?? "Paid",
         due_on: entry.fields.due_on ?? null,
         donor_name_mr: entry.fields.donor_name_mr ?? null,
+        paid_amount: entry.fields.paid_amount ?? null,
         pending: "create",
       });
     }

@@ -30,7 +30,7 @@ export default async function ReceiptsPage() {
         .limit(400),
       supabase
         .from("receipts")
-        .select("amount, collection_date")
+        .select("amount, paid_amount, payment_status, collection_date")
         .eq("payment_status", "Unpaid")
         .limit(1000),
     ]);
@@ -56,7 +56,12 @@ export default async function ReceiptsPage() {
       myName={myName ?? volunteerName(user?.email) ?? "—"}
       names={names}
       daily={(daily.data ?? []) as DailyTotal[]}
-      unpaid={(unpaidRows.data ?? []) as { amount: number; collection_date: string }[]}
+      unpaid={
+        (unpaidRows.data ?? []) as Pick<
+          Receipt,
+          "amount" | "paid_amount" | "payment_status" | "collection_date"
+        >[]
+      }
     />
   );
 }

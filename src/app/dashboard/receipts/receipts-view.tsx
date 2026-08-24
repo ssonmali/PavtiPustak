@@ -4,7 +4,10 @@ import * as React from "react";
 import { toast } from "sonner";
 import type { DailyTotal, NameMap, Receipt } from "@/lib/types";
 import { useI18n } from "@/lib/i18n/client";
-import { formatAmount } from "@/lib/receipt-utils";
+import {
+  formatAmount,
+  outstanding,
+} from "@/lib/receipt-utils";
 import { useOfflineReceipts, type FlushResult } from "@/lib/offline";
 import { useEditingPresence } from "@/lib/use-editing-presence";
 import { Plus } from "lucide-react";
@@ -42,8 +45,11 @@ export function ReceiptsView({
   myName: string;
   /** Per-day paid totals for the whole ledger, for the heading summary. */
   daily: DailyTotal[];
-  /** Every unpaid pledge, amount and day only. */
-  unpaid: { amount: number; collection_date: string }[];
+  /** Every unpaid pledge — enough of each to derive what is still owed. */
+  unpaid: Pick<
+    Receipt,
+    "amount" | "paid_amount" | "payment_status" | "collection_date"
+  >[];
 }) {
   const { t } = useI18n();
   const [period, setPeriod] = React.useState<Period>(ALL_TIME);
@@ -98,7 +104,8 @@ export function ReceiptsView({
 
   const expected = React.useMemo(
     () =>
-      filterByPeriod(unpaid, period).reduce((sum, r) => sum + Number(r.amount), 0),
+      // The remainder, not the face amount — see overview.tsx.
+      filterByPeriod(unpaid, period).reduce((sum, r) => sum + outstanding(r), 0),
     [unpaid, period],
   );
 

@@ -19,8 +19,15 @@ export type Receipt = {
    * corrected this", and the app transliterates `donor_name` on the fly.
    */
   donor_name_mr: string | null;
-  /** numeric(12,2) — supabase-js hands this back as a JS number. */
+  /** The agreed contribution. numeric(12,2), handed back as a JS number. */
   amount: number;
+  /**
+   * How much of `amount` has actually arrived, for a contribution being paid in
+   * instalments. Null means none of it has (an untouched pledge) or the
+   * question does not apply (a settled receipt). Read it through received() /
+   * outstanding() in receipt-utils rather than directly.
+   */
+  paid_amount: number | null;
   phone_number: string;
   payment_method: PaymentMethod;
   /** `YYYY-MM-DD`, may be backdated. */
@@ -153,6 +160,7 @@ export type ReceiptInput = Pick<
   | "donor_name"
   | "donor_name_mr"
   | "amount"
+  | "paid_amount"
   | "phone_number"
   | "payment_method"
   | "collection_date"

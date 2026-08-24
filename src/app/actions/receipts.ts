@@ -33,6 +33,7 @@ function fieldsFrom(formData: FormData) {
     donor_name: formData.get("donor_name"),
     donor_name_mr: formData.get("donor_name_mr") ?? undefined,
     amount: formData.get("amount"),
+    paid_amount: formData.get("paid_amount") ?? undefined,
     phone_number: formData.get("phone_number"),
     payment_method: formData.get("payment_method"),
     collection_date: formData.get("collection_date"),
@@ -131,6 +132,11 @@ export async function markReceiptPaid(
     .update({
       payment_status: "Paid",
       due_on: null,
+      // Cleared along with the due date. The whole amount is now received, so
+      // an instalment figure would be a second, contradictory record of the
+      // same money — and receipts_paid_amount_range rejects the pairing
+      // outright, so leaving it set would make this fail on any part-paid row.
+      paid_amount: null,
       payment_method: paymentMethod,
     })
     .eq("id", id)
