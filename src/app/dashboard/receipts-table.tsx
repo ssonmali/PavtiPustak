@@ -33,6 +33,7 @@ import {
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
+import { useNewRows } from "@/lib/use-new-rows";
 import { PaidPill, UnpaidBadge } from "./money-badges";
 import { PaidProgress } from "./paid-progress";
 import { ReceiptDialog } from "./receipt-dialog";
@@ -73,6 +74,8 @@ import {
  */
 /** How long a deleted receipt can be brought back before it is really sent. */
 const UNDO_MS = 3000;
+/** The row's exit; it leaves the list once this has played. */
+const EXIT_MS = 180;
 
 function MethodBadge({
   method,
@@ -170,12 +173,19 @@ export function ReceiptsTable({
    * closes. Nothing to restore if it is undone: the row was never removed.
    */
   const [undoable, setUndoable] = React.useState<string[]>([]);
+  /** Confirmed, still on screen while its exit plays. */
+  const [leaving, setLeaving] = React.useState<string[]>([]);
   const undoTimers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const exitTimers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
   // A device put to sleep mid-window would otherwise fire the delete into an
   // unmounted tree.
   React.useEffect(() => {
     const timers = undoTimers.current;
-    return () => timers.forEach(clearTimeout);
+    const exits = exitTimers.current;
+    return () => {
+      timers.forEach(clearTimeout);
+      exits.forEach(clearTimeout);
+    };
   }, []);
 
   const all = React.useMemo(
@@ -186,6 +196,9 @@ export function ReceiptsTable({
     [receipts, tail, pageKey, undoable],
   );
   const hasMore = typeof total === "number" && all.length < total;
+  // Watched on the server's own page rather than on `all`: the pages appended
+  // by Load more are old rows arriving late, not new ones.
+  const arrived = useNewRows(React.useMemo(() => receipts.map((r) => r.id), [receipts]));
 
   async function loadMore() {
     setLoadingMore(true);
@@ -340,9 +353,12 @@ export function ReceiptsTable({
 
   /** Puts the row back in the list; the delete never went anywhere. */
   function restore(id: string) {
-    const timer = undoTimers.current.get(id);
-    if (timer) clearTimeout(timer);
-    undoTimers.current.delete(id);
+    for (const timers of [undoTimers.current, exitTimers.current]) {
+      const timer = timers.get(id);
+      if (timer) clearTimeout(timer);
+      timers.delete(id);
+    }
+    setLeaving((ids) => ids.filter((i) => i !== id));
     setUndoable((ids) => ids.filter((i) => i !== id));
   }
 
@@ -376,7 +392,18 @@ export function ReceiptsTable({
     if (!toDelete) return;
     const receipt = toDelete;
     setToDelete(undefined);
-    setUndoable((ids) => [...ids, receipt.id]);
+
+    // On screen a moment longer, fading as it goes, so the eye follows it out
+    // and lands on the toast that offers it back.
+    setLeaving((ids) => [...ids, receipt.id]);
+    exitTimers.current.set(
+      receipt.id,
+      setTimeout(() => {
+        exitTimers.current.delete(receipt.id);
+        setLeaving((ids) => ids.filter((i) => i !== receipt.id));
+        setUndoable((ids) => [...ids, receipt.id]);
+      }, EXIT_MS),
+    );
 
     undoTimers.current.set(
       receipt.id,
@@ -446,7 +473,13 @@ export function ReceiptsTable({
               </TableRow>
             ) : (
               filtered.map((receipt) => (
-                <TableRow key={receipt.id}>
+                <TableRow
+                  key={receipt.id}
+                  className={cn(
+                    arrived.has(receipt.id) && "row-new",
+                    leaving.includes(receipt.id) && "row-leaving",
+                  )}
+                >
                   <TableCell className="text-muted-foreground tabular-nums">
                     {receipt.pending === "create" ? (
                       <span title={t("offline.pending")}>
@@ -597,7 +630,16 @@ export function ReceiptsTable({
           </li>
         ) : (
           filtered.map((receipt) => (
-            <li key={receipt.id} className="card-elevated rounded-xl border bg-card p-3">
+            <li
+              key={receipt.id}
+              className={cn(
+                "card-elevated rounded-xl border bg-card p-3",
+                // The card paints its own background, so its wash has to end
+                // on that rather than on nothing.
+                arrived.has(receipt.id) && "row-new [--row-new-end:var(--card)]",
+                leaving.includes(receipt.id) && "row-leaving",
+              )}
+            >
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="wrap-anywhere font-medium">

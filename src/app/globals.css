@@ -368,6 +368,51 @@
   }
 
   /*
+   * A row that has just arrived, marked with a wash of brand colour that
+   * fades out. Every list this appears in is sorted newest-first, so on a
+   * phone a saved receipt can land above the fold with nothing to say it is
+   * the one just written — and a colleague's arrives with no warning at all.
+   *
+   * The wash ends on `--row-new-end` rather than always on `transparent`,
+   * because a card paints its own background: fading to transparent would
+   * show the page through it for the last frames of the animation. Table rows
+   * have nothing of their own, so transparent is right for them.
+   */
+  .row-new {
+    animation: row-new 1200ms ease-out;
+  }
+
+  @keyframes row-new {
+    from {
+      background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+    }
+    to {
+      background-color: var(--row-new-end, transparent);
+    }
+  }
+
+  /*
+   * A row on its way out after a delete is confirmed. It is not decoration:
+   * the undo toast appears somewhere else on the screen, and without a moment
+   * of movement here there is nothing to connect the row vanishing to the
+   * offer to bring it back.
+   */
+  .row-leaving {
+    animation: row-leaving 180ms ease-in forwards;
+    pointer-events: none;
+  }
+
+  @keyframes row-leaving {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+  }
+
+  /*
    * The three seconds an undo lasts, drawn along the bottom of its toast. A
    * countdown you can see is the difference between an offer and a gamble —
    * the volunteer knows whether there is time to reach for it.

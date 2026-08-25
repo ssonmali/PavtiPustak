@@ -15,6 +15,7 @@ import {
   todayInIst,
 } from "@/lib/receipt-utils";
 import { cn } from "@/lib/utils";
+import { useNewRows } from "@/lib/use-new-rows";
 import {
   PAYMENT_METHODS,
   type Expense,
@@ -97,6 +98,12 @@ export function ExpensesView({
   const [toMarkPaid, setToMarkPaid] = React.useState<Expense | undefined>();
   /** Id of the bill currently being settled. */
   const [marking, setMarking] = React.useState<string | null>(null);
+
+  // Marked on arrival, so a bill just recorded is findable in the list it
+  // drops into — the same reason the receipts table does it.
+  const arrived = useNewRows(
+    React.useMemo(() => expenses.map((e) => e.id), [expenses]),
+  );
 
   // period-filter works on `collection_date`; expenses carry `spent_on`.
   const inPeriod = React.useMemo(
@@ -301,7 +308,10 @@ export function ExpensesView({
                     </TableRow>
                   ) : (
                     visible.map((e) => (
-                      <TableRow key={e.id}>
+                      <TableRow
+                        key={e.id}
+                        className={cn(arrived.has(e.id) && "row-new")}
+                      >
                         <TableCell className="font-medium">
                           <span className="wrap-anywhere">{e.description}</span>
                           {e.note ? (
@@ -412,7 +422,10 @@ export function ExpensesView({
                 visible.map((e) => (
                   <li
                     key={e.id}
-                    className="card-elevated rounded-xl border bg-card p-3"
+                    className={cn(
+                      "card-elevated rounded-xl border bg-card p-3",
+                      arrived.has(e.id) && "row-new [--row-new-end:var(--card)]",
+                    )}
                   >
                     {/* Laid out like the receipt card: what it was, then what
                         it cost, then the actions on their own row. Settling a
