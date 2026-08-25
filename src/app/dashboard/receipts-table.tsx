@@ -387,6 +387,10 @@ export function ReceiptsTable({
     // or disappear while it is still good.
     toast.success(t("toast.deleted", { number: receipt.receipt_number }), {
       duration: UNDO_MS,
+      // The line along the bottom of the toast empties over the same window,
+      // so the offer visibly runs out rather than vanishing mid-reach.
+      className: "toast-countdown",
+      style: { "--toast-duration": `${UNDO_MS}ms` } as React.CSSProperties,
       action: {
         label: t("toast.undo"),
         onClick: () => {

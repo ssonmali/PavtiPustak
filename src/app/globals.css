@@ -368,6 +368,41 @@
   }
 
   /*
+   * The three seconds an undo lasts, drawn along the bottom of its toast. A
+   * countdown you can see is the difference between an offer and a gamble —
+   * the volunteer knows whether there is time to reach for it.
+   *
+   * Sonner pauses its own timer while the stack is hovered, so the line pauses
+   * with it; otherwise the bar would empty while the offer was still good.
+   */
+  .toast-countdown {
+    position: relative;
+    overflow: hidden;
+  }
+  .toast-countdown::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--brand-gradient, var(--primary));
+    transform-origin: left center;
+    animation: toast-countdown var(--toast-duration, 3000ms) linear forwards;
+  }
+  [data-sonner-toaster]:hover .toast-countdown::after {
+    animation-play-state: paused;
+  }
+
+  @keyframes toast-countdown {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0);
+    }
+  }
+
+  /*
    * As tall as the dialog may get: nine tenths of what is actually visible.
    * With the keyboard up that is the strip above it, so the form scrolls
    * inside a shorter box rather than running on underneath the keys.
