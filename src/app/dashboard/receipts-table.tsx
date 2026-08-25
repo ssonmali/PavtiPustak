@@ -26,6 +26,7 @@ import {
   formatAmount,
   formatDate,
   isFullyPaid,
+  pledgeReminderUrl,
   isPartPaid,
   outstanding,
   received,
@@ -295,11 +296,16 @@ export function ReceiptsTable({
       toast.error(t("offline.noSend"));
       return;
     }
-    // The message thanks the contributor for money received. Sending it while
-    // any of the contribution is still outstanding would be a receipt for cash
-    // nobody has handed over — including the half of a part-paid one.
+    // A receipt thanks the contributor for money received, so it cannot stand
+    // in for one still outstanding — including the half of a part-paid row.
+    // The nudge goes out instead: same wa.me intent, honest wording, and it
+    // names the remainder rather than the promised amount.
     if (!isFullyPaid(receipt)) {
-      toast.error(t("status.cannotSend"));
+      window.open(
+        pledgeReminderUrl(receipt, mandalName),
+        "_blank",
+        "noopener",
+      );
       return;
     }
     // Image with the receipt text as its caption, falling back to the
@@ -470,18 +476,15 @@ export function ReceiptsTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {/* A receipt thanks someone for money received, so it
-                          cannot be sent for a pledge. The title says why the
-                          button is dead rather than leaving it a mystery. */}
                       <Button
                         size="sm"
-                        disabled={
-                          !isFullyPaid(receipt) || sending === receipt.id
-                        }
+                        disabled={sending === receipt.id}
                         onClick={() => sendWhatsApp(receipt)}
                         title={
                           !isFullyPaid(receipt)
-                            ? t("status.cannotSend")
+                            ? t("table.remindTitle", {
+                                name: receipt.donor_name,
+                              })
                             : t("table.sendTitle", { name: receipt.donor_name })
                         }
                         variant="whatsapp"
@@ -491,7 +494,9 @@ export function ReceiptsTable({
                         ) : (
                           <MessageCircle />
                         )}
-                        {t("table.send")}
+                        {isFullyPaid(receipt)
+                          ? t("table.send")
+                          : t("due.remind")}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -653,19 +658,35 @@ export function ReceiptsTable({
                     whatever the label, and Edit drops its text to match the
                     print and delete buttons already beside it, which frees the
                     room that made the overflow possible in the first place. */}
-                {receipt.payment_status === "Unpaid" ? (
-                  <Button
-                    className="min-w-0 flex-1 basis-0"
-                    onClick={() => setToMarkPaid(receipt)}
-                    disabled={marking === receipt.id}
-                  >
-                    {marking === receipt.id ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <Check />
-                    )}
-                    {t("status.markPaidShort")}
-                  </Button>
+                {!isFullyPaid(receipt) ? (
+                  <>
+                    <Button
+                      className="min-w-0 flex-1 basis-0"
+                      onClick={() => setToMarkPaid(receipt)}
+                      disabled={marking === receipt.id}
+                    >
+                      {marking === receipt.id ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        <Check />
+                      )}
+                      {t("status.markPaidShort")}
+                    </Button>
+                    {/* Icon-only: the nudge is a second action on this state,
+                        and a fifth label would put the row over the edge of a
+                        narrow phone — the very overflow the note above fixes. */}
+                    <Button
+                      variant="whatsapp"
+                      size="icon"
+                      aria-label={t("table.remindTitle", {
+                        name: receipt.donor_name,
+                      })}
+                      title={t("due.remind")}
+                      onClick={() => sendWhatsApp(receipt)}
+                    >
+                      <MessageCircle />
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     variant="whatsapp"

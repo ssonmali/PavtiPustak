@@ -22,6 +22,7 @@ import {
   displayName,
   formatAmount,
   outstanding,
+  received,
 } from "@/lib/receipt-utils";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -92,7 +93,6 @@ export function Overview({
   }, [daily, period]);
 
   const total = visible.reduce((s, d) => s + Number(d.total), 0);
-  const count = visible.reduce((s, d) => s + d.receipt_count, 0);
 
   // Spending over the same window, so the balance answers "of what came in
   // during this period, what is left" rather than mixing two date ranges.
@@ -127,6 +127,20 @@ export function Overview({
       ),
     [unpaidDays, period],
   );
+  // Rows that brought in nothing yet: the daily view counts only receipts that
+  // contributed money, so a pledge with no instalment against it is missing
+  // from receipt_count. A part-paid row is already in there — counting it again
+  // here would report more receipts than were written.
+  const pledgeOnlyCount = React.useMemo(
+    () =>
+      filterByPeriod(unpaidDays, period).filter((r) => received(r) === 0)
+        .length,
+    [unpaidDays, period],
+  );
+  // Every receipt written in the window, paid or not.
+  const count =
+    visible.reduce((s, d) => s + d.receipt_count, 0) + pledgeOnlyCount;
+
   const unpaidCount = React.useMemo(
     () =>
       // A row whose remainder has reached zero is not still owed.
