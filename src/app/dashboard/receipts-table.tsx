@@ -26,7 +26,6 @@ import {
   formatAmount,
   formatDate,
   isFullyPaid,
-  pledgeReminderUrl,
   isPartPaid,
   outstanding,
   received,
@@ -296,18 +295,6 @@ export function ReceiptsTable({
       toast.error(t("offline.noSend"));
       return;
     }
-    // A receipt thanks the contributor for money received, so it cannot stand
-    // in for one still outstanding — including the half of a part-paid row.
-    // The nudge goes out instead: same wa.me intent, honest wording, and it
-    // names the remainder rather than the promised amount.
-    if (!isFullyPaid(receipt)) {
-      window.open(
-        pledgeReminderUrl(receipt, mandalName),
-        "_blank",
-        "noopener",
-      );
-      return;
-    }
     // Image with the receipt text as its caption, falling back to the
     // addressed wa.me message where the share sheet cannot take a file.
     setSending(receipt.id);
@@ -480,13 +467,9 @@ export function ReceiptsTable({
                         size="sm"
                         disabled={sending === receipt.id}
                         onClick={() => sendWhatsApp(receipt)}
-                        title={
-                          !isFullyPaid(receipt)
-                            ? t("table.remindTitle", {
-                                name: receipt.donor_name,
-                              })
-                            : t("table.sendTitle", { name: receipt.donor_name })
-                        }
+                        title={t("table.sendTitle", {
+                          name: receipt.donor_name,
+                        })}
                         variant="whatsapp"
                       >
                         {sending === receipt.id ? (
@@ -494,9 +477,7 @@ export function ReceiptsTable({
                         ) : (
                           <MessageCircle />
                         )}
-                        {isFullyPaid(receipt)
-                          ? t("table.send")
-                          : t("due.remind")}
+                        {t("table.send")}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -672,19 +653,24 @@ export function ReceiptsTable({
                       )}
                       {t("status.markPaidShort")}
                     </Button>
-                    {/* Icon-only: the nudge is a second action on this state,
+                    {/* Icon-only: sending is a second action on this state,
                         and a fifth label would put the row over the edge of a
                         narrow phone — the very overflow the note above fixes. */}
                     <Button
                       variant="whatsapp"
                       size="icon"
-                      aria-label={t("table.remindTitle", {
+                      aria-label={t("table.sendTitle", {
                         name: receipt.donor_name,
                       })}
-                      title={t("due.remind")}
+                      title={t("table.send")}
                       onClick={() => sendWhatsApp(receipt)}
+                      disabled={sending === receipt.id}
                     >
-                      <MessageCircle />
+                      {sending === receipt.id ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        <MessageCircle />
+                      )}
                     </Button>
                   </>
                 ) : (

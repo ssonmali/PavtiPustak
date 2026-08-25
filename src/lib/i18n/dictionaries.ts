@@ -223,7 +223,6 @@ const en = {
   "table.noMatch": "No receipts match that search.",
   "table.showing": "Showing {shown} of {total} receipts.",
   "table.sendTitle": "Send receipt to {name} on WhatsApp",
-  "table.remindTitle": "Remind {name} on WhatsApp about what is still owed",
 
   // Form
   "form.newTitle": "New receipt",
@@ -563,7 +562,6 @@ const mr: Record<MessageKey, string> = {
   "table.noMatch": "शोधाशी जुळणारी पावती नाही.",
   "table.showing": "{total} पैकी {shown} पावत्या दिसत आहेत.",
   "table.sendTitle": "{name} यांना WhatsApp वर पावती पाठवा",
-  "table.remindTitle": "{name} यांना उर्वरित रकमेची WhatsApp वर आठवण करा",
 
   "form.newTitle": "नवीन पावती",
   "form.editTitle": "पावती बदला",
