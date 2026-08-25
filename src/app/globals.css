@@ -367,6 +367,15 @@
     font-weight: 600;
   }
 
+  /*
+   * As tall as the dialog may get: nine tenths of what is actually visible.
+   * With the keyboard up that is the strip above it, so the form scrolls
+   * inside a shorter box rather than running on underneath the keys.
+   */
+  .max-h-visual {
+    max-height: calc(var(--visual-height, 100dvh) * 0.9);
+  }
+
   /* Page background: a barely-there marigold wash rather than flat grey. */
   .app-surface {
     background:

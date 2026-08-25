@@ -322,7 +322,7 @@ function ReceiptDialogBody({
 
   return (
     <>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="max-h-visual overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? t("form.editTitle") : t("form.newTitle")}

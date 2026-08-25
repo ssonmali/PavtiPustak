@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Tiro_Devanagari_Marathi } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { WebAnalytics } from "@/components/web-analytics";
 import { Toaster } from "@/components/ui/sonner";
+import { MobileKeyboard } from "@/components/mobile-keyboard";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="app-surface flex min-h-full flex-col">
         <ThemeProvider>
+          <MobileKeyboard />
           {children}
           <Toaster
             position="top-center"
