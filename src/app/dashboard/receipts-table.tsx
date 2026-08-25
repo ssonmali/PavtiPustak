@@ -71,6 +71,9 @@ import {
  * learns one mapping rather than two. Tinted rather than solid: a badge is a
  * label, not a data mark competing with the bars.
  */
+/** How long a deleted receipt can be brought back before it is really sent. */
+const UNDO_MS = 3000;
+
 function MethodBadge({
   method,
   label,
@@ -160,9 +163,27 @@ export function ReceiptsTable({
     key: pageKey,
     rows: [],
   });
+  /**
+   * Receipts whose delete has been confirmed but not yet sent. They are gone
+   * from the list straight away — the row disappearing is what makes the undo
+   * offer legible — and the delete only leaves the device once the window
+   * closes. Nothing to restore if it is undone: the row was never removed.
+   */
+  const [undoable, setUndoable] = React.useState<string[]>([]);
+  const undoTimers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // A device put to sleep mid-window would otherwise fire the delete into an
+  // unmounted tree.
+  React.useEffect(() => {
+    const timers = undoTimers.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
   const all = React.useMemo(
-    () => [...receipts, ...(tail.key === pageKey ? tail.rows : [])],
-    [receipts, tail, pageKey],
+    () =>
+      [...receipts, ...(tail.key === pageKey ? tail.rows : [])].filter(
+        (r) => !undoable.includes(r.id),
+      ),
+    [receipts, tail, pageKey, undoable],
   );
   const hasMore = typeof total === "number" && all.length < total;
 
@@ -177,8 +198,10 @@ export function ReceiptsTable({
   }
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<LocalReceipt | undefined>();
+  /** Counts blank forms, so each one opens empty rather than inheriting the
+   *  donor typed into the last one. */
+  const [formInstance, setFormInstance] = React.useState(0);
   const [toDelete, setToDelete] = React.useState<LocalReceipt | undefined>();
-  const [deleting, setDeleting] = React.useState(false);
   /** Id of the pledge currently being marked received. */
   const [marking, setMarking] = React.useState<string | null>(null);
   /** Id of the receipt whose share image is currently being generated. */
@@ -208,6 +231,7 @@ export function ReceiptsTable({
 
   function openCreate() {
     setEditing(undefined);
+    setFormInstance((n) => n + 1);
     setDialogOpen(true);
   }
 
@@ -306,7 +330,6 @@ export function ReceiptsTable({
     if (!queue) return false;
     try {
       await queue({ kind: "delete", receiptId: receipt.id });
-      setToDelete(undefined);
       toast.success(t("offline.queued"));
       return true;
     } catch {
@@ -315,31 +338,65 @@ export function ReceiptsTable({
     }
   }
 
-  async function confirmDelete() {
-    if (!toDelete) return;
+  /** Puts the row back in the list; the delete never went anywhere. */
+  function restore(id: string) {
+    const timer = undoTimers.current.get(id);
+    if (timer) clearTimeout(timer);
+    undoTimers.current.delete(id);
+    setUndoable((ids) => ids.filter((i) => i !== id));
+  }
+
+  /** The delete itself, once the undo window has closed on it. */
+  async function runDelete(receipt: LocalReceipt) {
+    undoTimers.current.delete(receipt.id);
 
     // Offline, or the row has never reached the server in the first place.
-    if ((!online || toDelete.pending === "create") && (await queueDelete(toDelete)))
+    if ((!online || receipt.pending === "create") && (await queueDelete(receipt)))
       return;
 
-    setDeleting(true);
     let result;
     try {
-      result = await deleteReceipt(toDelete.id);
+      result = await deleteReceipt(receipt.id);
     } catch {
-      setDeleting(false);
-      if (await queueDelete(toDelete)) return;
+      if (await queueDelete(receipt)) return;
+      restore(receipt.id);
       toast.error(t("error.body"));
       return;
     }
-    setDeleting(false);
 
     if (!result.ok) {
+      // Nothing was removed, so the row has to come back — otherwise the list
+      // says deleted and the ledger says otherwise.
+      restore(receipt.id);
       toast.error("error" in result ? result.error : t("toast.conflict"));
-      return;
     }
-    toast.success(t("toast.deleted", { number: toDelete.receipt_number }));
+  }
+
+  function confirmDelete() {
+    if (!toDelete) return;
+    const receipt = toDelete;
     setToDelete(undefined);
+    setUndoable((ids) => [...ids, receipt.id]);
+
+    undoTimers.current.set(
+      receipt.id,
+      setTimeout(() => void runDelete(receipt), UNDO_MS),
+    );
+
+    // Same window on both, so the offer never outlives the chance to take it
+    // or disappear while it is still good.
+    toast.success(t("toast.deleted", { number: receipt.receipt_number }), {
+      duration: UNDO_MS,
+      action: {
+        label: t("toast.undo"),
+        onClick: () => {
+          restore(receipt.id);
+          toast.success(
+            t("toast.deleteUndone", { number: receipt.receipt_number }),
+          );
+        },
+      },
+    });
   }
 
   return (
@@ -746,6 +803,7 @@ export function ReceiptsTable({
         open={dialogOpen && !editingGone}
         onOpenChange={setDialogOpen}
         receipt={editing}
+        instance={formInstance}
         online={online}
         queue={queue}
       />
@@ -768,13 +826,12 @@ export function ReceiptsTable({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>{t("form.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleting}
-            >
-              {deleting ? t("delete.deleting") : t("delete.confirm")}
+            <AlertDialogCancel>{t("form.cancel")}</AlertDialogCancel>
+            {/* No pending state left to show: the row leaves the list at once
+                and the delete is sent after the undo window, so the dialog has
+                nothing to wait for. */}
+            <AlertDialogAction variant="destructive" onClick={confirmDelete}>
+              {t("delete.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

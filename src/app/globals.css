@@ -349,6 +349,24 @@
     backdrop-filter: blur(6px);
   }
 
+  /*
+   * The Undo on a toast is a real button, not a footnote: sonner's default is
+   * 24px tall, which is under half a thumb, and it is the only way back from a
+   * delete. Given three seconds to hit it, it cannot also be small.
+   *
+   * `flex-shrink: 0` because the toast is capped at the viewport width on a
+   * phone — without it the long Marathi label is what gives way, and the
+   * button that must not be missed becomes the narrowest thing on screen.
+   */
+  [data-sonner-toast] [data-button] {
+    height: 2.25rem;
+    flex-shrink: 0;
+    padding-inline: 0.85rem;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
   /* Page background: a barely-there marigold wash rather than flat grey. */
   .app-surface {
     background:

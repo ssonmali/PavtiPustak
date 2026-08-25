@@ -58,6 +58,8 @@ type QueueFn = (
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Bumped per blank form, so consecutive creates do not share their state. */
+  instance?: number;
   /** Present when editing; absent when creating. */
   receipt?: LocalReceipt;
   online?: boolean;
@@ -75,14 +77,18 @@ export function ReceiptDialog({
   open,
   onOpenChange,
   receipt,
+  instance,
   online = true,
   queue,
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Remounting on the target row resets the form without an effect. */}
+      {/* Remounting on the target row resets the form without an effect. The
+          body outlives the closed dialog, so a second new receipt would keep
+          the first one's donor: every blank form needs its own identity, which
+          is what `instance` supplies. */}
       <ReceiptDialogBody
-        key={receipt?.id ?? "new"}
+        key={receipt?.id ?? `new:${instance ?? 0}`}
         onOpenChange={onOpenChange}
         receipt={receipt}
         online={online}

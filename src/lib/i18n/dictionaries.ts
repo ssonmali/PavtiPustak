@@ -283,7 +283,7 @@ const en = {
   // Delete
   "delete.title": "Delete this receipt?",
   "delete.body":
-    "Receipt #{number} for {name} ({amount}) will be removed permanently. This cannot be undone.",
+    "Receipt #{number} for {name} ({amount}) will be removed. You have a few seconds to undo it.",
   "delete.confirm": "Delete",
   "delete.deleting": "Deleting…",
 
@@ -291,6 +291,8 @@ const en = {
   "toast.saved": "Receipt saved.",
   "toast.updated": "Receipt updated.",
   "toast.deleted": "Receipt #{number} deleted.",
+  "toast.deleteUndone": "Receipt #{number} kept.",
+  "toast.undo": "Undo",
   "toast.exported": "Exported {count} receipt(s).",
   "toast.nothingToExport": "Nothing to export.",
   "toast.conflict": "Someone else changed this receipt. Reopen it to see their version.",
@@ -618,13 +620,15 @@ const mr: Record<MessageKey, string> = {
 
   "delete.title": "ही पावती काढून टाकायची?",
   "delete.body":
-    "{name} यांची पावती क्र. {number} ({amount}) कायमची काढून टाकली जाईल. हे पूर्ववत होणार नाही.",
+    "{name} यांची पावती क्र. {number} ({amount}) काढून टाकली जाईल. काही सेकंद पूर्ववत करण्याची संधी मिळेल.",
   "delete.confirm": "काढून टाका",
   "delete.deleting": "काढत आहे…",
 
   "toast.saved": "पावती जतन झाली.",
   "toast.updated": "पावती बदलली.",
   "toast.deleted": "पावती क्र. {number} काढली.",
+  "toast.deleteUndone": "पावती क्र. {number} ठेवली.",
+  "toast.undo": "पूर्ववत",
   "toast.exported": "{count} पावत्या निर्यात केल्या.",
   "toast.nothingToExport": "निर्यात करण्यासाठी काही नाही.",
   "toast.conflict": "ही पावती दुसऱ्याने बदलली आहे. पुन्हा उघडून पहा.",
