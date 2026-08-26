@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { createDonation, updateDonation } from "@/app/actions/donations";
 import { searchDonors } from "@/app/actions/receipts";
 import { useI18n } from "@/lib/i18n/client";
-import { formatDate, toDateValue } from "@/lib/receipt-utils";
+import { capitalizeName, formatDate, toDateValue } from "@/lib/receipt-utils";
 import type { Donation, Donor } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -54,7 +54,9 @@ export function DonationDialog({
   const [showMatches, setShowMatches] = React.useState(false);
   const phoneRef = React.useRef<HTMLInputElement>(null);
 
-  function onDonorInput(value: string) {
+  function onDonorInput(raw: string) {
+    // Same as on a receipt: a name is capitalised as it is typed.
+    const value = capitalizeName(raw);
     setDonorQuery(value);
     if (isEdit) return;
     setShowMatches(true);

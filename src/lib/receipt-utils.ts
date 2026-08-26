@@ -278,3 +278,16 @@ export function pledgeReminderUrl(receipt: Receipt, mandalName: string) {
 
   return `https://wa.me/91${receipt.phone_number}?text=${encodeURIComponent(message)}`;
 }
+
+/**
+ * Capitalises each word of a Latin-script name as it is typed: "ramesh patil"
+ * becomes "Ramesh Patil". Applied on every keystroke, which is safe because it
+ * never changes the length of the string and so never moves the caret.
+ *
+ * Only the first letter is touched — the rest is left exactly as typed, so
+ * "McPatil" and an all-caps "PATIL" both survive. Devanagari has no case, so a
+ * name typed in Marathi passes through unchanged on its own.
+ */
+export function capitalizeName(name: string) {
+  return name.replace(/(^|[\s'-])(\p{Ll})/gu, (_, sep, ch) => sep + ch.toUpperCase());
+}

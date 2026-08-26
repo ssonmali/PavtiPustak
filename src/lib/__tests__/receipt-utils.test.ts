@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  capitalizeName,
   dayOf,
   displayName,
   formatAmount,
@@ -185,5 +186,30 @@ describe("whatsappUrl", () => {
     expect(url).not.toContain(" ");
     expect(decodeURIComponent(url)).toContain("सुनील पाटील");
     expect(decodeURIComponent(url)).toContain("47");
+  });
+});
+
+describe("capitalizeName", () => {
+  it("capitalises the first name and the surname", () => {
+    expect(capitalizeName("ramesh patil")).toBe("Ramesh Patil");
+  });
+
+  it("leaves the rest of each word as typed", () => {
+    expect(capitalizeName("PATIL")).toBe("PATIL");
+    expect(capitalizeName("mcPatil")).toBe("McPatil");
+  });
+
+  it("handles the separators that appear inside names", () => {
+    expect(capitalizeName("d'souza")).toBe("D'Souza");
+    expect(capitalizeName("patil-jadhav")).toBe("Patil-Jadhav");
+  });
+
+  it("never changes the length, so the caret cannot move", () => {
+    const typed = "  ramesh   patil ";
+    expect(capitalizeName(typed)).toHaveLength(typed.length);
+  });
+
+  it("leaves a Marathi name alone", () => {
+    expect(capitalizeName("रमेश पाटील")).toBe("रमेश पाटील");
   });
 });

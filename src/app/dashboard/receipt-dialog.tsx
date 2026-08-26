@@ -16,7 +16,12 @@ import {
   type PaymentStatus,
 } from "@/lib/types";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
-import { formatAmount, formatDate, toDateValue } from "@/lib/receipt-utils";
+import {
+  capitalizeName,
+  formatAmount,
+  formatDate,
+  toDateValue,
+} from "@/lib/receipt-utils";
 import { toDevanagariName } from "@/lib/devanagari-name";
 import { useI18n } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
@@ -168,7 +173,11 @@ function ReceiptDialogBody({
   } | null>(null);
 
   /** Looks up past donors as the volunteer types, debounced. */
-  function onDonorInput(value: string) {
+  function onDonorInput(raw: string) {
+    // A donor's name always reads as a name on the receipt, so the first letter
+    // of each word is capitalised as it is typed rather than left to the
+    // volunteer's shift key.
+    const value = capitalizeName(raw);
     setDonorQuery(value);
     // Keep the Marathi suggestion in step with the English name, unless it has
     // been corrected by hand.
