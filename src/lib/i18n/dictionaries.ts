@@ -159,6 +159,11 @@ const en = {
   // Stats
   "stats.estimated": "Total estimated",
   "stats.total": "Total collected",
+  // Heading summary on the receipts ledger: money in the box and money still
+  // promised, plus the two added up so "all" has a figure of its own.
+  "stats.grandTotal": "Total incl. due",
+  "stats.receivedShort": "{amount} received",
+  "stats.dueShort": "{amount} due",
   "stats.receipts": "Receipts",
   "stats.donors": "Contributors",
   "stats.today": "Today",
@@ -504,6 +509,9 @@ const mr: Record<MessageKey, string> = {
 
   "stats.estimated": "एकूण अंदाजित",
   "stats.total": "एकूण जमा",
+  "stats.grandTotal": "एकूण (येणे बाकीसह)",
+  "stats.receivedShort": "{amount} जमा",
+  "stats.dueShort": "{amount} येणे बाकी",
   "stats.receipts": "पावत्या",
   "stats.donors": "वर्गणीदार",
   "stats.today": "आज",

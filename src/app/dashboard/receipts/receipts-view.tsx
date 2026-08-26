@@ -102,18 +102,19 @@ export function ReceiptsView({
     };
   }, [daily, period]);
 
-  const expected = React.useMemo(
-    () =>
-      // The remainder, not the face amount — see overview.tsx.
-      filterByPeriod(unpaid, period).reduce((sum, r) => sum + outstanding(r), 0),
-    [unpaid, period],
-  );
+  /**
+   * What is still owed, and how many pledges owe it. Both come from the unpaid
+   * rows rather than the loaded page, for the same reason the collected figures
+   * come from the day aggregates.
+   */
+  const due = React.useMemo(() => {
+    const rows = filterByPeriod(unpaid, period);
+    return {
+      total: rows.reduce((sum, r) => sum + outstanding(r), 0),
+      count: rows.length,
+    };
+  }, [unpaid, period]);
 
-  // Counted within the period, so the badge matches what switching would show.
-  const unpaidCount = React.useMemo(
-    () => inPeriod.filter((r) => r.payment_status === "Unpaid").length,
-    [inPeriod],
-  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -125,24 +126,39 @@ export function ReceiptsView({
             <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
               {t("table.title")}
             </h1>
-            {/* One money figure with the count that belongs to it. Showing the
-                collected total beside a count that included pledges would put
-                two different scopes on the same line. */}
+            {/* Each tab gets the money its own rows hold, with the count that
+                belongs to that money — a collected total beside a count that
+                included pledges would put two scopes on one line. On "all"
+                the headline is the two added together, broken down after it,
+                because that tab is showing both kinds of row at once. */}
             <p className="text-sm text-muted-foreground">
               {status === "Unpaid" ? (
                 <>
                   {t("due.expected")}:{" "}
                   <span className="font-medium tabular-nums text-foreground">
-                    {formatAmount(expected)}
-                  </span>
+                    {formatAmount(due.total)}
+                  </span>{" "}
+                  · {t("chart.receiptsCount", { count: due.count })}
                 </>
-              ) : (
+              ) : status === "Paid" ? (
                 <>
                   {t("stats.total")}:{" "}
                   <span className="font-medium tabular-nums text-foreground">
                     {formatAmount(collected.total)}
                   </span>{" "}
                   · {t("chart.receiptsCount", { count: collected.count })}
+                </>
+              ) : (
+                <>
+                  {t("stats.grandTotal")}:{" "}
+                  <span className="font-medium tabular-nums text-foreground">
+                    {formatAmount(collected.total + due.total)}
+                  </span>{" "}
+                  ·{" "}
+                  {t("stats.receivedShort", {
+                    amount: formatAmount(collected.total),
+                  })}{" "}
+                  · {t("stats.dueShort", { amount: formatAmount(due.total) })}
                 </>
               )}
             </p>
@@ -161,7 +177,7 @@ export function ReceiptsView({
       <StatusFilterBar
         status={status}
         onChange={setStatus}
-        unpaidCount={unpaidCount}
+        unpaidCount={due.count}
       />
 
       <OfflineBadge online={online} pending={pending} syncing={syncing} />
