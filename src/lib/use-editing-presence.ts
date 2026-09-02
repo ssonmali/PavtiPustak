@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { createClient } from "@/lib/supabase/client";
+// Type-only: the runtime import is deferred into the effect below so
+// @supabase/supabase-js stays out of the entry chunk. `import type` is erased
+// at build time, so the ReturnType below costs nothing.
+import type { createClient } from "@/lib/supabase/client";
 
 /** Who is editing which receipt, keyed by receipt id. */
 export type Editors = Record<string, string[]>;
@@ -86,22 +89,44 @@ export function useEditingPresence(myName: string) {
   const trackedRef = React.useRef(false);
 
   React.useEffect(() => {
-    const supabase = createClient();
     let disposed = false;
-
-    const channel = supabase.channel("receipt-editors", {
-      config: { presence: { key: "" } },
-    });
-    channelRef.current = channel;
-
-    channel.on("presence", { event: "sync" }, () => {
-      if (disposed) return;
-      setEditors(
-        editorsFromPresence(channel.presenceState<Payload>(), myNameRef.current),
-      );
-    });
+    /** Tears down the channel, once it exists. */
+    let closeSocket: (() => void) | undefined;
 
     void (async () => {
+      // Deferred for the same reason as in use-realtime: nothing here is needed
+      // to paint, and an advisory "someone else is editing" warning can appear
+      // a beat after the dialog does. The publish effect below is already
+      // gated on `joined`, so it simply stays a no-op until this lands.
+      const { createClient } = await import("@/lib/supabase/client");
+      if (disposed) return;
+      const supabase = createClient();
+
+      const channel = supabase.channel("receipt-editors", {
+        config: { presence: { key: "" } },
+      });
+
+      channel.on("presence", { event: "sync" }, () => {
+        if (disposed) return;
+        setEditors(
+          editorsFromPresence(
+            channel.presenceState<Payload>(),
+            myNameRef.current,
+          ),
+        );
+      });
+
+      closeSocket = () => {
+        channelRef.current = null;
+        trackedRef.current = false;
+        void supabase.removeChannel(channel);
+      };
+      if (disposed) {
+        closeSocket();
+        return;
+      }
+      channelRef.current = channel;
+
       // Presence is subject to RLS on the socket, same as postgres_changes.
       const {
         data: { session },
@@ -122,7 +147,7 @@ export function useEditingPresence(myName: string) {
       disposed = true;
       channelRef.current = null;
       trackedRef.current = false;
-      void supabase.removeChannel(channel);
+      closeSocket?.();
     };
   }, []);
 

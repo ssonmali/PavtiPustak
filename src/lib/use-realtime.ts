@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 export type RealtimeStatus = "connecting" | "live" | "polling";
 
@@ -34,9 +33,10 @@ export function useRealtimeReceipts(delay = 400) {
   const [status, setStatus] = React.useState<RealtimeStatus>("connecting");
 
   React.useEffect(() => {
-    const supabase = createClient();
     let timer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
+    /** Tears down the channel and auth listener, once they exist. */
+    let closeSocket: (() => void) | undefined;
 
     const refreshSoon = () => {
       clearTimeout(timer);
@@ -49,42 +49,71 @@ export function useRealtimeReceipts(delay = 400) {
       timer = setTimeout(() => router.refresh(), delay);
     };
 
-    const channel = supabase
-      .channel("receipts-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "receipts" },
-        refreshSoon,
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "receipt_audit" },
-        refreshSoon,
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "expenses" },
-        refreshSoon,
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "expense_audit" },
-        refreshSoon,
-      )
-      // 11-donation-box.sql puts these in the publication so a donation logged
-      // on one phone shows on another; without them here it never did.
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "donations" },
-        refreshSoon,
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "donation_audit" },
-        refreshSoon,
+    void (async () => {
+      // Imported here rather than at module scope so @supabase/supabase-js —
+      // 65 KB gzipped — stays out of the dashboard layout's entry chunk, and
+      // therefore off the critical path of every dashboard route. Nothing on
+      // screen needs it to paint: the status dot starts at "connecting", which
+      // is exactly what it should read while this loads.
+      const { createClient } = await import("@/lib/supabase/client");
+      if (disposed) return;
+      const supabase = createClient();
+
+      const channel = supabase
+        .channel("receipts-changes")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "receipts" },
+          refreshSoon,
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "receipt_audit" },
+          refreshSoon,
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "expenses" },
+          refreshSoon,
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "expense_audit" },
+          refreshSoon,
+        )
+        // 11-donation-box.sql puts these in the publication so a donation
+        // logged on one phone shows on another; without them here it never did.
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "donations" },
+          refreshSoon,
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "donation_audit" },
+          refreshSoon,
+        );
+
+      // Keep the socket authorised across token refreshes.
+      const { data: authSub } = supabase.auth.onAuthStateChange(
+        (_event, session) => {
+          if (session?.access_token) {
+            void supabase.realtime.setAuth(session.access_token);
+          }
+        },
       );
 
-    void (async () => {
+      // Registered before the first await below, so an unmount that lands
+      // mid-handshake still has something to tear down.
+      closeSocket = () => {
+        authSub.subscription.unsubscribe();
+        void supabase.removeChannel(channel);
+      };
+      if (disposed) {
+        closeSocket();
+        return;
+      }
+
       // Realtime needs the access token explicitly: RLS is enforced on the
       // socket, and without this the subscription is silently unauthorised.
       const {
@@ -101,7 +130,11 @@ export function useRealtimeReceipts(delay = 400) {
           setStatus("live");
           return;
         }
-        if (state === "CHANNEL_ERROR" || state === "TIMED_OUT" || state === "CLOSED") {
+        if (
+          state === "CHANNEL_ERROR" ||
+          state === "TIMED_OUT" ||
+          state === "CLOSED"
+        ) {
           // Falls back to polling rather than going stale.
           console.warn(
             `[realtime] ${state} — falling back to periodic refresh. ` +
@@ -112,12 +145,9 @@ export function useRealtimeReceipts(delay = 400) {
       });
     })();
 
-    // Keep the socket authorised across token refreshes.
-    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.access_token) void supabase.realtime.setAuth(session.access_token);
-    });
-
     // Coming back to the tab is the most common moment to be out of date.
+    // Registered synchronously: these only debounce a refresh, so they work
+    // whether or not the Supabase client has finished loading.
     const onVisible = () => {
       if (document.visibilityState === "visible") refreshSoon();
     };
@@ -129,8 +159,7 @@ export function useRealtimeReceipts(delay = 400) {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", refreshSoon);
-      authSub.subscription.unsubscribe();
-      void supabase.removeChannel(channel);
+      closeSocket?.();
     };
   }, [router, delay]);
 
