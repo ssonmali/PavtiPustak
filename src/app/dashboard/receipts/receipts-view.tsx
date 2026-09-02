@@ -9,7 +9,7 @@ import {
   outstanding,
 } from "@/lib/receipt-utils";
 import { useOfflineReceipts, type FlushResult } from "@/lib/offline";
-import type { ReceiptQuery } from "../receipts-query";
+import { isDefaultQuery, type ReceiptQuery } from "../receipts-query";
 import { useReceiptQueryNav } from "../use-receipt-query";
 import { useEditingPresence } from "@/lib/use-editing-presence";
 import { Plus } from "lucide-react";
@@ -88,7 +88,13 @@ export function ReceiptsView({
   );
 
   const { online, syncing, pending, receipts: local, queue } =
-    useOfflineReceipts({ serverRows: receipts, onFlush });
+    useOfflineReceipts({
+      serverRows: receipts,
+      // A filtered page must not overwrite the offline ledger with a subset of
+      // itself; see isDefaultQuery.
+      cacheable: isDefaultQuery(query),
+      onFlush,
+    });
 
   /*
    * The rows as the server returned them.

@@ -127,6 +127,14 @@ export function useOnline() {
 type Options = {
   /** Rows rendered by the server; empty when the request never landed. */
   serverRows: Receipt[];
+  /**
+   * Whether these rows may be written to the offline copy.
+   *
+   * False when the list on screen is filtered. The cache is cleared and
+   * replaced wholesale, so mirroring a filtered page would leave the device
+   * holding a partial ledger and presenting it as the whole one.
+   */
+  cacheable?: boolean;
   onFlush?: (result: FlushResult) => void;
 };
 
@@ -134,7 +142,11 @@ type Options = {
  * Keeps a local copy of the ledger so the receipts list renders offline, and
  * exposes queue helpers so writes survive a dead zone.
  */
-export function useOfflineReceipts({ serverRows, onFlush }: Options) {
+export function useOfflineReceipts({
+  serverRows,
+  cacheable = true,
+  onFlush,
+}: Options) {
   const router = useRouter();
   const online = useOnline();
   const [cached, setCached] = React.useState<Receipt[] | null>(null);
@@ -145,10 +157,13 @@ export function useOfflineReceipts({ serverRows, onFlush }: Options) {
     setOutbox(await readOutbox());
   }, []);
 
-  // Mirror the server list into IndexedDB whenever we successfully get one.
+  // Mirror the server list into IndexedDB whenever we successfully get one —
+  // but only an unfiltered one, or the offline copy stops being a copy of the
+  // ledger and becomes a copy of somebody's search.
   React.useEffect(() => {
+    if (!cacheable) return;
     void cacheReceipts(serverRows);
-  }, [serverRows]);
+  }, [serverRows, cacheable]);
 
   // Load the local copy once on mount; it is the fallback when offline.
   React.useEffect(() => {

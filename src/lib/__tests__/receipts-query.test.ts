@@ -4,6 +4,7 @@ import {
   applyReceiptQuery,
   MAX_LIMIT,
   clampPage,
+  isDefaultQuery,
   orderFor,
   parseReceiptQuery,
   searchFilter,
@@ -294,6 +295,45 @@ describe("applyReceiptQuery", () => {
     expect(b.calls).toContain("eq:payment_status:Unpaid");
     expect(b.calls).toContain("gte:collection_date:2026-08-01");
     expect(b.calls.some((c) => c.startsWith("or:"))).toBe(true);
+  });
+});
+
+describe("isDefaultQuery — what may be cached for offline use", () => {
+  /**
+   * The offline copy is replaced by whatever page is on screen, so it may only
+   * be written from the unfiltered view. Cache a filtered page and a volunteer
+   * who filters to Unpaid and then loses signal is left holding a ledger with
+   * only unpaid receipts in it — and no way to tell that is what happened.
+   */
+  it("is true for the plain view", () => {
+    expect(isDefaultQuery(parseReceiptQuery({}))).toBe(true);
+  });
+
+  it("is false once anything is narrowed", () => {
+    expect(isDefaultQuery(parseReceiptQuery({ status: "Unpaid" }))).toBe(false);
+    expect(isDefaultQuery(parseReceiptQuery({ q: "ramesh" }))).toBe(false);
+    expect(isDefaultQuery(parseReceiptQuery({ days: "7" }))).toBe(false);
+    expect(
+      isDefaultQuery(parseReceiptQuery({ from: "2026-08-01" })),
+    ).toBe(false);
+  });
+
+  /**
+   * A sort is not a filter: the same rows come back, so the cache stays a
+   * complete copy of the newest page and is safe to write.
+   */
+  it("is true under a reordering, which returns the same rows", () => {
+    expect(isDefaultQuery(parseReceiptQuery({ sort: "number-asc" }))).toBe(true);
+  });
+
+  it("agrees with toSearchParams on what a default is", () => {
+    for (const sort of SORT_KEYS) {
+      const q = parseReceiptQuery({ sort });
+      // Sort aside, an empty param set and a default query are the same thing.
+      const params = toSearchParams(q);
+      delete params.sort;
+      expect(isDefaultQuery(q)).toBe(Object.keys(params).length === 0);
+    }
   });
 });
 

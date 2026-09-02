@@ -207,6 +207,23 @@ export function applyReceiptQuery<T extends ReceiptFilterable<T>>(
 }
 
 /**
+ * Whether this query returns the whole newest page, unnarrowed.
+ *
+ * The offline copy in IndexedDB is cleared and replaced by whatever page is on
+ * screen, so it may only be written from a view that is not filtered. Mirror a
+ * filtered page and a volunteer who narrows to Unpaid and then loses signal is
+ * left holding a ledger containing only unpaid receipts, with nothing to say
+ * that is what happened — silently incomplete data presented as the ledger.
+ *
+ * A sort is not a filter: reordering returns the same rows, so it is safe.
+ */
+export function isDefaultQuery(query: ReceiptQuery): boolean {
+  return (
+    query.q === "" && query.status === "all" && query.period.kind === "all"
+  );
+}
+
+/**
  * A query back into URL params — the inverse of `parseReceiptQuery`.
  *
  * Defaults are omitted rather than spelled out, so the plain view stays

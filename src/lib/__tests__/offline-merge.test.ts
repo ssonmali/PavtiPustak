@@ -113,7 +113,16 @@ describe("mergeOutbox", () => {
     expect(merged[0].amount).toBe(900);
   });
 
-  it("sorts synced rows newest-date-first", () => {
+  /**
+   * The server decides the order, not this function.
+   *
+   * It used to re-sort every merged list newest-date-first, which silently
+   * overrode the sort the volunteer had chosen: asking for receipt numbers
+   * ascending returned #1-#50 from the database and rendered them #50 down to
+   * #1. Preserving the incoming order is the whole contract now — the list is
+   * sorted and filtered by a query the browser cannot second-guess.
+   */
+  it("preserves the order the server sent the rows in", () => {
     const merged = mergeOutbox(
       [
         row({ id: "a", collection_date: "2026-08-01", receipt_number: 1 }),
@@ -121,7 +130,31 @@ describe("mergeOutbox", () => {
       ],
       [],
     );
+    expect(merged.map((r) => r.id)).toEqual(["a", "b"]);
+  });
+
+  it("preserves a descending order just the same", () => {
+    const merged = mergeOutbox(
+      [
+        row({ id: "b", collection_date: "2026-08-15", receipt_number: 2 }),
+        row({ id: "a", collection_date: "2026-08-01", receipt_number: 1 }),
+      ],
+      [],
+    );
     expect(merged.map((r) => r.id)).toEqual(["b", "a"]);
+  });
+
+  /** Whatever the order, unsynced work stays where it can be seen. */
+  it("still floats pending creates above rows in any order", () => {
+    const merged = mergeOutbox(
+      [
+        row({ id: "a", collection_date: "2026-08-01", receipt_number: 1 }),
+        row({ id: "b", collection_date: "2026-08-15", receipt_number: 2 }),
+      ],
+      [entry({ kind: "create", fields })],
+    );
+    expect(merged[0].pending).toBe("create");
+    expect(merged.slice(1).map((r) => r.id)).toEqual(["a", "b"]);
   });
 });
 

@@ -73,12 +73,25 @@ export function mergeOutbox(
     }
   }
 
+  /*
+   * Pending creates float to the top; everything else keeps the order it
+   * arrived in.
+   *
+   * This deliberately does NOT impose an order of its own. It used to re-sort
+   * newest-date-first, which quietly overrode whichever sort the volunteer had
+   * asked for: the database returned receipts #1-#50 ascending and this handed
+   * them back #50 down to #1. The server decides the order now, and the only
+   * thing worth overriding it for is work that has not synced yet — a row the
+   * server has never seen has no place in the server's ordering, and burying it
+   * is how a volunteer loses track of what is still queued.
+   *
+   * Array#sort is stable, so the comparator returning 0 preserves insertion
+   * order, and Map preserves it in turn.
+   */
   return [...byId.values()].sort((a, b) => {
-    // Pending creates float to the top; otherwise newest date, then number.
     if (a.pending === "create" && b.pending !== "create") return -1;
     if (b.pending === "create" && a.pending !== "create") return 1;
-    const byDate = b.collection_date.localeCompare(a.collection_date);
-    return byDate !== 0 ? byDate : b.receipt_number - a.receipt_number;
+    return 0;
   });
 }
 

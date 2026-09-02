@@ -874,7 +874,14 @@ export function ReceiptsTable({
           </p>
         ) : null}
 
-        {hasMore && !query ? (
+        {/* No longer withheld when a search or filter is on. `query` here was
+            once the search string, so `!query` meant "not searching" and
+            paging was hidden because the browser was filtering a single page.
+            The server applies all four controls now, so `total` is the count
+            of the filtered result and the next page belongs to it. Renaming
+            the prop to the query object left this reading `!object`, which is
+            always false — the button could not appear at all. */}
+        {hasMore ? (
           <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
             {loadingMore ? <Loader2 className="animate-spin" /> : null}
             {t("table.loadMore")}
