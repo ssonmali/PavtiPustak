@@ -134,6 +134,11 @@
     0 6px 16px -4px hsl(var(--shadow-color) / 0.10);
   --elevation-lg: 0 4px 8px -4px hsl(var(--shadow-color) / 0.14),
     0 16px 32px -8px hsl(var(--shadow-color) / 0.12);
+  /* The lit top edge of a card. On a near-white card this is a faint sheen;
+     it is the cue that reads as glass, more than the translucency does. */
+  --card-highlight: hsl(0 0% 100% / 0.75);
+  /* Re-declared as part of the card's own shadow — see [data-slot="card"]. */
+  --card-ring: color-mix(in oklab, var(--foreground) 10%, transparent);
   --brand-gradient: linear-gradient(
     135deg,
     oklch(0.62 0.17 55) 0%,
@@ -193,6 +198,16 @@
     0 8px 20px -6px hsl(var(--shadow-color) / 0.45);
   --elevation-lg: 0 6px 12px -6px hsl(var(--shadow-color) / 0.6),
     0 20px 40px -10px hsl(var(--shadow-color) / 0.5);
+  /* Dark mode carries depth in the EDGE, not the shadow.
+     Measured: with the light-mode recipe, the dark login card differed from
+     the old flat styling by at most 7/255 per channel — invisible. Of course
+     it was: --elevation-md in the dark is hsl(20 40% 3%) at half alpha, a
+     near-black shadow cast on a near-black ground. A raised surface in the
+     dark is legible because its top edge catches light and its outline is
+     brighter than what surrounds it, so that is what does the work here and
+     the shadow is left to do almost none. */
+  --card-highlight: hsl(0 0% 100% / 0.10);
+  --card-ring: color-mix(in oklab, var(--foreground) 22%, transparent);
   --brand-gradient: linear-gradient(
     135deg,
     oklch(0.76 0.16 65) 0%,
@@ -229,6 +244,11 @@
   body * {
     color: #000 !important;
     background-color: transparent !important;
+    /* Card shadows are screen depth. On paper they come out as grey halos
+       around every card — invisible in review, obvious once printed, and the
+       report is the one page that exists to be printed. The lit top edge goes
+       the same way: it is an inset shadow. */
+    box-shadow: none !important;
   }
 
   /*
@@ -298,14 +318,12 @@
    --------------------------------------------------------------------------- */
 @layer components {
   /* Elevation, warm-tinted. */
+  /* The card treatment itself lives in @layer utilities at the end of this
+     file — it has to, to outrank Tailwind's own bg-card and ring-1. */
   .card-elevated {
-    box-shadow: var(--elevation-sm);
     transition:
       box-shadow 160ms ease,
       transform 160ms ease;
-  }
-  .card-elevated:hover {
-    box-shadow: var(--elevation-md);
   }
 
   /* The saffron mark used for the logo tile and stat-card accents. */
@@ -560,5 +578,69 @@
 
   .print-grid tfoot td {
     border-top-color: #333;
+  }
+}
+
+@layer utilities {
+  /*
+   * Every card, not just the ones that opted in.
+   *
+   * 22 <Card> usages, 16 of which carried .card-elevated — so six were flat
+   * for no reason anyone chose. Styling the slot rather than the class fixes
+   * that without touching 22 call sites, and without editing the vendored
+   * components/ui/card.tsx, which the shadcn CLI would overwrite.
+   *
+   * Three cues, in order of how much work they do: a lit top edge, a slightly
+   * translucent ground so the app-surface glow bleeds through near the top of
+   * the page, and a resting shadow one step up the existing scale. No
+   * backdrop-filter anywhere — below the fold the background is flat, so a real
+   * blur would have nothing to blur while still recompositing 8-12 layers on
+   * every scroll frame of a volunteer's cheap phone.
+   *
+   * This block is in @layer utilities, and that is load-bearing. `bg-card` and
+   * `ring-1` are Tailwind utilities, and a cascade layer beats ANY specificity
+   * in an earlier layer — so the first version of this, sitting in
+   * @layer components, was silently dead however specific the selector was. It
+   * has to share the layer to win, and then :not(.shadow-none) carries it on
+   * specificity (0,2,0 against 0,1,0) while also giving any card a documented
+   * way to opt out.
+   *
+   * Because v4 implements `ring-1` AS a box-shadow, this rule re-declares that
+   * 1px ring itself — otherwise setting box-shadow here deletes the outline.
+   */
+  [data-slot="card"]:not(.shadow-none) {
+    background-color: color-mix(in oklab, var(--card) 92%, transparent);
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      0 0 0 1px var(--card-ring),
+      var(--elevation-md);
+  }
+
+  /* Cards with a brand hairline already own their top edge, so the highlight
+     would sit underneath it doing nothing. Drop it and keep the shadow. */
+  [data-slot="card"].accent-top:not(.shadow-none) {
+    box-shadow:
+      0 0 0 1px var(--card-ring),
+      var(--elevation-md);
+  }
+
+  [data-slot="card"].card-elevated:not(.shadow-none):hover {
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      0 0 0 1px var(--card-ring),
+      var(--elevation-lg);
+  }
+  [data-slot="card"].card-elevated.accent-top:not(.shadow-none):hover {
+    box-shadow:
+      0 0 0 1px var(--card-ring),
+      var(--elevation-lg);
+  }
+
+  /* Same family of preference as reduced-motion, which this file already
+     honours: if translucency is unwelcome, the card is simply solid. */
+  @media (prefers-reduced-transparency: reduce) {
+    [data-slot="card"]:not(.shadow-none) {
+      background-color: var(--card);
+    }
   }
 }
