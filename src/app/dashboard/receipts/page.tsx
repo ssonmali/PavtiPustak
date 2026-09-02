@@ -4,22 +4,36 @@ import { getMyName, getVolunteerNames } from "@/lib/volunteer-names";
 import { volunteerName } from "@/lib/receipt-utils";
 import type { DailyTotal, Receipt } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DEFAULT_LIMIT,
+  applyReceiptQuery,
+  parseReceiptQuery,
+} from "../receipts-query";
 import { ReceiptsView } from "./receipts-view";
 
 export const metadata = { title: "Receipts · SGMM Pustak" };
 
-export default async function ReceiptsPage() {
+export default async function ReceiptsPage({
+  searchParams,
+}: {
+  // Typed explicitly, matching report/page.tsx: the generated PageProps helper
+  // only knows routes that existed when types were last written.
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await createClient();
+  // The four controls live in the URL, so the first paint is already sorted
+  // and filtered — no client round trip, and no flash of newest-first before
+  // the real order arrives.
+  const query = parseReceiptQuery(await searchParams);
 
   const [{ data, error, count }, myName, user, names, daily, unpaidRows] =
     await Promise.all([
-      // First page only; the client appends further pages on demand.
-      supabase
-        .from("receipts")
-        .select("*", { count: "exact" })
-        .order("collection_date", { ascending: false })
-        .order("receipt_number", { ascending: false })
-        .range(0, 49),
+      // First page only; the client appends further pages on demand, through
+      // the same query so the pages belong to the same result.
+      applyReceiptQuery(
+        supabase.from("receipts").select("*", { count: "exact" }),
+        query,
+      ).range(0, DEFAULT_LIMIT - 1),
       getMyName(),
       getUser(),
       getVolunteerNames(),
@@ -51,6 +65,7 @@ export default async function ReceiptsPage() {
     <ReceiptsView
       receipts={(data ?? []) as Receipt[]}
       total={count ?? 0}
+      query={query}
       mandalName={process.env.NEXT_PUBLIC_MANDAL_NAME ?? "Shri Ganesh Mitra Mandal"}
       // The name other volunteers see when this device has a receipt open.
       myName={myName ?? volunteerName(user?.email) ?? "—"}

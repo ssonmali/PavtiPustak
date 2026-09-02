@@ -9,6 +9,8 @@ import {
   outstanding,
 } from "@/lib/receipt-utils";
 import { useOfflineReceipts, type FlushResult } from "@/lib/offline";
+import type { ReceiptQuery } from "../receipts-query";
+import { useReceiptQueryNav } from "../use-receipt-query";
 import { useEditingPresence } from "@/lib/use-editing-presence";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,13 +18,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { OfflineBadge } from "@/components/offline-badge";
 import { ReceiptsTable, type ReceiptsTableHandle } from "../receipts-table";
 import {
-  ALL_TIME,
   filterByPeriod,
   PeriodPresets,
   type Period,
 } from "../period-filter";
 import {
-  filterByStatus,
   StatusFilterBar,
   type StatusFilter,
 } from "../status-filter";
@@ -35,6 +35,7 @@ export function ReceiptsView({
   myName,
   daily,
   unpaid,
+  query,
 }: {
   receipts: Receipt[];
   mandalName: string;
@@ -50,10 +51,23 @@ export function ReceiptsView({
     Receipt,
     "amount" | "paid_amount" | "payment_status" | "collection_date"
   >[];
+  /** The four controls, parsed from the URL by the page. */
+  query: ReceiptQuery;
 }) {
   const { t } = useI18n();
-  const [period, setPeriod] = React.useState<Period>(ALL_TIME);
-  const [status, setStatus] = React.useState<StatusFilter>("all");
+  // Read from the URL rather than held here. As component state these reset
+  // every time the volunteer switched tabs, because navigating unmounts this.
+  const period = query.period;
+  const status = query.status;
+  const onQueryChange = useReceiptQueryNav(query);
+  const setPeriod = React.useCallback(
+    (next: Period) => onQueryChange({ period: next }),
+    [onQueryChange],
+  );
+  const setStatus = React.useCallback(
+    (next: StatusFilter) => onQueryChange({ status: next }),
+    [onQueryChange],
+  );
   const { editors, setEditing: setPresence } = useEditingPresence(myName);
 
   const onFlush = React.useCallback(
@@ -76,15 +90,20 @@ export function ReceiptsView({
   const { online, syncing, pending, receipts: local, queue } =
     useOfflineReceipts({ serverRows: receipts, onFlush });
 
-  const inPeriod = React.useMemo(
-    () => filterByPeriod(local, period),
-    [local, period],
-  );
-
-  const visible = React.useMemo(
-    () => filterByStatus(inPeriod, status),
-    [inPeriod, status],
-  );
+  /*
+   * The rows as the server returned them.
+   *
+   * These used to be run through filterByPeriod and filterByStatus, which was
+   * the bug: `local` is one page, so filtering it meant "unpaid among the
+   * newest 50" while the UI implied "unpaid". Both filters are in the query
+   * now.
+   *
+   * The two filterByPeriod calls further down are a different matter and must
+   * stay: they narrow `daily` and `unpaid`, which are separate whole-ledger
+   * queries feeding the collected and due figures in the heading, not this
+   * paginated list.
+   */
+  const visible = local;
 
   const tableRef = React.useRef<ReceiptsTableHandle>(null);
 
@@ -190,13 +209,18 @@ export function ReceiptsView({
             names={names}
             // Pagination only makes sense against the live server list, and
             // only when nothing is filtered out of it client-side.
-            total={online && status === "all" ? total : undefined}
+            // Paging composes with the filters now that the server applies
+            // both, so this no longer has to be withheld under a status
+            // filter — the count is the count of the filtered result.
+            total={online ? total : undefined}
             online={online}
             queue={queue}
             editors={editors}
             setPresence={setPresence}
             period={period}
             onPeriodChange={setPeriod}
+            query={query}
+            onQueryChange={onQueryChange}
             ref={tableRef}
           />
         </CardContent>

@@ -7,6 +7,7 @@ import {
   orderFor,
   parseReceiptQuery,
   searchFilter,
+  toSearchParams,
 } from "@/app/dashboard/receipts-query";
 import { DEFAULT_SORT, SORT_KEYS } from "@/app/dashboard/sort-rows";
 
@@ -295,3 +296,44 @@ describe("applyReceiptQuery", () => {
     expect(b.calls.some((c) => c.startsWith("or:"))).toBe(true);
   });
 });
+
+describe("toSearchParams — the inverse of parsing", () => {
+  /**
+   * The controls write the URL and the server reads it back, so a query that
+   * survives a round trip is the whole contract between them. If these ever
+   * disagree, a control would appear to do nothing: the URL changes, the
+   * server parses something else, the list comes back the same.
+   */
+  it("round-trips every sort key", () => {
+    for (const sort of SORT_KEYS) {
+      const q = parseReceiptQuery({ sort });
+      expect(parseReceiptQuery(toSearchParams(q))).toEqual(q);
+    }
+  });
+
+  it("round-trips a fully loaded query", () => {
+    const q = parseReceiptQuery({
+      sort: "amount-desc",
+      status: "Unpaid",
+      q: "ramesh",
+      from: "2026-08-01",
+      to: "2026-08-31",
+    });
+    expect(parseReceiptQuery(toSearchParams(q))).toEqual(q);
+  });
+
+  it("round-trips a preset period", () => {
+    const q = parseReceiptQuery({ days: "7" });
+    expect(parseReceiptQuery(toSearchParams(q))).toEqual(q);
+  });
+
+  /** A clean URL for the default view, not ?sort=date-desc&status=all. */
+  it("omits everything that is a default", () => {
+    expect(toSearchParams(parseReceiptQuery({}))).toEqual({});
+  });
+
+  it("omits an empty search rather than leaving ?q=", () => {
+    const q = parseReceiptQuery({ sort: "name-asc", q: "" });
+    expect(toSearchParams(q)).toEqual({ sort: "name-asc" });
+  });
+})

@@ -6,6 +6,11 @@ import { receiptSchema } from "@/lib/schemas";
 import type { PaymentMethod, Receipt } from "@/lib/types";
 import { displayName } from "@/lib/receipt-utils";
 import { getVolunteerNames } from "@/lib/volunteer-names";
+import {
+  applyReceiptQuery,
+  clampPage,
+  type ReceiptQuery,
+} from "@/app/dashboard/receipts-query";
 
 export type ActionResult =
   | { ok: true }
@@ -182,16 +187,29 @@ export async function searchDonors(term: string) {
   }[];
 }
 
-/** One page of receipts, newest first. */
-export async function fetchReceipts(offset: number, limit = 50) {
+/**
+ * One page of receipts, under the same sort and filters as the first page.
+ *
+ * The query has to come from the caller. This used to be hardcoded to
+ * newest-first and unfiltered, so "show more" appended rows from a different
+ * result than the one on screen — which is what let an ascending sort start at
+ * #47 and then acquire #1 at the top once more rows arrived.
+ *
+ * Bounds come from clampPage: a server action is a public POST endpoint, and
+ * offset and limit went into .range() unvalidated.
+ */
+export async function fetchReceipts(
+  query: ReceiptQuery,
+  rawOffset: number,
+  rawLimit?: number,
+) {
   const { supabase } = await requireUser();
+  const { offset, limit } = clampPage(rawOffset, rawLimit);
 
-  const { data, count } = await supabase
-    .from("receipts")
-    .select("*", { count: "exact" })
-    .order("collection_date", { ascending: false })
-    .order("receipt_number", { ascending: false })
-    .range(offset, offset + limit - 1);
+  const { data, count } = await applyReceiptQuery(
+    supabase.from("receipts").select("*", { count: "exact" }),
+    query,
+  ).range(offset, offset + limit - 1);
 
   return { rows: (data ?? []) as Receipt[], total: count ?? 0 };
 }

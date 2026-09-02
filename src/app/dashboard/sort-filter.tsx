@@ -26,9 +26,12 @@ export function SortFilter({
   value,
   onChange,
   keys = SORT_KEYS,
+  disabled = false,
 }: {
   value: SortKey;
   onChange: (key: SortKey) => void;
+  /** Sorting is a database query, so it is unavailable with no connection. */
+  disabled?: boolean;
   /**
    * Which orders to offer. Defaults to all of them; the expenses ledger passes
    * a narrower list because its rows carry no receipt number.
@@ -49,8 +52,11 @@ export function SortFilter({
           the dropdown is open. */}
       <SelectTrigger
         aria-label={t("sort.label")}
-        title={t(LABEL_KEYS[value] ?? "sort.newest")}
+        title={
+          disabled ? t("table.needsSignal") : t(LABEL_KEYS[value] ?? "sort.newest")
+        }
         className="w-auto shrink-0 px-2.5"
+        disabled={disabled}
       >
         <ArrowDownUp className="size-4 shrink-0 text-muted-foreground" />
         {/* Rendered for screen readers only — sighted users get the icon. */}

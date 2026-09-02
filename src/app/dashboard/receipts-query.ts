@@ -205,3 +205,30 @@ export function applyReceiptQuery<T extends ReceiptFilterable<T>>(
 
   return q;
 }
+
+/**
+ * A query back into URL params — the inverse of `parseReceiptQuery`.
+ *
+ * Defaults are omitted rather than spelled out, so the plain view stays
+ * `/dashboard/receipts` instead of `?sort=date-desc&status=all&…`. The
+ * round-trip is the contract between the controls that write the URL and the
+ * server that reads it: if these two disagree, a control appears to do nothing
+ * — the URL changes, the server parses something else, the list comes back
+ * identical.
+ */
+export function toSearchParams(query: ReceiptQuery): Record<string, string> {
+  const params: Record<string, string> = {};
+
+  if (query.sort !== DEFAULT_SORT) params.sort = query.sort;
+  if (query.q) params.q = query.q;
+  if (query.status !== "all") params.status = query.status;
+
+  if (query.period.kind === "days") {
+    params.days = String(query.period.days);
+  } else if (query.period.kind === "custom") {
+    if (query.period.from) params.from = query.period.from;
+    if (query.period.to) params.to = query.period.to;
+  }
+
+  return params;
+}

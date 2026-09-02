@@ -38,7 +38,7 @@ import { PaidPill, UnpaidBadge } from "./money-badges";
 import { PaidProgress } from "./paid-progress";
 import { ReceiptDialog } from "./receipt-dialog";
 import { SortFilter } from "./sort-filter";
-import { DEFAULT_SORT, sortRows, type SortKey } from "./sort-rows";
+import type { ReceiptQuery } from "./receipts-query";
 import { CustomDateRange, type Period } from "./period-filter";
 import {
   AlertDialog,
@@ -133,6 +133,8 @@ export function ReceiptsTable({
   setPresence,
   period,
   onPeriodChange,
+  query,
+  onQueryChange,
   ref,
 }: {
   receipts: LocalReceipt[];
@@ -145,6 +147,11 @@ export function ReceiptsTable({
   /** Present when writes should be queued instead of sent. */
   queue?: QueueFn;
   /** Receipt id → other volunteers with it open right now. */
+  /** The four controls, as parsed from the URL. The server already applied
+   *  them; this is here so "show more" can ask for the next page of the SAME
+   *  result, and so the controls can render their current value. */
+  query: ReceiptQuery;
+  onQueryChange: (patch: Partial<ReceiptQuery>) => void;
   editors: Editors;
   /** Announces which receipt this device has open. */
   setPresence: (receiptId: string | null) => void;
@@ -154,14 +161,43 @@ export function ReceiptsTable({
   ref?: React.Ref<ReceiptsTableHandle>;
 }) {
   const { t, locale } = useI18n();
-  const [query, setQuery] = React.useState("");
-  const [sort, setSort] = React.useState<SortKey>(DEFAULT_SORT);
+  /**
+   * What is being typed, which is deliberately NOT the search term.
+   *
+   * The term lives in the URL and every change to it is a database query, so
+   * the field keeps its own draft and pushes it debounced. Binding the input
+   * straight to the URL would issue a request per keystroke and make typing
+   * feel like it is fighting back.
+   */
+  const [draft, setDraft] = React.useState(query.q);
+  /*
+   * Re-sync when the term changes from somewhere else — the back button, or
+   * another control rewriting the query.
+   *
+   * Adjusted during render against the previous value rather than in an
+   * effect. Setting state in an effect for this schedules a second render
+   * every time the URL changes, and React flags it as cascading; comparing
+   * here re-renders once, before anything is painted.
+   */
+  const [syncedQ, setSyncedQ] = React.useState(query.q);
+  if (query.q !== syncedQ) {
+    setSyncedQ(query.q);
+    setDraft(query.q);
+  }
+
+  React.useEffect(() => {
+    if (draft.trim() === query.q) return;
+    const timer = setTimeout(() => onQueryChange({ q: draft.trim() }), 300);
+    return () => clearTimeout(timer);
+  }, [draft, query.q, onQueryChange]);
   const [loadingMore, setLoadingMore] = React.useState(false);
 
   // The server sends the first page; further pages append here. A realtime
   // refresh replaces `receipts`, which changes the key and drops the stale
   // tail — derived rather than reset in an effect.
-  const pageKey = `${receipts.length}:${receipts[0]?.id ?? ""}`;
+  // Folded in with the query: two different sorts could coincidentally share a
+  // first row and a length, which would let pages of different orderings mix.
+  const pageKey = `${JSON.stringify(query)}:${receipts.length}:${receipts[0]?.id ?? ""}`;
   const [tail, setTail] = React.useState<{ key: string; rows: LocalReceipt[] }>({
     key: pageKey,
     rows: [],
@@ -202,7 +238,7 @@ export function ReceiptsTable({
 
   async function loadMore() {
     setLoadingMore(true);
-    const { rows } = await fetchReceipts(all.length);
+    const { rows } = await fetchReceipts(query, all.length);
     setTail((prev) => ({
       key: pageKey,
       rows: prev.key === pageKey ? [...prev.rows, ...rows] : rows,
@@ -222,25 +258,17 @@ export function ReceiptsTable({
   /** Pledge waiting for the volunteer to say how it was actually paid. */
   const [toMarkPaid, setToMarkPaid] = React.useState<LocalReceipt | undefined>();
 
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const matched = !q
-      ? all
-      : all.filter(
-          (r) =>
-            r.donor_name.toLowerCase().includes(q) ||
-            r.phone_number.includes(q) ||
-            String(r.receipt_number) === q,
-        );
-    // Sorts what is loaded. With a paginated tail the top of an amount sort is
-    // the largest of the rows fetched so far, not of the whole ledger.
-    return sortRows(matched, sort, {
-      date: (r) => r.collection_date,
-      amount: (r) => r.amount,
-      name: (r) => r.donor_name,
-      number: (r) => r.receipt_number,
-    }, locale);
-  }, [all, query, sort, locale]);
+  /**
+   * The rows, in the order the database returned them.
+   *
+   * This used to sort and filter `all` in the browser, which was the bug: the
+   * server sends one page, so every control silently acted on a 50-row window.
+   * Sorting receipt numbers ascending showed the smallest of the loaded rows —
+   * #47 of 96 — and "show more" then brought #1 in above it. All four controls
+   * are part of the query now, so re-deriving anything here would only be a
+   * second, disagreeing opinion.
+   */
+  const filtered = all;
 
   function openCreate() {
     setEditing(undefined);
@@ -436,13 +464,22 @@ export function ReceiptsTable({
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
           <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("table.search")}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={online ? t("table.search") : t("table.needsSignal")}
             className="pl-8"
+            // Searching and sorting are database queries now, so with no
+            // signal they cannot run. Disabled rather than quietly searching
+            // the cached copy: a volunteer reading a total has to be able to
+            // trust that it is the whole answer.
+            disabled={!online}
           />
         </div>
-        <SortFilter value={sort} onChange={setSort} />
+        <SortFilter
+          value={query.sort}
+          onChange={(sort) => onQueryChange({ sort })}
+          disabled={!online}
+        />
       </div>
 
       <CustomDateRange period={period} onChange={onPeriodChange} />
