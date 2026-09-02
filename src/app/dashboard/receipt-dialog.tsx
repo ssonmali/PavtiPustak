@@ -23,6 +23,11 @@ import {
   toDateValue,
 } from "@/lib/receipt-utils";
 import { toDevanagariName } from "@/lib/devanagari-name";
+import {
+  receiptBaseline,
+  receiptFields,
+  sameReceiptFields,
+} from "@/lib/receipt-fields";
 import { useI18n } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar-lazy";
@@ -145,11 +150,27 @@ function ReceiptDialogBody({
     return d;
   });
 
+  /*
+   * The money and the number are held here rather than left to the DOM.
+   *
+   * They were uncontrolled, read out of FormData on submit, which is fine for
+   * saving but leaves the current value invisible to render — and "has
+   * anything changed?" has to be answerable during render to disable a button.
+   * Controlled, the answer is derived from state with no effect and no second
+   * render pass.
+   */
+  const [amount, setAmount] = React.useState(
+    receipt ? String(Number(receipt.amount)) : "",
+  );
+  const [phone, setPhone] = React.useState(receipt?.phone_number ?? "");
+  const [paidAmount, setPaidAmount] = React.useState(
+    receipt?.paid_amount != null ? String(Number(receipt.paid_amount)) : "",
+  );
+
   // Donor autocomplete
   const [donorQuery, setDonorQuery] = React.useState(receipt?.donor_name ?? "");
   const [matches, setMatches] = React.useState<Donor[]>([]);
   const [showMatches, setShowMatches] = React.useState(false);
-  const phoneRef = React.useRef<HTMLInputElement>(null);
 
   /**
    * The Marathi spelling that goes on the receipt image.
@@ -215,7 +236,7 @@ function ReceiptDialogBody({
     setDonorQuery(donor.donor_name);
     setShowMatches(false);
     // Auto-fill the number we already have for this donor.
-    if (phoneRef.current) phoneRef.current.value = donor.phone_number;
+    setPhone(donor.phone_number);
     // A spelling corrected on an earlier receipt is reused rather than
     // re-guessed — that is the whole point of storing it.
     if (donor.donor_name_mr) {
@@ -227,33 +248,55 @@ function ReceiptDialogBody({
     }
   }
 
-  /** Reads the form into the shape the outbox stores. */
+  /**
+   * Reads the form into the shape the outbox stores.
+   *
+   * Normalised by the same function that normalises the stored row, which is
+   * what lets the two be compared at all — see receipt-fields.ts.
+   */
   function fieldsFrom(formData: FormData) {
-    return {
-      donor_name: String(formData.get("donor_name") ?? "").trim(),
-      donor_name_mr:
-        String(formData.get("donor_name_mr") ?? "").trim() || null,
-      amount: Number(formData.get("amount") ?? 0),
-      // Null for a settled receipt, matching what the schema stores.
-      paid_amount:
-        String(formData.get("payment_status") ?? "Paid") === "Unpaid"
-          ? Number(formData.get("paid_amount") ?? 0) || null
-          : null,
-      phone_number: String(formData.get("phone_number") ?? "")
-        .replace(/[\s-]/g, "")
-        .replace(/^(\+91|91|0)/, ""),
-      payment_method: String(formData.get("payment_method") ?? "Cash") as PaymentMethod,
+    return receiptFields({
+      donor_name: String(formData.get("donor_name") ?? ""),
+      donor_name_mr: String(formData.get("donor_name_mr") ?? ""),
+      amount: String(formData.get("amount") ?? ""),
+      paid_amount: String(formData.get("paid_amount") ?? ""),
+      phone_number: String(formData.get("phone_number") ?? ""),
+      payment_method: String(formData.get("payment_method") ?? "Cash"),
       collection_date: String(formData.get("collection_date") ?? ""),
-      payment_status: String(
-        formData.get("payment_status") ?? "Paid",
-      ) as PaymentStatus,
-      // Kept null for a paid row, matching the DB constraint.
-      due_on:
-        String(formData.get("payment_status") ?? "Paid") === "Unpaid"
-          ? String(formData.get("due_on") ?? "") || null
-          : null,
-    };
+      payment_status: String(formData.get("payment_status") ?? "Paid"),
+      due_on: String(formData.get("due_on") ?? ""),
+    });
   }
+
+  /**
+   * Whether this edit would actually say anything different.
+   *
+   * Opening a receipt, touching nothing and saving used to write the row
+   * regardless: it bumped updated_at and put an edit in the activity log that
+   * never happened. The log is how the mandal checks who touched what, so a
+   * meaningless entry in it costs real trust. Save is disabled until there is
+   * something to save.
+   *
+   * Derived during render from the same state the inputs use, so there is no
+   * effect and no stale answer. Creating is never "unchanged" — a blank form
+   * is stopped by `required`, not by this.
+   */
+  const changed =
+    !receipt ||
+    !sameReceiptFields(
+      receiptFields({
+        donor_name: donorQuery,
+        donor_name_mr: nameMr,
+        amount,
+        paid_amount: paidAmount,
+        phone_number: phone,
+        payment_method: method,
+        collection_date: date ? toDateValue(date) : "",
+        payment_status: status,
+        due_on: dueDate ? toDateValue(dueDate) : "",
+      }),
+      receiptBaseline(receipt),
+    );
 
   /** Stores the write on the device for the outbox to replay later. */
   async function queueLocally(formData: FormData) {
@@ -428,7 +471,8 @@ function ReceiptDialogBody({
                 min="1"
                 step="1"
                 inputMode="numeric"
-                defaultValue={receipt ? String(Number(receipt.amount)) : ""}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
                 placeholder="501"
                 required
               />
@@ -437,12 +481,12 @@ function ReceiptDialogBody({
             <div className="flex flex-col gap-2">
               <Label htmlFor="phone_number">{t("form.mobile")}</Label>
               <Input
-                ref={phoneRef}
                 id="phone_number"
                 name="phone_number"
                 type="tel"
                 inputMode="numeric"
-                defaultValue={receipt?.phone_number ?? ""}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 placeholder="9876543210"
                 required
               />
@@ -556,11 +600,8 @@ function ReceiptDialogBody({
                   min="0"
                   step="0.01"
                   inputMode="decimal"
-                  defaultValue={
-                    receipt?.paid_amount != null
-                      ? String(Number(receipt.paid_amount))
-                      : ""
-                  }
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
                   placeholder="0"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -619,7 +660,8 @@ function ReceiptDialogBody({
             >
               {t("form.cancel")}
             </Button>
-            <Button type="submit" disabled={pending}>
+            {/* Nothing to save is a reason to stop, not a reason to write. */}
+            <Button type="submit" disabled={pending || !changed}>
               {pending ? <Loader2 className="animate-spin" /> : <Save />}
               {isEdit ? t("form.saveChanges") : t("form.save")}
             </Button>
