@@ -166,3 +166,18 @@ select 'activity feed arms' as check, entity, count(*) as entries
 from public.activity_log
 group by entity
 order by entity;
+
+-- 16-write-integrity.sql ----------------------------------------------
+-- The slip number can no longer collide, and identity can no longer be
+-- rewritten by a volunteer. A missing row here means the migration has not run.
+select 'unique slip number' as check,
+       (to_regclass('public.receipts_receipt_number_key') is not null) as enforced;
+
+select 'duplicate index dropped' as check,
+       (to_regclass('public.receipts_outstanding_idx') is null) as dropped;
+
+select 'identity pinned' as check, tgname, tgrelid::regclass::text as on_table
+from pg_trigger
+where tgname in
+  ('receipts_pin_identity', 'expenses_pin_identity', 'donations_pin_identity')
+order by on_table;
