@@ -9,7 +9,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { capitalizeName, formatDate, toDateValue } from "@/lib/receipt-utils";
 import type { Donation, Donor } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar-lazy";
 import {
   DialogContent,
   DialogDescription,

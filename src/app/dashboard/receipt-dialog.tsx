@@ -25,7 +25,7 @@ import {
 import { toDevanagariName } from "@/lib/devanagari-name";
 import { useI18n } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar-lazy";
 import {
   AlertDialog,
   AlertDialogAction,

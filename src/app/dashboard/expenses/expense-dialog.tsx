@@ -14,7 +14,7 @@ import {
   type ExpenseCategory,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar-lazy";
 import {
   DialogContent,
   DialogDescription,
