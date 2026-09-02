@@ -155,6 +155,47 @@ export async function dequeue(localId: string) {
   await tx(STORE_OUTBOX, "readwrite", (s) => s.delete(localId));
 }
 
+// --- Signing out ------------------------------------------------------
+
+/**
+ * Drops this device's cached ledger on logout.
+ *
+ * Volunteers share a mandal phone. `clearPrivateCache()` already removes the
+ * service worker's rendered pages, but the cached rows here — donor names and
+ * phone numbers, in STORE_RECEIPTS — outlived the session, so the next person
+ * to sign in inherited the previous one's donor list.
+ *
+ * The outbox is deliberately left alone. Those entries are receipts a volunteer
+ * collected with no signal, and nobody else's privacy is worth silently
+ * throwing away money someone recorded at a doorstep.
+ *
+ * NOTE: an entry queued by one volunteer and flushed after another signs in is
+ * attributed to whoever is signed in at flush time — outbox entries carry no
+ * user id (see ./sync.ts). Fixing that means stamping each entry at enqueue and
+ * refusing to flush another user's, which is a change to the queue format.
+ */
+export async function clearOfflineData(): Promise<void> {
+  if (!isAvailable()) return;
+  try {
+    const db = await openDb();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(
+        [STORE_RECEIPTS, STORE_META],
+        "readwrite",
+      );
+      transaction.objectStore(STORE_RECEIPTS).clear();
+      transaction.objectStore(STORE_META).clear();
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } catch {
+    /* nothing useful to do on the way out the door */
+  }
+}
+
 export async function setMeta(key: string, value: unknown) {
   await tx(STORE_META, "readwrite", (s) => s.put({ key, value }));
 }

@@ -1,5 +1,6 @@
 export {
   cacheReceipts,
+  clearOfflineData,
   dequeue,
   enqueue,
   getMeta,

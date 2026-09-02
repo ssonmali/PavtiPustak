@@ -16,6 +16,7 @@ import { setLocale } from "@/app/actions/locale";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
 import { NameForm } from "@/components/name-form";
+import { clearOfflineData } from "@/lib/offline";
 import { clearPrivateCache } from "@/components/service-worker";
 import { Button } from "@/components/ui/button";
 import {
@@ -146,11 +147,16 @@ export function SettingsMenu({
           <DropdownMenuItem
             onClick={() =>
               startTransition(() => {
-                // Before the redirect: the service worker caches rendered
-                // dashboard pages, so without this the next volunteer to open
-                // the app offline on this phone sees the previous one's ledger.
+                // Before the redirect. Two separate stores hold this
+                // volunteer's ledger on a phone they may well share: the
+                // service worker's rendered dashboard pages, and the receipt
+                // rows cached in IndexedDB. Leaving either behind shows the
+                // next volunteer the previous one's donors.
                 clearPrivateCache();
-                return logout();
+                // Chained, not fire-and-forget: the clear has to land before
+                // the redirect, or a slow phone signs out with the rows still
+                // on disk.
+                return clearOfflineData().then(() => logout());
               })
             }
             disabled={pending}
