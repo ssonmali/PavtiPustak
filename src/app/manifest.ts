@@ -10,8 +10,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/dashboard",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#fafafa",
-    theme_color: "#d97706",
+    // The installed app's splash: the light mesh base, not the old cream.
+    background_color: "#e6d0aa",
+    theme_color: "#e6d0aa",
     // Marathi is the default language of the installed app.
     lang: "mr-IN",
     dir: "ltr",

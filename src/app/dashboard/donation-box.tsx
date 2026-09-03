@@ -111,7 +111,7 @@ export function DonationBox({ donations }: { donations: Donation[] }) {
         ) : (
           <>
             {/* Phones get the card list below; the table starts at sm. */}
-            <div className="hidden overflow-auto rounded-xl border sm:block">
+            <div className="glass-inset card-elevated hidden overflow-auto rounded-xl border sm:block">
               <Table className="table-zebra table-sticky">
                 <TableHeader>
                   <TableRow>
@@ -180,7 +180,7 @@ export function DonationBox({ donations }: { donations: Donation[] }) {
 
             <div className="flex flex-col gap-2 sm:hidden">
               {donations.map((donation) => (
-                <div key={donation.id} className="rounded-xl border p-3">
+                <div key={donation.id} className="glass-inset card-elevated rounded-xl border p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="wrap-anywhere text-sm font-medium">

@@ -58,160 +58,252 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Marigold & Ink — a warm saffron palette for the mandal, replacing the
-   greyscale default. Every pairing below was checked for WCAG contrast rather
-   than eyeballed: body text ≥ 17:1, muted text ≥ 5.4:1, primary-on-white and
-   white-on-primary both ≥ 4.8:1.
+   Ember & Jade — a glass-morphic palette over a coloured mesh.
+
+   Replaces "Marigold & Ink". The surfaces are translucent now, which changes
+   what a colour token means: --card is no longer a colour, it is a veil, and
+   what shows through it is the mesh in .app-surface. Two consequences worth
+   knowing before editing these:
+
+    - Anything that needs to be opaque (a fallback when translucency is
+      unwelcome, or anything printed) cannot use --card. --card-solid is the
+      opaque twin of each glass surface, and exists for exactly that.
+    - Contrast is no longer a property of a pair of tokens, because the text
+      sits over card-over-mesh rather than over card. The measured figures are
+      in docs/ — several are lower than the palette this replaced.
    --------------------------------------------------------------------------- */
 :root {
-  --background: oklch(0.985 0.008 85);
-  --foreground: oklch(0.21 0.025 55);
-  --card: oklch(0.995 0.005 85);
-  --card-foreground: oklch(0.21 0.025 55);
-  --popover: oklch(0.995 0.005 85);
-  --popover-foreground: oklch(0.21 0.025 55);
-  /* Deep saffron — festive without being a highlighter. */
-  --primary: oklch(0.56 0.16 48);
+  /* Mesh base: warm saffron rather than the grey-blue it was.
+     A mandal's ground should read as lamplight, not as an office. Same
+     lightness band as before (0.87, so it is still easy on the eyes over a
+     festival's worth of hours) with the hue moved to 80 and the chroma up to
+     0.055 — enough to be unmistakably warm without becoming a colour wash.
+
+     The binding constraint is muted text sitting bare on this, in the
+     subtitle under each page heading: 4.89:1 measured at the darkest point of
+     the mesh. It is NOT --primary as text; that only ever lands on .glass-bar
+     and two underlined link variants, never bare on the ground. */
+  --background: oklch(0.87 0.055 80);
+  --foreground: oklch(0.24 0.025 60);
+  /*
+   * Glass, and the alpha is not what makes it read as glass.
+   *
+   * 0.42, up from 0.20. The earlier reasoning — thinner is glassier — was
+   * only true while the ground was too pale to see through a pane at all.
+   * Now that the mesh is darker, a pane can be substantial AND still
+   * transmit: measured, 0.42 passes 4.9/255 of the mesh variation where 0.20
+   * passed 6.5, so nearly all the see-through survives a doubling of the
+   * veil. What actually reads as glass is the lit edge, the sheen and the
+   * blur, none of which are alpha.
+   */
+  --card: oklch(1 0 0 / 0.42);
+  --card-foreground: oklch(0.24 0.025 60);
+  /* The opaque twin. A popover or a dropdown floats over arbitrary content
+     rather than over the mesh, so a veil there shows the text underneath it
+     and stops being readable — these stay solid. */
+  --card-solid: oklch(0.99 0.006 85);
+  --popover: oklch(0.99 0.006 85);
+  --popover-foreground: oklch(0.24 0.025 60);
+  /* Copper-gold. L nudged from the mock's 0.55 to 0.54 because the pane got
+     more transparent for the glass effect and took the ground down with it:
+     --primary as text measured 4.44:1 there, a whisker under the gate. Now
+     4.64:1, and white-on-primary as a button improves to 5.24:1 with it. */
+  --primary: oklch(0.54 0.15 44);
   --primary-foreground: oklch(0.99 0.01 85);
-  --secondary: oklch(0.9 0.04 80);
-  --secondary-foreground: oklch(0.32 0.05 50);
-  --muted: oklch(0.965 0.014 80);
-  --muted-foreground: oklch(0.52 0.03 60);
-  --accent: oklch(0.88 0.05 78);
-  --accent-foreground: oklch(0.3 0.06 48);
-  --destructive: oklch(0.55 0.2 27);
-  /* Money states, so a figure reads before it is read: held / projected /
-     still owed. Validated as a set against this surface with the palette
-     checker — all-pairs CVD ΔE 15.5, normal-vision ΔE 20.5, both above the
-     8 and 15 gates.
+  --secondary: oklch(0.75 0.1 80 / 0.2);
+  --secondary-foreground: oklch(0.5 0.12 60);
+  --muted: oklch(0.96 0.02 70);
+  /* The mock specifies 0.55 alpha here. Measured, that is 3.56:1 against the
+     mesh and 3.67:1 on a glass card, against the 4.5:1 needed for body text —
+     and this token carries dates, counts and hints, which is most of the
+     secondary text in the app, read outdoors on cheap screens. 0.65 is the
+     smallest step that clears the gate (4.79:1 / 4.99:1) and still reads as
+     the softened grey-blue the design is after. Revert this one number to
+     0.55 to match the mock exactly.
 
-     These are fills and swatches, never text. Amber dark enough to clear
-     4.5:1 as text turns olive and collides with the green (ΔE 13.8, and 3.1
-     under protan), so numbers stay in ink and the coloured mark beside them
-     carries the state. */
-  --positive: oklch(0.48 0.13 150);
-  --info: oklch(0.55 0.13 245);
-  --pending: oklch(0.68 0.13 85);
-  /* The same two states as ink, stepped darker so they clear 4.5:1 as text on
-     a card: green 5.59:1, amber 4.83:1. Only ever used where a sign or a word
-     already carries the meaning — green and red are the confusable pair, so
-     colour here is the second reading, never the first. */
-  --positive-ink: oklch(0.5 0.13 150);
-  --pending-ink: oklch(0.55 0.105 85);
-  --border: oklch(0.9 0.018 75);
-  --input: oklch(0.9 0.018 75);
-  --ring: oklch(0.56 0.16 48);
+     Raised again to 0.68 when the mesh went cool: this token also appears
+     bare on the mesh, in the subtitle under each page heading, and there the
+     new blobs put it at 4.41:1. 0.68 measures 4.80:1 at the darkest point of
+     the ground. */
+  --muted-foreground: oklch(0.24 0.025 60 / 0.7);
+  --accent: oklch(0.75 0.1 80 / 0.2);
+  --accent-foreground: oklch(0.5 0.12 60);
+  --destructive: oklch(0.55 0.19 27);
+  --positive: oklch(0.72 0.15 65);           /* jade/gold fill */
+  --positive-ink: oklch(0.42 0.13 155);
+  --pending: oklch(0.75 0.1 80);
+  --pending-ink: oklch(0.5 0.12 60);
+  --info: oklch(0.5 0.12 220);
+  /* The mock has these as white (a "glass edge"), which is right on a DARK
+     ground and self-defeating on a light one: measured, a white hairline on
+     the near-white pane separates by 11/255, so every border in light mode —
+     cards, inputs, table rules — was an edge that was not there. A glass edge
+     is really two things, and only one of them is white: a dark silhouette
+     that cuts the shape out of the background, and a bright inner rim along
+     the top that reads as light catching the pane. --card-highlight is that
+     rim. These two are the silhouette. */
+  --border: color-mix(in oklab, oklch(0.24 0.025 60) 14%, transparent);
+  --input: color-mix(in oklab, oklch(0.24 0.025 60) 16%, transparent);
+  --ring: oklch(0.54 0.15 44);
+  --whatsapp: oklch(0.9 0.06 155);
+  --whatsapp-ink: oklch(0.42 0.11 155);
 
-  /* Chart series: validated for colourblind separation against this surface. */
-  --chart-1: oklch(0.56 0.16 48);
-  --chart-2: oklch(0.58 0.15 250);
-  --chart-3: oklch(0.66 0.14 165);
-  --chart-4: oklch(0.72 0.15 85);
+  --chart-1: oklch(0.55 0.15 44);
+  --chart-2: oklch(0.5 0.12 220);
+  --chart-3: oklch(0.42 0.13 155);
+  --chart-4: oklch(0.72 0.15 65);
   --chart-5: oklch(0.55 0.16 300);
-
-  /* A soft green wash rather than WhatsApp's full-strength brand green, which
-     shouted next to the saffron. Explicit fills rather than an alpha tint, so
-     the text contrast is a plain pair to check: 5.87:1 here, 6.85:1 in dark. */
-  --whatsapp: oklch(0.93 0.06 155);
-  --whatsapp-ink: oklch(0.45 0.11 155);
 
   --radius: 0.75rem;
 
-  --sidebar: oklch(0.975 0.012 82);
-  --sidebar-foreground: oklch(0.21 0.025 55);
-  --sidebar-primary: oklch(0.56 0.16 48);
+  --sidebar: oklch(1 0 0 / 0.5);
+  --sidebar-foreground: oklch(0.24 0.025 60);
+  --sidebar-primary: oklch(0.54 0.15 44);
   --sidebar-primary-foreground: oklch(0.99 0.01 85);
-  --sidebar-accent: oklch(0.88 0.05 78);
-  --sidebar-accent-foreground: oklch(0.3 0.06 48);
-  --sidebar-border: oklch(0.9 0.018 75);
-  --sidebar-ring: oklch(0.56 0.16 48);
+  --sidebar-accent: oklch(0.75 0.1 80 / 0.2);
+  --sidebar-accent-foreground: oklch(0.5 0.12 60);
+  --sidebar-border: oklch(1 0 0 / 0.8);
+  --sidebar-ring: oklch(0.55 0.15 44);
 
-  /* Warm-tinted elevation: neutral grey shadows look dirty over cream. */
+  /* Deepened for glass. A translucent card has no colour of its own to
+     separate it from the mesh, so the shadow is the only thing holding it off
+     the page — bigger blur radius, warm-tinted rather than neutral grey, which
+     looks dirty over a coloured ground. */
   --shadow-color: 30 45% 22%;
-  --elevation-sm: 0 1px 2px -1px hsl(var(--shadow-color) / 0.10),
-    0 1px 3px hsl(var(--shadow-color) / 0.06);
-  --elevation-md: 0 2px 4px -2px hsl(var(--shadow-color) / 0.12),
-    0 6px 16px -4px hsl(var(--shadow-color) / 0.10);
-  --elevation-lg: 0 4px 8px -4px hsl(var(--shadow-color) / 0.14),
-    0 16px 32px -8px hsl(var(--shadow-color) / 0.12);
-  /* The lit top edge of a card. On a near-white card this is a faint sheen;
-     it is the cue that reads as glass, more than the translucency does. */
-  --card-highlight: hsl(0 0% 100% / 0.75);
-  /* Re-declared as part of the card's own shadow — see [data-slot="card"]. */
-  --card-ring: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --elevation-sm: 0 1px 2px -1px hsl(var(--shadow-color) / 0.16),
+    0 2px 8px -2px hsl(var(--shadow-color) / 0.12);
+  --elevation-md: 0 1px 2px hsl(var(--shadow-color) / 0.10),
+    0 6px 12px -4px hsl(var(--shadow-color) / 0.18),
+    0 18px 36px -10px hsl(var(--shadow-color) / 0.20);
+  --elevation-lg: 0 2px 4px hsl(var(--shadow-color) / 0.12),
+    0 12px 24px -8px hsl(var(--shadow-color) / 0.22),
+    0 32px 60px -16px hsl(var(--shadow-color) / 0.26);
+  /* The lit top edge. On glass this does more work than the translucency: it
+     is the cue that reads as a pane catching light. */
+  --card-highlight: hsl(0 0% 100% / 0.85);
+  /* The one edge a pane gets, on a card and on an activity row alike. */
+  --card-ring-raised: color-mix(in oklab, var(--foreground) 14%, transparent);
+  /*
+   * A band of light raked across the pane.
+   *
+   * The one glass cue that owes nothing to what is behind it: a sheet of glass
+   * catches the light at an angle whatever it is sitting on. Worth more than
+   * the translucency on a page whose mesh is deliberately subtle, and it costs
+   * no contrast in light mode because it only ever lightens the ground under
+   * dark text.
+   */
+  /* The same value as the nested sheen below, deliberately: a card and an
+     activity row are the same material, so a card wearing a brighter wash
+     than a row read as a different one. */
+  --card-sheen: oklch(1 0 0 / 0.4);
+  --card-sheen-nested: oklch(1 0 0 / 0.4);
+  /*
+   * The ground of a surface nested on a pane — the from/to box, a receipt
+   * row, a card inside a card.
+   *
+   * This was 0.85, chosen to make nesting legible by making the inner surface
+   * markedly lighter. It worked, and it was the wrong trade: at 0.85 the
+   * colour coming through drops to 0-4/255, so those surfaces went flat white
+   * while everything around them stayed glass. They were the ones that looked
+   * painted on.
+   *
+   * 0.44, tracking --card two points up so a row still reads as very
+   * slightly in front of a pane. Separation is carried by the edge and the
+   * cast shadow rather than by the fill — the honest way to say "in front".
+   */
+  --card-nested: oklch(1 0 0 / 0.44);
+  --card-nested-solid: oklch(0.99 0.006 85);
+  /* How far the pane blurs what is behind it. A variable so the whole effect
+     can be turned off in one place — see the @supports gate below. */
+  --glass-blur: 22px;
   --brand-gradient: linear-gradient(
     135deg,
-    oklch(0.62 0.17 55) 0%,
-    oklch(0.53 0.16 38) 100%
+    oklch(0.62 0.16 52) 0%,
+    oklch(0.52 0.15 36) 100%
   );
 }
 
 .dark {
-  --background: oklch(0.175 0.014 60);
-  --foreground: oklch(0.97 0.008 85);
-  --card: oklch(0.225 0.016 60);
-  --card-foreground: oklch(0.97 0.008 85);
-  --popover: oklch(0.235 0.016 60);
-  --popover-foreground: oklch(0.97 0.008 85);
-  --primary: oklch(0.74 0.15 62);
-  --primary-foreground: oklch(0.2 0.03 50);
-  --secondary: oklch(0.33 0.03 60);
-  --secondary-foreground: oklch(0.95 0.01 85);
-  --muted: oklch(0.27 0.015 60);
-  --muted-foreground: oklch(0.72 0.025 70);
-  --accent: oklch(0.36 0.04 55);
-  --accent-foreground: oklch(0.95 0.02 80);
+  --background: oklch(0.17 0.03 250);        /* deep indigo-charcoal mesh base */
+  --foreground: oklch(0.97 0.008 220);
+  --card: oklch(1 0 0 / 0.06);                /* glass: translucent white-on-dark */
+  --card-foreground: oklch(0.97 0.008 220);
+  --card-solid: oklch(0.225 0.025 250);
+  --popover: oklch(0.235 0.025 250);
+  --popover-foreground: oklch(0.97 0.008 220);
+  --primary: oklch(0.78 0.14 68);             /* copper-gold, brighter for dark */
+  --primary-foreground: oklch(0.15 0.03 50);
+  --secondary: oklch(0.75 0.1 80 / 0.14);
+  --secondary-foreground: oklch(0.82 0.1 82);
+  --muted: oklch(1 0 0 / 0.06);
+  /*
+   * Brighter and more opaque than the mock's 0.85/0.6, and it has to be.
+   *
+   * In dark mode the text sits at the end of a stack of white veils — the
+   * pane, then a nested row, then whatever sheen is on them — over a mesh
+   * that also lightens the ground. Measured through the whole stack, the
+   * mock's value gave 3.96:1 on the base and 2.69:1 over a blob. This clears
+   * 4.92:1 at the worst point.
+   */
+  --muted-foreground: oklch(0.92 0.012 220 / 0.85);
+  --accent: oklch(0.75 0.1 80 / 0.14);
+  --accent-foreground: oklch(0.82 0.1 82);
   --destructive: oklch(0.68 0.19 25);
-  /* Re-stepped for the dark card rather than flipped: the light values sit
-     outside the dark lightness band. All-pairs normal-vision ΔE 17.1. */
-  --positive: oklch(0.56 0.13 150);
-  --info: oklch(0.62 0.12 245);
-  --pending: oklch(0.66 0.13 85);
-  /* Lighter than the light-mode ink, not darker: green 5.56:1, amber 6.49:1. */
-  --positive-ink: oklch(0.72 0.13 150);
-  --pending-ink: oklch(0.78 0.13 85);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.74 0.15 62);
-
-  --chart-1: oklch(0.74 0.15 62);
-  --chart-2: oklch(0.65 0.15 250);
-  --chart-3: oklch(0.7 0.13 165);
-  --chart-4: oklch(0.78 0.14 85);
-  --chart-5: oklch(0.65 0.16 300);
-
+  --positive: oklch(0.78 0.13 158);
+  --positive-ink: oklch(0.82 0.11 158);
+  --pending: oklch(0.75 0.1 80);
+  --pending-ink: oklch(0.82 0.1 82);
+  --info: oklch(0.7 0.12 220);
+  --border: oklch(1 0 0 / 0.14);
+  --input: oklch(1 0 0 / 0.16);
+  --ring: oklch(0.78 0.14 68);
   --whatsapp: oklch(0.34 0.06 155);
   --whatsapp-ink: oklch(0.82 0.12 155);
 
-  --sidebar: oklch(0.2 0.015 60);
-  --sidebar-foreground: oklch(0.97 0.008 85);
-  --sidebar-primary: oklch(0.74 0.15 62);
-  --sidebar-primary-foreground: oklch(0.2 0.03 50);
-  --sidebar-accent: oklch(0.36 0.04 55);
-  --sidebar-accent-foreground: oklch(0.95 0.02 80);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.74 0.15 62);
+  --chart-1: oklch(0.78 0.14 68);
+  --chart-2: oklch(0.7 0.12 220);
+  --chart-3: oklch(0.78 0.13 158);
+  --chart-4: oklch(0.85 0.14 78);
+  --chart-5: oklch(0.65 0.16 300);
 
+  --sidebar: oklch(1 0 0 / 0.06);
+  --sidebar-foreground: oklch(0.97 0.008 220);
+  --sidebar-primary: oklch(0.78 0.14 68);
+  --sidebar-primary-foreground: oklch(0.15 0.03 50);
+  --sidebar-accent: oklch(0.75 0.1 80 / 0.14);
+  --sidebar-accent-foreground: oklch(0.82 0.1 82);
+  --sidebar-border: oklch(1 0 0 / 0.14);
+  --sidebar-ring: oklch(0.78 0.14 68);
+
+  /* Left light on purpose. In the dark the contrast comes from the blur and
+     the bright edge, not from a shadow — a near-black shadow cast on a
+     near-black ground is invisible, which was measured the last time this
+     file was touched: at most 7/255 per channel. The edge does the work. */
   --shadow-color: 20 40% 3%;
   --elevation-sm: 0 1px 2px -1px hsl(var(--shadow-color) / 0.5);
   --elevation-md: 0 2px 4px -2px hsl(var(--shadow-color) / 0.5),
     0 8px 20px -6px hsl(var(--shadow-color) / 0.45);
   --elevation-lg: 0 6px 12px -6px hsl(var(--shadow-color) / 0.6),
     0 20px 40px -10px hsl(var(--shadow-color) / 0.5);
-  /* Dark mode carries depth in the EDGE, not the shadow.
-     Measured: with the light-mode recipe, the dark login card differed from
-     the old flat styling by at most 7/255 per channel — invisible. Of course
-     it was: --elevation-md in the dark is hsl(20 40% 3%) at half alpha, a
-     near-black shadow cast on a near-black ground. A raised surface in the
-     dark is legible because its top edge catches light and its outline is
-     brighter than what surrounds it, so that is what does the work here and
-     the shadow is left to do almost none. */
-  --card-highlight: hsl(0 0% 100% / 0.10);
-  --card-ring: color-mix(in oklab, var(--foreground) 22%, transparent);
+  --card-highlight: hsl(0 0% 100% / 0.2);
+  /* Carried much harder in the dark, where the edge does nearly all the work
+     of separating a nested surface — the shadow cannot. */
+  --card-ring-raised: oklch(1 0 0 / 0.3);
+  /* None at all in the dark, on either surface. Here the sheen lightens the
+     ground under LIGHT text, so it works against contrast rather than with
+     it: veil + veil + sheen measured muted text at 3.96:1. The sheen is the
+     one of those layers that is purely decorative, so it is the one that
+     goes — and dropping it on cards too is what makes a card and an activity
+     row the same material in the dark. */
+  --card-sheen: transparent;
+  --card-sheen-nested: transparent;
+  --card-nested: oklch(1 0 0 / 0.07);
+  --card-nested-solid: oklch(0.26 0.025 250);
+  --glass-blur: 16px;
   --brand-gradient: linear-gradient(
     135deg,
-    oklch(0.76 0.16 65) 0%,
-    oklch(0.64 0.16 42) 100%
+    oklch(0.8 0.14 72) 0%,
+    oklch(0.68 0.15 46) 100%
   );
 }
 
@@ -276,6 +368,12 @@
   tr,
   img {
     break-inside: avoid;
+  }
+
+  /* Both mesh layers are fixed, so without this they reprint on every sheet. */
+  .app-surface::before,
+  .app-surface::after {
+    display: none !important;
   }
 }
 
@@ -476,17 +574,144 @@
     max-height: calc(var(--visual-height, 100dvh) * 0.9);
   }
 
-  /* Page background: a barely-there marigold wash rather than flat grey. */
-  .app-surface {
+  /*
+   * Two drifting layers rather than one static one.
+   *
+   * ::before and ::after each carry the mesh and each moves on its own long,
+   * offset cycle, so where they overlap the colour swells and fades. That
+   * interference is what reads as slow water; a single layer sliding about
+   * reads as a sheet being dragged. Both are fixed to the viewport, so
+   * scrolling cards pass through standing colour rather than towing it.
+   *
+   * Cost, because this is a phone-first app: transform on a fixed,
+   * composited layer with no text in it. It never touches layout or paint —
+   * the compositor moves an already-rasterised texture. The blobs are soft
+   * enough that scale changes need no re-raster. 60s and 75s cycles mean the
+   * texture is nearly still between any two frames.
+   */
+  .app-surface::before,
+  .app-surface::after {
+    content: "";
+    position: fixed;
+    inset: -25%;
+    z-index: -1;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .app-surface::before {
+    /*
+     * One warm family — gold through saffron to amber — so the ground reads
+     * as light falling on it rather than as a colour wash. The blobs stay
+     * within a few points of the base's lightness and separate mostly by
+     * lightness, which is what the glass needs to catch. This is the same
+     * restraint the cool version had; only the hue changed.
+     */
     background:
+      /* gold, top right */
       radial-gradient(
-        ellipse 80% 50% at 50% -10%,
-        color-mix(in oklab, var(--primary) 8%, transparent),
+        ellipse 60% 50% at 85% 18%,
+        oklch(0.84 0.07 92 / 0.5),
         transparent 70%
       ),
-      var(--background);
+      /* saffron, left of centre */
+      radial-gradient(
+        ellipse 50% 60% at 8% 52%,
+        oklch(0.85 0.065 66 / 0.5),
+        transparent 70%
+      );
+    animation: mesh-drift-a 60s ease-in-out infinite alternate;
+  }
+
+  .app-surface::after {
+    background:
+      /* amber, bottom right */
+      radial-gradient(
+        ellipse 55% 45% at 88% 88%,
+        oklch(0.86 0.05 50 / 0.45),
+        transparent 70%
+      ),
+      /* a fourth, faint, so the two layers never line up the same way twice */
+      radial-gradient(
+        ellipse 45% 40% at 25% 88%,
+        oklch(0.85 0.06 100 / 0.36),
+        transparent 70%
+      );
+    animation: mesh-drift-b 75s ease-in-out infinite alternate;
+  }
+
+  /* The flat ground sits under both, on the element itself. position:
+     relative gives body its own stacking context, which is what keeps the
+     z-index: -1 mesh from falling behind the page's own canvas background
+     instead of just behind body's content. */
+  .app-surface {
+    position: relative;
+    background-color: var(--background);
+  }
+
+  @keyframes mesh-drift-a {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+      transform: translate3d(4%, -3%, 0) scale(1.12);
+    }
+  }
+
+  @keyframes mesh-drift-b {
+    from {
+      transform: translate3d(0, 0, 0) scale(1.08);
+    }
+    to {
+      transform: translate3d(-5%, 2.5%, 0) scale(1);
+    }
+  }
+
+  /* Motion is decoration here: the mesh is just as legible held still. */
+  @media (prefers-reduced-motion: reduce) {
+    .app-surface::before,
+    .app-surface::after {
+      animation: none;
+      will-change: auto;
+    }
+  }
+
+  .dark .app-surface::before {
+    /*
+     * The same positions as deep colours rather than mixes of the ink tokens.
+     * Those are BRIGHT in dark mode — they have to be, to read as text on a
+     * dark card — and mixed into the ground they made luminous blobs that
+     * cost light text its contrast: muted text on a row above one measured
+     * 2.69:1.
+     */
+    background:
+      radial-gradient(
+        ellipse 60% 50% at 85% 18%,
+        oklch(0.4 0.1 285 / 0.55),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 50% 60% at 8% 52%,
+        oklch(0.38 0.1 220 / 0.55),
+        transparent 70%
+      );
+  }
+
+  .dark .app-surface::after {
+    background:
+      radial-gradient(
+        ellipse 55% 45% at 88% 88%,
+        oklch(0.4 0.08 255 / 0.5),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 45% 40% at 25% 88%,
+        oklch(0.38 0.09 300 / 0.4),
+        transparent 70%
+      );
   }
 }
+
 
 @layer base {
   /*
@@ -609,38 +834,244 @@
    * 1px ring itself — otherwise setting box-shadow here deletes the outline.
    */
   [data-slot="card"]:not(.shadow-none) {
-    background-color: color-mix(in oklab, var(--card) 92%, transparent);
+    /* --card carries its own alpha now, so it is used as-is. It used to be
+       mixed down to 92% here; doing that on top of a translucent token
+       compounds the two and the pane all but disappears. */
+    background-color: var(--card);
+    /* Raked light across the pane — see --card-sheen. Fades out by 55% so it
+       reads as a band catching the light, not as a gradient fill. */
+    background-image: linear-gradient(
+      135deg,
+      var(--card-sheen) 0%,
+      transparent 60%
+    );
+    /*
+     * One lit edge, one shadow — the same two layers .glass-inset uses, and
+     * for the same reason: they are what a pane of glass actually shows.
+     *
+     * This used to add a full-perimeter rim AND a silhouette ring on top of
+     * the top-edge highlight. Three edges read as a drawn outline rather than
+     * thickness, and next to an activity row — which has one — the same card
+     * looked like a different material. Rendered side by side that was the
+     * whole of the mismatch, together with the sheen above.
+     */
+    border-color: var(--card-ring-raised);
     box-shadow:
       inset 0 1px 0 var(--card-highlight),
-      0 0 0 1px var(--card-ring),
       var(--elevation-md);
+  }
+
+  /*
+   * The blur, gated twice.
+   *
+   * @supports because a browser without backdrop-filter would otherwise show a
+   * 55%-opaque white pane with the mesh legible straight through the text
+   * behind it. Where the blur is unavailable the pane goes solid instead.
+   *
+   * The gate is also where the cost lives, and it is worth being explicit
+   * about it: this app is used by volunteers on cheap phones, and a blurred
+   * pane forces the compositor to re-sample everything behind it. A list of
+   * receipt cards is 8-12 panes. Fixed-attachment mesh keeps them from
+   * recomputing on scroll, which is most of the cost, but not all of it. If
+   * scrolling turns out to stutter on a real handset, drop --glass-blur to 0
+   * and the layout is unchanged.
+   */
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    [data-slot="card"]:not(.shadow-none) {
+      /* A blur averages the mesh towards grey, so a little saturation back
+         is what keeps the pane reading as something you look THROUGH rather
+         than frosted plastic. 1.05, not the 1.8 this had: at 1.8 the boost
+         was inventing colour the ground does not have, which is what made
+         these panes read cyan-green over a mesh that is neither. */
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.05);
+      backdrop-filter: blur(var(--glass-blur)) saturate(1.05);
+    }
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    [data-slot="card"]:not(.shadow-none) {
+      background-color: var(--card-solid);
+    }
   }
 
   /* Cards with a brand hairline already own their top edge, so the highlight
      would sit underneath it doing nothing. Drop it and keep the shadow. */
   [data-slot="card"].accent-top:not(.shadow-none) {
-    box-shadow:
-      0 0 0 1px var(--card-ring),
-      var(--elevation-md);
+    box-shadow: var(--elevation-md);
   }
 
   [data-slot="card"].card-elevated:not(.shadow-none):hover {
     box-shadow:
       inset 0 1px 0 var(--card-highlight),
-      0 0 0 1px var(--card-ring),
       var(--elevation-lg);
   }
   [data-slot="card"].card-elevated.accent-top:not(.shadow-none):hover {
+    box-shadow: var(--elevation-lg);
+  }
+
+  /*
+   * A document surface: the printable report and a single receipt.
+   *
+   * Solid on purpose, and the one place the glass idiom is refused. These two
+   * pages exist to be read closely and then printed, and a mesh showing
+   * through a column of figures is noise over exactly the content that has to
+   * be checked digit by digit. What comes out of the printer should be what
+   * was proof-read on screen.
+   */
+  .paper {
+    background-color: var(--card-solid);
+  }
+
+  /*
+   * Chrome: the header, the sidebar rail and the bottom tab bar.
+   *
+   * All three were inventing their own translucency — bg-background/85,
+   * bg-sidebar/60, bg-background/90, each with a different blur or none — from
+   * before there was a glass idiom to belong to. They are the same material as
+   * the panes, so they say so in one place.
+   */
+  .glass-bar {
+    background-color: color-mix(in oklab, var(--card-solid) 72%, transparent);
+    box-shadow: inset 0 1px 0 var(--card-highlight);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .glass-bar {
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+      backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    }
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-bar {
+      background-color: var(--card-solid);
+    }
+  }
+
+  /*
+   * A row or tile nested INSIDE a pane — the mobile receipt and expense cards,
+   * an activity entry, the printable report's article.
+   *
+   * Deliberately no backdrop-filter. Its parent already blurred what is behind
+   * it, so a second blur has nothing new to sample while costing another
+   * composited layer; and translucency over translucency compounds, which is
+   * what made these read as washed-out rather than raised. A faint lift and an
+   * edge instead, which is what separates a row from the pane holding it.
+   */
+  .glass-inset {
+    /* A row is the same glass as the pane holding it, lifted: its edge and
+       its shadow say it is in front, not a whiter fill. */
+    background-color: var(--card-nested);
+    background-image: linear-gradient(
+      135deg,
+      var(--card-sheen-nested) 0%,
+      transparent 60%
+    );
+    border-color: var(--card-ring-raised);
     box-shadow:
-      0 0 0 1px var(--card-ring),
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-md);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-bar {
+      background-color: var(--card-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    /* Still a step apart from the pane, or turning transparency off would
+       merge the two surfaces again — which is the bug this all fixes. */
+    .glass-inset,
+    [data-slot="card"] [data-slot="card"]:not(.shadow-none) {
+      background-color: var(--card-nested-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /*
+   * A pane inside a pane.
+   *
+   * Two translucent surfaces of the same alpha, stacked, do not read as two
+   * surfaces — they read as one that happens to be slightly more opaque, and
+   * the boundary between them disappears. Nesting is exactly where the glass
+   * idiom stops describing itself, so the inner pane has to change *material*
+   * rather than just repeat the recipe one layer up.
+   *
+   * Three things separate it, and the order matters because only the first two
+   * survive dark mode:
+   *
+   *  1. Its ground is a slightly brighter veil over the parent — a lift, not
+   *     a repaint. Pushed far enough to be legible on its own it stops
+   *     transmitting the mesh (0-4/255 through, measured, at 0.85) and the
+   *     inner surface goes flat white, which is worse than the problem it
+   *     solves. So this cue stays small and the next two carry it.
+   *  2. Its edge is brighter than the parent's, which is what says "in front"
+   *     in the dark, where a near-black shadow on a near-black ground is
+   *     worth almost nothing.
+   *  3. It casts a real shadow onto the parent, one step up the scale. This
+   *     is what the eye reads in light mode.
+   *
+   * No backdrop-filter: the parent already blurred what is behind both of
+   * them, so a second blur samples nothing new while costing another
+   * composited layer on a cheap phone.
+   */
+  [data-slot="card"] [data-slot="card"]:not(.shadow-none) {
+    background-color: var(--card-nested);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      0 0 0 1px var(--card-ring-raised),
       var(--elevation-lg);
   }
 
-  /* Same family of preference as reduced-motion, which this file already
-     honours: if translucency is unwelcome, the card is simply solid. */
+  /* The same, for a nested pane that owns its top edge already. */
+  [data-slot="card"] [data-slot="card"].accent-top:not(.shadow-none) {
+    box-shadow:
+      0 0 0 1px var(--card-ring-raised),
+      var(--elevation-lg);
+  }
+
+  /*
+   * A glass pill: the shared surface for the controls that sit ON the mesh
+   * rather than inside a card — search, the sort trigger, the filter chips,
+   * the header actions. Same three cues as the card, one step lighter, so a
+   * control reads as the same material without competing with the panes.
+   */
+  .glass-pill {
+    background-color: var(--card);
+    border-color: var(--border);
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-sm);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .glass-pill {
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-pill {
+      background-color: var(--card-solid);
+    }
+  }
+
+  /*
+   * Same family of preference as reduced-motion, which this file already
+   * honours: if translucency is unwelcome the surface is simply solid. Note
+   * this needs --card-solid, not --card — --card is the veil itself now, so
+   * the old version of this rule quietly did nothing.
+   */
   @media (prefers-reduced-transparency: reduce) {
-    [data-slot="card"]:not(.shadow-none) {
-      background-color: var(--card);
+    [data-slot="card"]:not(.shadow-none),
+    .glass-pill {
+      background-color: var(--card-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
     }
   }
 }

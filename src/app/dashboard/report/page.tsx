@@ -367,7 +367,7 @@ export default async function ReportPage({
         </p>
       ) : null}
 
-      <article className="overflow-x-auto rounded-lg border bg-card p-4 text-card-foreground sm:p-6 print:overflow-visible print:rounded-none print:border-0 print:p-0">
+      <article className="paper overflow-x-auto rounded-lg border p-4 text-card-foreground sm:p-6 print:overflow-visible print:rounded-none print:border-0 print:p-0">
         <header className="pb-4 text-center">
           <h1 className="font-display text-2xl font-bold">{mandalName}</h1>
           <p className="text-sm font-semibold tracking-wide uppercase">

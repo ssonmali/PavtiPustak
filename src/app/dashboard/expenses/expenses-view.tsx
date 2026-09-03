@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -235,7 +234,12 @@ export function ExpensesView({
               ) : null}
             </p>
           </div>
-          <Button size="sm" onClick={openCreate} className="shrink-0">
+          {/* Sits on the mesh rather than in a card, so it wears the pill. */}
+          <Button
+            size="sm"
+            onClick={openCreate}
+            className="glass-pill shrink-0 rounded-full"
+          >
             <Plus /> {t("expenses.new")}
           </Button>
         </div>
@@ -254,269 +258,148 @@ export function ExpensesView({
         onSelect={setCategory}
       />
 
-      <Card className="card-elevated">
-        <CardContent>
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <div className="relative min-w-0 flex-1 sm:max-w-xs">
-                <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t("expenses.search")}
-                  className="pl-8"
-                />
-              </div>
-              {/* An expense has no serial number, so those two orders are not
-                offered here rather than silently doing something else. */}
-            <SortFilter
-              value={sort}
-              onChange={setSort}
-              keys={EXPENSE_SORT_KEYS}
+      {/* No wrapping pane: the rows carry the glass themselves, exactly as
+          the activity feed's do. A pane around them made every row a
+          nested surface, which is deliberately dimmer and flatter. */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1 sm:max-w-xs">
+            {/* z-10 because the input now has a backdrop-filter, which makes it
+                a stacking context: a non-positioned element that does so paints
+                with the z-index:0 group, in tree order. The icon comes first in
+                the DOM, so the field painted over it — and blurred it into its
+                own backdrop. Measured, the stroke went from 671 to 261 (sum
+                RGB) with this. */}
+            <Search className="absolute top-1/2 left-2.5 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("expenses.search")}
+              /* glass-pill: these sit on the mesh, not in a pane — the
+                 wrapping Card came off when the rows were unnested, and the
+                 base Input is bg-transparent, so without this the box was
+                 just a border with text in it. Measured on the pill over the
+                 darkest blob: placeholder 5.33:1, typed text 12.47:1. No
+                 height: the 44px floor comes from @media (pointer: coarse). */
+              className="glass-pill pl-8"
             />
-            </div>
-            <CustomDateRange period={period} onChange={setPeriod} />
+          </div>
+          {/* An expense has no serial number, so those two orders are not
+            offered here rather than silently doing something else. */}
+        <SortFilter
+          value={sort}
+          onChange={setSort}
+          keys={EXPENSE_SORT_KEYS}
+          className="glass-pill"
+        />
+        </div>
+        <CustomDateRange period={period} onChange={setPeriod} />
 
-            {/* Phones get the card list below; the table starts at sm. */}
-            <div className="hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">
-              <Table className="table-zebra table-sticky">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("expenses.description")}</TableHead>
-                    <TableHead className="text-right">
-                      {t("table.amount")}
-                    </TableHead>
-                    <TableHead>{t("expenses.category")}</TableHead>
-                    <TableHead>{t("table.method")}</TableHead>
-                    <TableHead>{t("expenses.date")}</TableHead>
-                    <TableHead className="text-right">
-                      {t("table.actions")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visible.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="py-10 text-center text-muted-foreground"
-                      >
-                        {expenses.length === 0
-                          ? t("expenses.empty")
-                          : t("expenses.emptyPeriod")}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    visible.map((e) => (
-                      <TableRow
-                        key={e.id}
-                        className={cn(arrived.has(e.id) && "row-new")}
-                      >
-                        <TableCell className="font-medium">
-                          <span className="wrap-anywhere">{e.description}</span>
-                          {e.note ? (
-                            <span className="block text-xs font-normal text-muted-foreground">
-                              {e.note}
-                            </span>
-                          ) : null}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          <span
-                            className={
-                              // Struck through only when none of it has been
-                              // paid. A part-paid bill has real money against
-                              // it, so striking the figure would misread it.
-                              e.payment_status === "Unpaid" && !isPartPaid(e)
-                                ? "text-muted-foreground line-through"
-                                : undefined
-                            }
-                          >
-                            {formatAmount(e.amount)}
-                          </span>
-                          {isPartPaid(e) ? (
-                            <span className="mt-0.5 flex items-center justify-end gap-2">
-                              <PaidProgress
-                                paid={received(e)}
-                                total={e.amount}
-                                className="w-14"
-                              />
-                              <PaidPill
-                                label={t("expenses.advancePaid", {
-                                  paid: formatAmount(received(e)),
-                                })}
-                              />
-                            </span>
-                          ) : null}
-                          {e.payment_status === "Unpaid" ? (
-                            <span className="mt-0.5 block">
-                              <UnpaidBadge
-                                dueOn={e.due_on}
-                                today={today}
-                                label={
-                                  isPartPaid(e)
-                                    ? t("expenses.remainingBadge", {
-                                        amount: formatAmount(outstanding(e)),
-                                      })
-                                    : t("expenses.unpaidBadge")
-                                }
-                                title={dueTitle(e.due_on)}
-                              />
-                            </span>
-                          ) : null}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {t(`category.${e.category}`)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{t(`method.${e.payment_method}`)}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {formatDate(e.spent_on, locale)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                          {/* Settling a bill is the action a volunteer comes
-                              to this row for, so it is a button rather than
-                              two taps into a menu — and it names the sum, so
-                              nothing is recorded as paid unseen. */}
-                          {outstanding(e) > 0 ? (
-                            <Button
-                              size="sm"
-                              onClick={() => setToMarkPaid(e)}
-                              disabled={marking === e.id}
-                            >
-                              {marking === e.id ? (
-                                <Loader2 className="animate-spin" />
-                              ) : (
-                                <Check />
-                              )}
-                              {t("expenses.payRemaining", {
-                                amount: formatAmount(outstanding(e)),
-                              })}
-                            </Button>
-                          ) : null}
-                          <RowActions
-                            onEdit={() => openEdit(e)}
-                            onDelete={() => setToDelete(e)}
-                            editLabel={t("table.edit")}
-                            deleteLabel={t("table.delete")}
-                          />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile: one card per expense — the amount is the prominent thing. */}
-            <ul className="flex flex-col gap-2 sm:hidden">
+        {/* Phones get the card list below; the table starts at sm. */}
+        <div className="glass-inset card-elevated hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">
+          <Table className="table-zebra table-sticky">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("expenses.description")}</TableHead>
+                <TableHead className="text-right">
+                  {t("table.amount")}
+                </TableHead>
+                <TableHead>{t("expenses.category")}</TableHead>
+                <TableHead>{t("table.method")}</TableHead>
+                <TableHead>{t("expenses.date")}</TableHead>
+                <TableHead className="text-right">
+                  {t("table.actions")}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {visible.length === 0 ? (
-                <li className="rounded-lg border py-10 text-center text-sm text-muted-foreground">
-                  {expenses.length === 0
-                    ? t("expenses.empty")
-                    : t("expenses.emptyPeriod")}
-                </li>
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="py-10 text-center text-muted-foreground"
+                  >
+                    {expenses.length === 0
+                      ? t("expenses.empty")
+                      : t("expenses.emptyPeriod")}
+                  </TableCell>
+                </TableRow>
               ) : (
                 visible.map((e) => (
-                  <li
+                  <TableRow
                     key={e.id}
-                    className={cn(
-                      "card-elevated rounded-xl border bg-card p-3",
-                      arrived.has(e.id) && "row-new [--row-new-end:var(--card)]",
-                    )}
+                    className={cn(arrived.has(e.id) && "row-new")}
                   >
-                    {/* Laid out like the receipt card: what it was, then what
-                        it cost, then the actions on their own row. Settling a
-                        bill used to share a wrapping line with the category
-                        badge and the date, where it landed in a different
-                        place on every card. */}
-                    <div className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="wrap-anywhere text-sm font-medium">
-                          {e.description}
-                        </p>
-                        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                          <Badge variant="outline">
-                            {t(`category.${e.category}`)}
-                          </Badge>
-                          <span>{t(`method.${e.payment_method}`)}</span>
-                          <span aria-hidden>·</span>
-                          <span>{formatDate(e.spent_on, locale)}</span>
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1">
-                        {/* The same pair of pills the receipt card uses:
-                            advance and remainder, equal weight, no total. */}
-                        {isPartPaid(e) ? (
-                          <>
-                            <PaidPill
-                              label={t("expenses.advancePaid", {
-                                paid: formatAmount(received(e)),
-                              })}
-                            />
-                            <UnpaidBadge
-                              dueOn={e.due_on}
-                              today={today}
-                              label={t("expenses.remainingBadge", {
-                                amount: formatAmount(outstanding(e)),
-                              })}
-                              title={dueTitle(e.due_on)}
-                            />
-                            <PaidProgress
-                              paid={received(e)}
-                              total={e.amount}
-                              className="w-full"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <span
-                              className={cn(
-                                "text-lg font-semibold tabular-nums",
-                                // Nothing paid yet, so the figure is what was
-                                // agreed rather than what has gone out.
-                                e.payment_status === "Unpaid" &&
-                                  "text-muted-foreground line-through",
-                              )}
-                            >
-                              {formatAmount(e.amount)}
-                            </span>
-                            {e.payment_status === "Unpaid" ? (
-                              <UnpaidBadge
-                                dueOn={e.due_on}
-                                today={today}
-                                label={t("expenses.unpaidBadge")}
-                                title={dueTitle(e.due_on)}
-                              />
-                            ) : null}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {e.note ? (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {e.note}
-                      </p>
-                    ) : null}
-                    {e.created_by_email ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {displayName(e.created_by_email, names)}
-                      </p>
-                    ) : null}
-
-                    {/* Real buttons rather than a hidden menu: on a phone
-                        there is room, and edit and delete are the same two
-                        icons the receipt card uses. `basis-0` keeps the pay
-                        button from outgrowing its share when the amount is a
-                        long one — a flex item cannot shrink below its own
-                        label, which is what made the row jump about. */}
-                    <div className="mt-3 flex gap-2">
+                    <TableCell className="font-medium">
+                      <span className="wrap-anywhere">{e.description}</span>
+                      {e.note ? (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {e.note}
+                        </span>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      <span
+                        className={
+                          // Struck through only when none of it has been
+                          // paid. A part-paid bill has real money against
+                          // it, so striking the figure would misread it.
+                          e.payment_status === "Unpaid" && !isPartPaid(e)
+                            ? "text-muted-foreground line-through"
+                            : undefined
+                        }
+                      >
+                        {formatAmount(e.amount)}
+                      </span>
+                      {isPartPaid(e) ? (
+                        <span className="mt-0.5 flex items-center justify-end gap-2">
+                          <PaidProgress
+                            paid={received(e)}
+                            total={e.amount}
+                            className="w-14"
+                          />
+                          <PaidPill
+                            label={t("expenses.advancePaid", {
+                              paid: formatAmount(received(e)),
+                            })}
+                          />
+                        </span>
+                      ) : null}
+                      {e.payment_status === "Unpaid" ? (
+                        <span className="mt-0.5 block">
+                          <UnpaidBadge
+                            dueOn={e.due_on}
+                            today={today}
+                            label={
+                              isPartPaid(e)
+                                ? t("expenses.remainingBadge", {
+                                    amount: formatAmount(outstanding(e)),
+                                  })
+                                : t("expenses.unpaidBadge")
+                            }
+                            title={dueTitle(e.due_on)}
+                          />
+                        </span>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {t(`category.${e.category}`)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{t(`method.${e.payment_method}`)}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {formatDate(e.spent_on, locale)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                      {/* Settling a bill is the action a volunteer comes
+                          to this row for, so it is a button rather than
+                          two taps into a menu — and it names the sum, so
+                          nothing is recorded as paid unseen. */}
                       {outstanding(e) > 0 ? (
                         <Button
-                          className="min-w-0 flex-1 basis-0"
+                          size="sm"
                           onClick={() => setToMarkPaid(e)}
                           disabled={marking === e.id}
                         >
@@ -530,31 +413,168 @@ export function ExpensesView({
                           })}
                         </Button>
                       ) : null}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={outstanding(e) > 0 ? undefined : "ml-auto"}
-                        aria-label={t("table.edit")}
-                        onClick={() => openEdit(e)}
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("table.delete")}
-                        onClick={() => setToDelete(e)}
-                      >
-                        <Trash2 className="text-destructive" />
-                      </Button>
-                    </div>
-                  </li>
+                      <RowActions
+                        onEdit={() => openEdit(e)}
+                        onDelete={() => setToDelete(e)}
+                        editLabel={t("table.edit")}
+                        deleteLabel={t("table.delete")}
+                      />
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Mobile: one card per expense — the amount is the prominent thing. */}
+        <ul className="flex flex-col gap-2 sm:hidden">
+          {visible.length === 0 ? (
+            <li className="rounded-lg border py-10 text-center text-sm text-muted-foreground">
+              {expenses.length === 0
+                ? t("expenses.empty")
+                : t("expenses.emptyPeriod")}
+            </li>
+          ) : (
+            visible.map((e) => (
+              <li
+                key={e.id}
+                className={cn(
+                  "glass-inset card-elevated rounded-xl border p-3",
+                  arrived.has(e.id) && "row-new [--row-new-end:var(--card)]",
+                )}
+              >
+                {/* Laid out like the receipt card: what it was, then what
+                    it cost, then the actions on their own row. Settling a
+                    bill used to share a wrapping line with the category
+                    badge and the date, where it landed in a different
+                    place on every card. */}
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="wrap-anywhere text-sm font-medium">
+                      {e.description}
+                    </p>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                      <Badge variant="outline">
+                        {t(`category.${e.category}`)}
+                      </Badge>
+                      <span>{t(`method.${e.payment_method}`)}</span>
+                      <span aria-hidden>·</span>
+                      <span>{formatDate(e.spent_on, locale)}</span>
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {/* The same pair of pills the receipt card uses:
+                        advance and remainder, equal weight, no total. */}
+                    {isPartPaid(e) ? (
+                      <>
+                        <PaidPill
+                          label={t("expenses.advancePaid", {
+                            paid: formatAmount(received(e)),
+                          })}
+                        />
+                        <UnpaidBadge
+                          dueOn={e.due_on}
+                          today={today}
+                          label={t("expenses.remainingBadge", {
+                            amount: formatAmount(outstanding(e)),
+                          })}
+                          title={dueTitle(e.due_on)}
+                        />
+                        <PaidProgress
+                          paid={received(e)}
+                          total={e.amount}
+                          className="w-full"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className={cn(
+                            "text-lg font-semibold tabular-nums",
+                            // Nothing paid yet, so the figure is what was
+                            // agreed rather than what has gone out.
+                            e.payment_status === "Unpaid" &&
+                              "text-muted-foreground line-through",
+                          )}
+                        >
+                          {formatAmount(e.amount)}
+                        </span>
+                        {e.payment_status === "Unpaid" ? (
+                          <UnpaidBadge
+                            dueOn={e.due_on}
+                            today={today}
+                            label={t("expenses.unpaidBadge")}
+                            title={dueTitle(e.due_on)}
+                          />
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {e.note ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {e.note}
+                  </p>
+                ) : null}
+                {e.created_by_email ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {displayName(e.created_by_email, names)}
+                  </p>
+                ) : null}
+
+                {/* Real buttons rather than a hidden menu: on a phone
+                    there is room, and edit and delete are the same two
+                    icons the receipt card uses. `basis-0` keeps the pay
+                    button from outgrowing its share when the amount is a
+                    long one — a flex item cannot shrink below its own
+                    label, which is what made the row jump about.
+
+                    No sizes forced here: @media (pointer: coarse) in
+                    globals.css puts a 44px floor under every button on a
+                    phone, which is what makes this row thumb-sized. */}
+                <div className="mt-3 flex gap-2">
+                  {outstanding(e) > 0 ? (
+                    <Button
+                      className="min-w-0 flex-1 basis-0"
+                      onClick={() => setToMarkPaid(e)}
+                      disabled={marking === e.id}
+                    >
+                      {marking === e.id ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        <Check />
+                      )}
+                      {t("expenses.payRemaining", {
+                        amount: formatAmount(outstanding(e)),
+                      })}
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={outstanding(e) > 0 ? undefined : "ml-auto"}
+                    aria-label={t("table.edit")}
+                    onClick={() => openEdit(e)}
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("table.delete")}
+                    onClick={() => setToDelete(e)}
+                  >
+                    <Trash2 className="text-destructive" />
+                  </Button>
+                </div>
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
 
       <Dialog
         open={dialogOpen}

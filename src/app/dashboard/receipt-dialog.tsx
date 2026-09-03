@@ -8,13 +8,7 @@ import {
   searchDonors,
   updateReceipt,
 } from "@/app/actions/receipts";
-import {
-  PAYMENT_METHODS,
-  PAYMENT_STATUSES,
-  type Donor,
-  type PaymentMethod,
-  type PaymentStatus,
-} from "@/lib/types";
+import { PAYMENT_METHODS, PAYMENT_STATUSES, type Donor } from "@/lib/types";
 import type { LocalReceipt, OutboxEntry } from "@/lib/offline";
 import {
   capitalizeName,

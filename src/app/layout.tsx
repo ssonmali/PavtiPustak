@@ -32,9 +32,14 @@ const tiro = Tiro_Devanagari_Marathi({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  /* The browser's own chrome, so the address bar matches the app rather than
+     the palette this replaced. Hexes because the manifest and meta tags
+     predate CSS: these are the TOP of the mesh in each theme, sampled from a
+     render, not --primary. A copper bar above a violet ground read as a
+     stripe of a different app. Keep them in step by hand. */
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#d97706" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#e6d0aa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c1527" },
   ],
 };
 

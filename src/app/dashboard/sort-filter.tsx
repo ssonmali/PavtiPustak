@@ -2,6 +2,7 @@
 
 import { ArrowDownUp } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ export function SortFilter({
   onChange,
   keys = SORT_KEYS,
   disabled = false,
+  className,
 }: {
   value: SortKey;
   onChange: (key: SortKey) => void;
@@ -37,6 +39,8 @@ export function SortFilter({
    * a narrower list because its rows carry no receipt number.
    */
   keys?: readonly SortKey[];
+  /** Extra classes for the trigger, so a caller can give it the glass pill. */
+  className?: string;
 }) {
   const { t } = useI18n();
 
@@ -55,7 +59,7 @@ export function SortFilter({
         title={
           disabled ? t("table.needsSignal") : t(LABEL_KEYS[value] ?? "sort.newest")
         }
-        className="w-auto shrink-0 px-2.5"
+        className={cn("w-auto shrink-0 px-2.5", className)}
         disabled={disabled}
       >
         <ArrowDownUp className="size-4 shrink-0 text-muted-foreground" />

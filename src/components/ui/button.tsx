@@ -12,8 +12,13 @@ const buttonVariants = cva(
           // Gradient plus a lift on hover: the primary action should look like
           // the primary action.
           "bg-[image:var(--brand-gradient)] text-primary-foreground shadow-[var(--elevation-sm)] hover:shadow-[var(--elevation-md)] hover:brightness-105 active:brightness-95 active:translate-y-px",
+        // bg-background was the opaque mesh base, so every outline button —
+        // 21 of them, from the period presets to the row actions — sat on the
+        // glass as a flat panel. Translucent instead, deliberately with no
+        // backdrop-filter: a blur per small button is a composited layer per
+        // button for an effect nobody can see at this size.
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-[color-mix(in_oklab,var(--card-solid)_55%,transparent)] hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

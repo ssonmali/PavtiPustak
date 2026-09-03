@@ -22,8 +22,12 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "system-ui, sans-serif",
-          background: "#fafafa",
-          color: "#0a0a0a",
+          /* Inline hexes, and they have to be: this component replaces the
+             root layout, so globals.css and its tokens are gone by the time
+             it renders. Kept in step with --background/--foreground by hand
+             so the crash page still looks like the app. */
+          background: "#e6d0aa",
+          color: "#2a2118",
         }}
       >
         <main style={{ maxWidth: 380, padding: 24, textAlign: "center" }}>

@@ -68,7 +68,7 @@ export function DailyCollections({ days }: { days: DailyTotal[] }) {
           {t("chart.empty")}
         </p>
       ) : asTable ? (
-        <div className="overflow-x-auto rounded-lg border">
+        <div className="glass-inset card-elevated overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>

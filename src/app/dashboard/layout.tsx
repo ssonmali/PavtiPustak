@@ -46,7 +46,7 @@ export default async function DashboardLayout({
     <I18nProvider locale={locale}>
       <ServiceWorkerRegistrar />
       <div className="flex min-h-full flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 print:hidden">
+        <header className="glass-bar sticky top-0 z-20 border-b print:hidden">
           <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
             <Image
               src="/idol.jpg"

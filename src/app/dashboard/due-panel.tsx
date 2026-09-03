@@ -163,7 +163,7 @@ export function DuePanel({
             {visible.map((p) => {
               const overdue = Boolean(p.due_on) && p.due_on! < today;
               return (
-                <li key={p.id} className="rounded-lg border p-2.5">
+                <li key={p.id} className="glass-inset card-elevated rounded-lg border p-2.5">
                   {/* Name and amount on their own line: with the two buttons on
                     the same row, a phone squeezed the name to one word per
                     line. Buttons sit below, full-width and thumb-sized. */}
@@ -213,10 +213,14 @@ export function DuePanel({
 
                   <div className="mt-2 flex gap-2 sm:justify-end">
                     {/* A nudge to the contributor uses the same wa.me intent the
-                      receipts do — no API, no keys, nothing to configure. */}
+                      receipts do — no API, no keys, nothing to configure.
+                      Touch targets are handled globally: @media (pointer: coarse)
+                      in globals.css puts a 44px floor under every button on a
+                      phone, so the size here is the DESKTOP density and must
+                      not be inflated to compensate. */}
                     <Button
-                      size="sm"
                       variant="outline"
+                      size="sm"
                       className="flex-1 sm:flex-none"
                       onClick={() =>
                         window.open(

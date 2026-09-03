@@ -462,12 +462,24 @@ export function ReceiptsTable({
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
-          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          {/* z-10 because the input now has a backdrop-filter, which makes it
+              a stacking context: a non-positioned element that does so paints
+              with the z-index:0 group, in tree order. The icon comes first in
+              the DOM, so the field painted over it — and blurred it into its
+              own backdrop. Measured, the stroke went from 671 to 261 (sum
+              RGB) with this. */}
+          <Search className="absolute top-1/2 left-2.5 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder={online ? t("table.search") : t("table.needsSignal")}
-            className="pl-8"
+            /* glass-pill: these sit on the mesh, not in a pane — the
+               wrapping Card came off when the rows were unnested, and the
+               base Input is bg-transparent, so without this the box was just
+               a border with text in it. Measured on the pill over the darkest
+               blob: placeholder 5.33:1, typed text 12.47:1. No height: the
+               44px floor comes from @media (pointer: coarse). */
+            className="glass-pill pl-8"
             // Searching and sorting are database queries now, so with no
             // signal they cannot run. Disabled rather than quietly searching
             // the cached copy: a volunteer reading a total has to be able to
@@ -479,13 +491,14 @@ export function ReceiptsTable({
           value={query.sort}
           onChange={(sort) => onQueryChange({ sort })}
           disabled={!online}
+          className="glass-pill"
         />
       </div>
 
       <CustomDateRange period={period} onChange={onPeriodChange} />
 
       {/* Phones get the card list below; the table starts at sm. */}
-      <div className="hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">
+      <div className="glass-inset card-elevated hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">
         <Table className="table-zebra table-sticky">
           <TableHeader>
             <TableRow>
@@ -670,7 +683,7 @@ export function ReceiptsTable({
             <li
               key={receipt.id}
               className={cn(
-                "card-elevated rounded-xl border bg-card p-3",
+                "glass-inset card-elevated rounded-xl border p-3",
                 // The card paints its own background, so its wash has to end
                 // on that rather than on nothing.
                 arrived.has(receipt.id) && "row-new [--row-new-end:var(--card)]",
@@ -779,6 +792,9 @@ export function ReceiptsTable({
                     whatever the label, and Edit drops its text to match the
                     print and delete buttons already beside it, which frees the
                     room that made the overflow possible in the first place. */}
+                {/* No sizes forced here: @media (pointer: coarse) in
+                    globals.css puts a 44px floor under every button on a
+                    phone, which is what makes this row thumb-sized. */}
                 {!isFullyPaid(receipt) ? (
                   <>
                     <Button

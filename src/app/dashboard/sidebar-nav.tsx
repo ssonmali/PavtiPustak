@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  Download,
   LayoutDashboard,
-  Printer,
   ReceiptText,
   Wallet,
 } from "lucide-react";
@@ -17,7 +17,11 @@ const ITEMS = [
   { href: "/dashboard/receipts", labelKey: "nav.receipts", icon: ReceiptText },
   { href: "/dashboard/expenses", labelKey: "nav.expenses", icon: Wallet },
   { href: "/dashboard/activity", labelKey: "nav.activity", icon: Activity },
-  { href: "/dashboard/report", labelKey: "nav.report", icon: Printer },
+  /* Same route as ever — /dashboard/report still renders the printable
+     report. Only the label and the icon changed: the page is where a
+     treasurer takes the ledger out of the app, and "Export" is what they are
+     looking for when they go there. */
+  { href: "/dashboard/report", labelKey: "nav.report", icon: Download },
 ] as const;
 
 /** Vertical rail, shown from md up. */
@@ -26,7 +30,7 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden w-56 shrink-0 flex-col gap-1 border-r bg-sidebar/60 p-3 md:flex print:hidden">
+    <nav className="glass-bar hidden w-56 shrink-0 flex-col gap-1 border-r p-3 md:flex print:hidden">
       {ITEMS.map(({ href, labelKey, icon: Icon }) => {
         const active = pathname === href;
         return (
@@ -64,7 +68,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 z-10 flex border-t bg-background/90 backdrop-blur-md md:hidden print:hidden">
+    <nav className="glass-bar sticky bottom-0 z-10 flex border-t md:hidden print:hidden">
       {ITEMS.map(({ href, labelKey, icon: Icon }) => {
         const active = pathname === href;
         return (

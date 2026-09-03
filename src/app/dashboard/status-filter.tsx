@@ -3,6 +3,7 @@
 import type { Receipt } from "@/lib/types";
 import { useI18n } from "@/lib/i18n/client";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /** `all`, or one of the two payment statuses. */
 export const STATUS_FILTERS = ["all", "Paid", "Unpaid"] as const;
@@ -42,7 +43,17 @@ export function StatusFilterBar({
           key={key}
           size="sm"
           variant={status === key ? "secondary" : "outline"}
-          className="shrink-0 sm:border-transparent sm:shadow-none"
+          /* The chosen chip keeps its solid `secondary` fill — a pane that
+             also reads as "selected" needs something the other panes do not
+             have, and translucency is the wrong axis for it. Only the
+             unselected chips are glass.
+             Height is not set here: @media (pointer: coarse) in globals.css
+             puts a 44px floor under every button on a phone, so this stays
+             the desktop density. */
+          className={cn(
+            "shrink-0 rounded-full sm:border-transparent sm:shadow-none",
+            status !== key && "glass-pill",
+          )}
           onClick={() => onChange(key)}
         >
           {t(LABEL_KEYS[key])}

@@ -62,7 +62,7 @@ export default async function ReceiptSlipPage({
         <PrintBar printLabel={t("report.print")} backLabel={t("report.back")} />
       </div>
 
-      <article className="relative overflow-hidden rounded-lg border bg-card p-5 text-card-foreground print:rounded-none print:border-2 print:p-6">
+      <article className="paper relative overflow-hidden rounded-lg border p-5 text-card-foreground print:rounded-none print:border-2 print:p-6">
         {watermark ? (
           <Image
             src={watermark}

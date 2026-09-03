@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +39,18 @@ export function PeriodPresets({
           key={presetLabelKey(preset)}
           size="sm"
           variant={samePeriod(period, preset) ? "secondary" : "outline"}
-          className="shrink-0 sm:border-transparent sm:shadow-none"
+          /* The `outline` variant is bg-background, which is the opaque mesh
+             base — so these chips sat on the glass as flat panels. Only the
+             unselected ones become glass: the chosen chip keeps its solid
+             `secondary` fill, because "selected" needs a cue the others do
+             not have and translucency is the wrong axis to say it with.
+             Height is not set here: @media (pointer: coarse) in globals.css
+             puts a 44px floor under every button on a phone, so this stays
+             the desktop density. */
+          className={cn(
+            "shrink-0 rounded-full sm:border-transparent sm:shadow-none",
+            !samePeriod(period, preset) && "glass-pill",
+          )}
           onClick={() => onChange(preset)}
         >
           {t(presetLabelKey(preset))}
@@ -83,7 +95,9 @@ export function CustomDateRange({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border p-3">
+    /* Was a bare bordered box: no ground of its own, so it read as a flat
+       cut-out rather than part of the same material. */
+    <div className="glass-inset flex flex-col gap-2 rounded-lg border p-3">
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-36 flex-1 flex-col gap-1.5">
           <Label htmlFor="period-from" className="text-xs text-muted-foreground">
@@ -92,6 +106,13 @@ export function CustomDateRange({
           <Input
             id="period-from"
             type="date"
+            /* No glass-pill here: the from/to box around these already IS
+               the glass, and a pill stacked inside it compounds two veils
+               into a near-white patch — which is what made this box look
+               painted on. A visible border is enough now that --input is a
+               real hairline rather than a white one.
+               No height set either: [data-slot="input"] gets the same 44px
+               floor from @media (pointer: coarse). */
             value={from}
             max={to || undefined}
             onChange={(e) => setBound("from", e.target.value)}

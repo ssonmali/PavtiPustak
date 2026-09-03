@@ -143,9 +143,13 @@ export function ReportToolbar({
   return (
     // print:hidden keeps the toolbar out of the PDF itself.
     <div className="flex flex-col gap-3 print:hidden">
+      {/* The outline/default pairing matches PrintBar's back+print row on the
+          single-receipt page — the other screen built around .paper. Sizes
+          are the desktop density; @media (pointer: coarse) in globals.css
+          puts a 44px floor under both on a phone. */}
       <div className="flex items-center gap-2">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           nativeButton={false}
           render={<Link href="/dashboard/receipts" />}
@@ -171,21 +175,30 @@ export function ReportToolbar({
         </DropdownMenu>
       </div>
 
+      {/* A glass pane, like every other filter surface in the app — this was
+          a bare `border` with flat bg-muted/40 bands inside it, which is why
+          it read as a different, older screen next to the receipts and
+          expenses toolbars. Same pane, same rounded-full chip row; no
+          glass-pill on the chips themselves, for the same reason the from/to
+          box doesn't put one on its date inputs — a pill stacked inside a
+          pane it is already sitting on compounds two veils into a white
+          patch. */}
       <form
         // The date fields are uncontrolled, so a range picked elsewhere has to
         // arrive as a fresh instance; changing defaultValue in place is ignored.
         key={`${range.from ?? ""}:${range.to ?? ""}`}
         action="/dashboard/report"
         method="get"
-        className="overflow-hidden rounded-lg border"
+        className="glass-inset flex flex-col gap-3 rounded-lg border p-3"
       >
         {/* Status sits with the ranges: both narrow what gets printed. */}
-        <div className="flex flex-wrap items-center gap-1 border-b bg-muted/40 p-1.5">
+        <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3">
           {statuses.map((s) => (
             <Button
               key={s.key}
               size="sm"
-              variant={status === s.key ? "secondary" : "ghost"}
+              variant={status === s.key ? "secondary" : "outline"}
+              className="shrink-0 rounded-full"
               nativeButton={false}
               render={
                 <Link
@@ -200,12 +213,13 @@ export function ReportToolbar({
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1 border-b bg-muted/40 p-1.5">
+        <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3">
           {presets.map((p) => (
             <Button
               key={p.key}
               size="sm"
-              variant={range.key === p.key ? "secondary" : "ghost"}
+              variant={range.key === p.key ? "secondary" : "outline"}
+              className="shrink-0 rounded-full"
               nativeButton={false}
               render={<Link href={p.href} />}
             >
@@ -221,7 +235,7 @@ export function ReportToolbar({
           <input type="hidden" name="sort" value={sort} />
         )}
 
-        <div className="flex items-end gap-2 p-3">
+        <div className="flex items-end gap-2">
           <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
             <Label htmlFor="from" className="text-xs text-muted-foreground">
               {labels.from}

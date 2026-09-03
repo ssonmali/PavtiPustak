@@ -111,7 +111,9 @@ export function ActivityList({
 
   const volunteers = React.useMemo(
     () =>
-      [...new Set(entries.map((e) => e.actor_email).filter(Boolean))].sort() as string[],
+      [
+        ...new Set(entries.map((e) => e.actor_email).filter(Boolean)),
+      ].sort() as string[],
     [entries],
   );
 
@@ -137,8 +139,13 @@ export function ActivityList({
 
   const show = (field: string, value: unknown) => {
     if (value === null || value === undefined || value === "") return "—";
-    if (field === "amount" || field === "value") return formatAmount(Number(value));
-    if (field === "collection_date" || field === "spent_on" || field === "donation_date")
+    if (field === "amount" || field === "value")
+      return formatAmount(Number(value));
+    if (
+      field === "collection_date" ||
+      field === "spent_on" ||
+      field === "donation_date"
+    )
       return formatDate(String(value), locale);
     if (field === "payment_method")
       return t(`method.${String(value) as "Cash" | "UPI"}`);
@@ -212,7 +219,9 @@ export function ActivityList({
               key={key}
               size="sm"
               variant={ledger === key ? "secondary" : "outline"}
-              className="shrink-0 sm:border-transparent sm:shadow-none"
+              // No height forced: @media (pointer: coarse) in globals.css
+              // puts a 44px floor under every button on a phone.
+              className="shrink-0 rounded-full sm:border-transparent sm:shadow-none"
               onClick={() => setLedger(key)}
             >
               {Icon ? <Icon /> : null}
@@ -222,26 +231,26 @@ export function ActivityList({
         })}
       </div>
 
-      {/* Who, what, when — all three filters in one row. */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
-          {ACTION_FILTERS.map(({ key, labelKey }) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={action === key ? "secondary" : "outline"}
-              className="shrink-0 sm:border-transparent sm:shadow-none"
-              onClick={() => setAction(key)}
-            >
-              {t(labelKey)}
-            </Button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <PeriodFilter period={period} onChange={setPeriod} />
-        </div>
+      {/* What. */}
+      <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:w-fit sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
+        {ACTION_FILTERS.map(({ key, labelKey }) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={action === key ? "secondary" : "outline"}
+            className="shrink-0 rounded-full sm:border-transparent sm:shadow-none"
+            onClick={() => setAction(key)}
+          >
+            {t(labelKey)}
+          </Button>
+        ))}
       </div>
+
+      {/* When. Its own full-width row rather than squeezed beside the action
+          filters — that wrapping had no width of its own to hand the custom
+          date box, which is why it rendered at its cramped minimum instead
+          of the full row width every other custom-date box gets. */}
+      <PeriodFilter period={period} onChange={setPeriod} />
 
       {days.length === 0 ? (
         <Card>
@@ -312,7 +321,9 @@ export function ActivityList({
                   // not money the mandal received or spent — it gets no
                   // +/- sign and no flow colour, unlike the other two.
                   const isDonation = entry.entity === "donation";
-                  const rawFigure = isDonation ? snapshot?.value : snapshot?.amount;
+                  const rawFigure = isDonation
+                    ? snapshot?.value
+                    : snapshot?.amount;
                   const figure =
                     rawFigure === null || rawFigure === undefined
                       ? null
@@ -321,7 +332,7 @@ export function ActivityList({
                   return (
                     <li
                       key={entry.entry_key}
-                      className="card-elevated rounded-xl border bg-card p-3"
+                      className="glass-inset card-elevated rounded-xl border p-3"
                     >
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -333,9 +344,12 @@ export function ActivityList({
                               <Glyph
                                 className={cn(
                                   "size-4",
-                                  entry.action === "deleted" && "text-destructive",
-                                  entry.action === "created" && "text-positive-ink",
-                                  entry.action === "updated" && "text-pending-ink",
+                                  entry.action === "deleted" &&
+                                    "text-destructive",
+                                  entry.action === "created" &&
+                                    "text-positive-ink",
+                                  entry.action === "updated" &&
+                                    "text-pending-ink",
                                 )}
                               />
                             );
@@ -415,8 +429,7 @@ export function ActivityList({
                           <p className="mt-1 text-xs text-muted-foreground">
                             {formatTime(entry.changed_at, locale)} ·{" "}
                             {t("activity.by", {
-                              who:
-                                displayName(entry.actor_email, names) ?? "—",
+                              who: displayName(entry.actor_email, names) ?? "—",
                             })}
                           </p>
                         </div>

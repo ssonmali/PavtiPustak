@@ -14,7 +14,6 @@ import { useReceiptQueryNav } from "../use-receipt-query";
 import { useEditingPresence } from "@/lib/use-editing-presence";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { OfflineBadge } from "@/components/offline-badge";
 import { ReceiptsTable, type ReceiptsTableHandle } from "../receipts-table";
 import {
@@ -188,10 +187,11 @@ export function ReceiptsView({
               )}
             </p>
           </div>
+          {/* On the mesh, not in a card, so it wears the pill too. */}
           <Button
             size="sm"
             onClick={() => tableRef.current?.openCreate()}
-            className="shrink-0"
+            className="glass-pill shrink-0 rounded-full"
           >
             <Plus /> {t("table.new")}
           </Button>
@@ -207,30 +207,29 @@ export function ReceiptsView({
 
       <OfflineBadge online={online} pending={pending} syncing={syncing} />
 
-      <Card className="card-elevated">
-        <CardContent>
-          <ReceiptsTable
-            receipts={visible}
-            mandalName={mandalName}
-            names={names}
-            // Pagination only makes sense against the live server list, and
-            // only when nothing is filtered out of it client-side.
-            // Paging composes with the filters now that the server applies
-            // both, so this no longer has to be withheld under a status
-            // filter — the count is the count of the filtered result.
-            total={online ? total : undefined}
-            online={online}
-            queue={queue}
-            editors={editors}
-            setPresence={setPresence}
-            period={period}
-            onPeriodChange={setPeriod}
-            query={query}
-            onQueryChange={onQueryChange}
-            ref={tableRef}
-          />
-        </CardContent>
-      </Card>
+      {/* No wrapping pane: the rows carry the glass themselves, exactly as
+          the activity feed's do. A pane around them made every row a nested
+          surface, which is deliberately dimmer and flatter. */}
+      <ReceiptsTable
+        receipts={visible}
+        mandalName={mandalName}
+        names={names}
+        // Pagination only makes sense against the live server list, and
+        // only when nothing is filtered out of it client-side.
+        // Paging composes with the filters now that the server applies
+        // both, so this no longer has to be withheld under a status
+        // filter — the count is the count of the filtered result.
+        total={online ? total : undefined}
+        online={online}
+        queue={queue}
+        editors={editors}
+        setPresence={setPresence}
+        period={period}
+        onPeriodChange={setPeriod}
+        query={query}
+        onQueryChange={onQueryChange}
+        ref={tableRef}
+      />
     </div>
   );
 }

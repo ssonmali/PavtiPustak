@@ -17,6 +17,8 @@ export function PrintBar({
   return (
     // print:hidden keeps the toolbar out of the PDF itself.
     <div className="flex items-center gap-2 print:hidden">
+      {/* Sizes are the desktop density; @media (pointer: coarse) in
+          globals.css puts a 44px floor under both on a phone. */}
       <Button
         variant="outline"
         size="sm"
