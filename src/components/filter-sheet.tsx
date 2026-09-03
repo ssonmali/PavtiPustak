@@ -68,6 +68,16 @@ export function FilterSheet<T>({
   const { t } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<T>(value);
+  /**
+   * What the commit button said at the moment the sheet started closing.
+   *
+   * On the tabs that hold their filters in local state, onApply lands before
+   * the exit animation has played, so `dirty` flips false and the button
+   * relabelled itself from Apply to Done mid-fade — a small but real flicker,
+   * and one of two causes of it. Latched here so nothing inside the sheet
+   * changes after the volunteer has dismissed it.
+   */
+  const [closingDirty, setClosingDirty] = React.useState(false);
 
   const patch = React.useCallback(
     (part: Partial<T>) => setDraft((d) => ({ ...d, ...part })),
@@ -85,6 +95,7 @@ export function FilterSheet<T>({
    */
   function onOpenChange(next: boolean) {
     if (next) setDraft(value);
+    else setClosingDirty(dirty);
     setOpen(next);
   }
 
@@ -143,12 +154,15 @@ export function FilterSheet<T>({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop
           data-slot="dialog-overlay"
-          className="fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          /* sheet-scrim, not fade-in-0/fade-out-0: those carry a filter in
+             their keyframes, which fights the backdrop-blur here — see the
+             note on @keyframes sheet-rise in globals.css. */
+          className="sheet-scrim fixed inset-0 isolate z-50 bg-black/10 supports-backdrop-filter:backdrop-blur-xs"
         />
         <DialogPrimitive.Popup
           data-slot="dialog-content"
           className={cn(
-            "fixed z-50 flex flex-col gap-4 rounded-t-2xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-150 outline-none",
+            "fixed z-50 flex flex-col gap-4 rounded-t-2xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none",
             /*
              * Positioned with insets and NOT with a transform, which is the
              * whole reason this reads differently from ui/dialog.tsx.
@@ -176,7 +190,10 @@ export function FilterSheet<T>({
             // Capped so a long filter set scrolls rather than covering the
             // page it is filtering — you have to be able to see what changed.
             "max-h-[80svh] overflow-y-auto",
-            "data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom",
+            /* See @keyframes sheet-rise in globals.css: transform and opacity
+               only, because this element carries a backdrop-filter and the
+               stock animate-in/out keyframes add a filter on top of it. */
+            "sheet-anim",
           )}
         >
           <div className="flex items-center justify-between gap-2">
@@ -240,11 +257,17 @@ export function FilterSheet<T>({
           <Button
             className="w-full"
             onClick={() => {
+              // Latched before onApply, which on some tabs updates `value`
+              // synchronously and would otherwise relabel this button while
+              // it is still on screen fading out.
+              setClosingDirty(dirty);
               if (dirty) onApply(draft);
               setOpen(false);
             }}
           >
-            {dirty ? t("filters.apply") : t("filters.done")}
+            {(open ? dirty : closingDirty)
+              ? t("filters.apply")
+              : t("filters.done")}
           </Button>
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>

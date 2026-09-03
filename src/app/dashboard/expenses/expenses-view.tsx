@@ -90,6 +90,24 @@ export function ExpensesView({
   const { t, locale } = useI18n();
   const [period, setPeriod] = React.useState<Period>(ALL_TIME);
   const [query, setQuery] = React.useState("");
+  /**
+   * The term the LIST filters on, one step behind what is being typed.
+   *
+   * Expenses are filtered here rather than by the server, so every keystroke
+   * re-ran the filter and the sort over as many as a thousand rows and then
+   * re-rendered the list — which renders each expense twice, as a table row
+   * and as a card, with CSS hiding the half you are not looking at. That work
+   * happened between the key going down and the letter appearing, which is
+   * what made typing feel heavy.
+   *
+   * useDeferredValue rather than a debounce, because the two fail differently:
+   * a debounce makes the list wait a fixed time whether or not the phone is
+   * busy, while this keeps the input at the highest priority and lets React
+   * abandon a half-finished list render when the next letter arrives. On a
+   * fast phone the list still keeps up keystroke for keystroke; on a slow one
+   * it falls behind by a render instead of blocking the field.
+   */
+  const deferredQuery = React.useDeferredValue(query);
   const [sort, setSort] = React.useState<SortKey>(DEFAULT_SORT);
   const [category, setCategory] = React.useState<ExpenseCategory | null>(null);
   /**
@@ -147,7 +165,7 @@ export function ExpensesView({
   const breakdown = React.useMemo(() => categoryTotals(inPeriod), [inPeriod]);
 
   const visible = React.useMemo(() => {
-    const clean = query.trim().toLowerCase();
+    const clean = deferredQuery.trim().toLowerCase();
     const inCategory = category
       ? inPeriod.filter((e) => e.category === category)
       : inPeriod;
@@ -164,7 +182,7 @@ export function ExpensesView({
       amount: (e) => e.amount,
       name: (e) => e.description,
     }, locale);
-  }, [inPeriod, query, category, sort, locale]);
+  }, [inPeriod, deferredQuery, category, sort, locale]);
 
   // Money that actually left the box, and what is still owed on the same rows.
   // Summing `amount` here would report a committed bill as spent.

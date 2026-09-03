@@ -8,7 +8,6 @@ import {
   Pencil,
   Printer,
   CloudOff,
-  Search,
   Check,
   Trash2,
 } from "lucide-react";
@@ -40,7 +39,7 @@ import { ReceiptDialog } from "./receipt-dialog";
 import { SortFilter } from "./sort-filter";
 import type { ReceiptQuery } from "./receipts-query";
 import { CustomDateRange, type Period } from "./period-filter";
-import { shouldAdoptTerm } from "./search-draft";
+import { ReceiptsSearch } from "./receipts-search";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +57,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -166,45 +164,18 @@ export function ReceiptsTable({
   ref?: React.Ref<ReceiptsTableHandle>;
 }) {
   const { t, locale } = useI18n();
-  /**
-   * What is being typed, which is deliberately NOT the search term.
-   *
-   * The term lives in the URL and every change to it is a database query, so
-   * the field keeps its own draft and pushes it debounced. Binding the input
-   * straight to the URL would issue a request per keystroke and make typing
-   * feel like it is fighting back.
-   */
-  const [draft, setDraft] = React.useState(query.q);
   /*
-   * Re-sync when the term changes from somewhere else — the back button, or
-   * another control rewriting the query.
-   *
-   * Adjusted during render against the previous value rather than in an
-   * effect. Setting state in an effect for this schedules a second render
-   * every time the URL changes, and React flags it as cascading; comparing
-   * here re-renders once, before anything is painted.
-   *
-   * shouldAdoptTerm is what makes that safe, and it is not a refinement —
-   * without it this clobbered live typing while a debounced push was in
-   * flight. See that module for the failure it prevents; it is pure and
-   * tested because the naive version reads as obviously correct.
-   *
-   * Deliberately not a ref holding the last-sent term: reading a ref during
-   * render is not allowed, and the lint rule saying so is right — this has to
-   * be part of the render snapshot to stay correct if a render is replayed.
+   * The search box owns its own draft state, its debounce and its re-sync —
+   * see receipts-search.tsx. All of it used to live here, which meant every
+   * keystroke re-rendered this whole component, and this component renders
+   * each receipt TWICE (a table row and a card, one hidden by CSS). That was
+   * the stutter while typing.
    */
-  const [syncedQ, setSyncedQ] = React.useState(query.q);
-  if (query.q !== syncedQ) {
-    const adopt = shouldAdoptTerm(query.q, syncedQ, draft);
-    setSyncedQ(query.q);
-    if (adopt) setDraft(query.q);
-  }
+  const onCommitSearch = React.useCallback(
+    (q: string) => onQueryChange({ q }),
+    [onQueryChange],
+  );
 
-  React.useEffect(() => {
-    if (draft.trim() === query.q) return;
-    const timer = setTimeout(() => onQueryChange({ q: draft.trim() }), 300);
-    return () => clearTimeout(timer);
-  }, [draft, query.q, onQueryChange]);
   const [loadingMore, setLoadingMore] = React.useState(false);
 
   // The server sends the first page; further pages append here. A realtime
@@ -476,32 +447,11 @@ export function ReceiptsTable({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <div className="relative min-w-0 flex-1 sm:max-w-xs">
-          {/* z-10 because the input now has a backdrop-filter, which makes it
-              a stacking context: a non-positioned element that does so paints
-              with the z-index:0 group, in tree order. The icon comes first in
-              the DOM, so the field painted over it — and blurred it into its
-              own backdrop. Measured, the stroke went from 671 to 261 (sum
-              RGB) with this. */}
-          <Search className="absolute top-1/2 left-2.5 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={online ? t("table.search") : t("table.needsSignal")}
-            /* glass-pill: these sit on the mesh, not in a pane — the
-               wrapping Card came off when the rows were unnested, and the
-               base Input is bg-transparent, so without this the box was just
-               a border with text in it. Measured on the pill over the darkest
-               blob: placeholder 5.33:1, typed text 12.47:1. No height: the
-               44px floor comes from @media (pointer: coarse). */
-            className="glass-pill pl-8"
-            // Searching and sorting are database queries now, so with no
-            // signal they cannot run. Disabled rather than quietly searching
-            // the cached copy: a volunteer reading a total has to be able to
-            // trust that it is the whole answer.
-            disabled={!online}
-          />
-        </div>
+        <ReceiptsSearch
+          q={query.q}
+          onCommit={onCommitSearch}
+          online={online}
+        />
         {filters}
         <SortFilter
           value={query.sort}

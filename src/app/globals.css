@@ -2255,6 +2255,87 @@
     animation-delay: 300ms;
   }
 
+  /* -------------------------------------------------------------------------
+     The filter sheet's own entrance and exit.
+
+     Hand-written rather than tw-animate-css's `animate-in`/`animate-out`, and
+     the reason is specific: those compile to keyframes that set
+
+       filter: blur(var(--tw-enter-blur, 0))
+
+     on the animated element. A `filter` — even blur(0) — forces the element
+     onto its own render surface, and this sheet already carries a
+     backdrop-filter in the Devasthan themes, which are now the default. Adding
+     and removing a filter around a backdrop-filtered element makes the browser
+     build a composited layer at the start of the animation and throw it away
+     at the end, which on Android shows as a one-frame flash every time the
+     sheet closes. Transform and opacity only, so the layer the backdrop-filter
+     needs is never rebuilt.
+
+     Reduced motion is handled by the global rule near the top of this file,
+     which collapses every animation-duration and delay.
+     ------------------------------------------------------------------------- */
+  @keyframes sheet-rise {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes sheet-sink {
+    from {
+      opacity: 1;
+      transform: none;
+    }
+    to {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+
+  /* base-ui stamps data-open / data-closed and waits for animationend before
+     unmounting, so the exit has to be a real animation rather than a
+     transition for the sheet to stay on screen while it plays. */
+  .sheet-anim[data-open] {
+    animation: sheet-rise 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .sheet-anim[data-closed] {
+    animation: sheet-sink 150ms cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  /* The scrim behind it, same reasoning: it carries its own backdrop-filter,
+     so its fade must not add a filter on top. */
+  @keyframes sheet-scrim-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes sheet-scrim-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  .sheet-scrim[data-open] {
+    animation: sheet-scrim-in 180ms ease-out;
+  }
+
+  .sheet-scrim[data-closed] {
+    animation: sheet-scrim-out 150ms ease-in;
+  }
+
   @keyframes riseIn {
     from {
       opacity: 0;
