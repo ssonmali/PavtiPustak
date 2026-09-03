@@ -2487,3 +2487,102 @@
     animation: none !important;
   }
 }
+
+/*
+ * Dialogs — the receipt, expense and donation forms — open and close.
+ *
+ * They were already animated, by tw-animate-css's `animate-in fade-in-0
+ * zoom-in-95` on ui/dialog.tsx. This replaces that for one substantive
+ * reason and one cosmetic one.
+ *
+ * THE SUBSTANTIVE ONE. Its `enter` and `exit` keyframes both set
+ *
+ *     filter: blur(var(--tw-enter-blur, 0))
+ *
+ * and every dialog here carries `backdrop-filter: blur(var(--glass-blur-soft))`
+ * in the Devasthan themes. A filter animating on an element that is also
+ * blurring what is behind it forces a fresh composited layer on every frame,
+ * and that is precisely what caused the filter sheet to flicker on dismiss —
+ * proved there by A/B, `old: filter=blur(0px) anim=exit` against
+ * `new: filter=none anim=sheet-sink`. The same trap, in a component opened far
+ * more often. Nothing below touches `filter`.
+ *
+ * WHAT IS NOT WRONG WITH IT, since it looked wrong at first read: the keyframes
+ * set the whole `transform` property, which would normally clobber the
+ * -translate-x-1/2 centring the way it clobbered the sheet's position. It does
+ * not, because Tailwind v4 centres with the separate `translate:` property —
+ * `--tw-translate-x: …; translate: var(--tw-translate-x) var(--tw-translate-y)`
+ * in the compiled CSS — so the two compose instead of fighting. That is also
+ * why `transform: scale()` below is safe here and was not on the sheet.
+ *
+ * Unlayered, so it beats the `data-open:animate-in` utilities without needing
+ * an edit to ui/dialog.tsx — a vendored shadcn file that `shadcn add` would
+ * overwrite, taking the fix with it.
+ */
+:is(
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"]
+)[data-open]:not([data-open="false"]) {
+  /* Rises very slightly as it grows. 0.96 rather than the 0.95 it replaces is
+     not fussiness: paired with the lift, a deeper scale reads as the panel
+     flying at you, and these dialogs are full of form fields a volunteer is
+     about to type into. */
+  animation: dialog-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:is(
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"]
+)[data-closed] {
+  /* Leaves faster than it arrives, and barely shrinks. A dialog being
+     dismissed has already been dealt with; it should get out of the way
+     rather than perform on the way. */
+  animation: dialog-out 130ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
+
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+/*
+ * The scrim behind them, for the same reason.
+ *
+ * It carries `backdrop-blur-xs` and was fading with the same filter-bearing
+ * keyframes — so the flicker had two sources stacked on each other, exactly as
+ * the filter sheet did before .sheet-scrim was split out. Opacity only.
+ */
+:is(
+  [data-slot="dialog-overlay"],
+  [data-slot="alert-dialog-overlay"]
+)[data-open]:not([data-open="false"]) {
+  animation: dialog-scrim-in 180ms ease-out;
+}
+
+:is(
+  [data-slot="dialog-overlay"],
+  [data-slot="alert-dialog-overlay"]
+)[data-closed] {
+  animation: dialog-scrim-out 130ms ease-in;
+}
+
+@keyframes dialog-scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-scrim-out {
+  to {
+    opacity: 0;
+  }
+}
