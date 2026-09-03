@@ -13,11 +13,21 @@ select 'audit rows' as check, count(*) as entries from public.receipt_audit;
 
 -- Is realtime actually publishing everything the app subscribes to?
 --
--- src/lib/use-realtime.ts listens to all six of these. A table missing here
--- is the worst kind of failure: the channel still reports SUBSCRIBED, so the
--- app looks healthy and simply never receives that table's changes. Listed as
--- expected-vs-actual rather than "rows returned", so a missing table shows up
--- as a false instead of quietly being absent from the output.
+-- src/lib/use-realtime.ts binds all six of these on ONE channel, and any one
+-- of them missing here fails all six: realtime-js matches the client's
+-- bindings against the server's by index, so a binding the server rejects
+-- desynchronises the list and the client unsubscribes with CHANNEL_ERROR.
+--
+-- This note used to say the opposite — that the channel would still report
+-- SUBSCRIBED and silently never deliver that table's changes. That was true
+-- of an older realtime, and believing it costs real time: the app logs
+-- CHANNEL_ERROR, which reads like a connection or auth problem, when the
+-- ordinary cause is one unrun migration. Publication membership is spread
+-- across 03 and 05 (receipts, receipt_audit), 08 (expenses), 09
+-- (expense_audit) and 11 (donations, donation_audit).
+--
+-- Listed as expected-vs-actual rather than "rows returned", so a missing
+-- table shows up as a false instead of quietly being absent from the output.
 select
   'realtime publication' as check,
   expected.tablename,

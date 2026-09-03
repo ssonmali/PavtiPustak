@@ -10,11 +10,19 @@ export type RealtimeStatus = "connecting" | "live" | "polling";
 // router.refresh() — the layout's queries plus the page's — on a volunteer's
 // mobile data, and when realtime is healthy it has nothing to find: the events
 // it exists to backstop are the update/delete ones that need `replica identity
-// full`, and all six subscribed tables set it. What is left is the case this
-// code genuinely cannot detect — a table missing from the publication, where
-// the channel reports SUBSCRIBED and simply never delivers. Ten minutes bounds
-// that without putting a refresh in the middle of someone's typing; returning
-// to the tab refreshes anyway, which is the moment staleness is noticed.
+// full`, and all six subscribed tables set it.
+//
+// This used to say the net was there for a table missing from the publication,
+// "where the channel reports SUBSCRIBED and simply never delivers". That is
+// not how realtime-js 2.x behaves and the correction matters, because it sent
+// a real diagnosis the wrong way: _updatePostgresBindings matches the client's
+// bindings against the server's BY INDEX, and on any mismatch it unsubscribes
+// and fires CHANNEL_ERROR. A table missing from the publication therefore
+// fails the whole channel, loudly, and lands in the handler below. What is
+// left for this net is what stays genuinely invisible: a blocked websocket, a
+// socket dropped on a phone, or an event lost in a reconnect gap. Ten minutes
+// bounds that without putting a refresh in the middle of someone's typing;
+// returning to the tab refreshes anyway, which is when staleness is noticed.
 const POLL_LIVE = 600_000;
 // Realtime is not working; this is the only thing keeping the page current, so
 // it is the one case worth paying for often.
@@ -124,7 +132,7 @@ export function useRealtimeReceipts(delay = 400) {
         await supabase.realtime.setAuth(session.access_token);
       }
 
-      channel.subscribe((state) => {
+      channel.subscribe((state, err) => {
         if (disposed) return;
         if (state === "SUBSCRIBED") {
           setStatus("live");
@@ -135,10 +143,28 @@ export function useRealtimeReceipts(delay = 400) {
           state === "TIMED_OUT" ||
           state === "CLOSED"
         ) {
-          // Falls back to polling rather than going stale.
+          /*
+           * Falls back to polling rather than going stale.
+           *
+           * `err` is passed on because it is the only thing here that names
+           * the cause — for a rejected binding the server says which table
+           * and why. This callback took only the state and dropped it, which
+           * left the message below as the sole clue.
+           *
+           * And that message named 03-realtime.sql alone, which was actively
+           * misleading: with 11 unrun you would check 03, find it correct,
+           * and be no wiser. The question is never "did 03 run" but "which of
+           * the six bindings was rejected" — see the note on POLL_LIVE for why
+           * one is enough to fail them all, and verify.sql for the answer.
+           */
           console.warn(
             `[realtime] ${state} — falling back to periodic refresh. ` +
-              "If this persists, check that supabase/03-realtime.sql has run.",
+              "If this persists, run the 'realtime publication' query in " +
+              "supabase/verify.sql: this channel binds receipts, " +
+              "receipt_audit, expenses, expense_audit, donations and " +
+              "donation_audit, and any one of them missing from the " +
+              "publication fails all of them.",
+            err ?? "(no error detail from the server)",
           );
           setStatus("polling");
         }
