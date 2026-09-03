@@ -13,10 +13,11 @@ select 'audit rows' as check, count(*) as entries from public.receipt_audit;
 
 -- Is realtime actually publishing everything the app subscribes to?
 --
--- src/lib/use-realtime.ts binds all six of these on ONE channel, and any one
--- of them missing here fails all six: realtime-js matches the client's
--- bindings against the server's by index, so a binding the server rejects
--- desynchronises the list and the client unsubscribes with CHANNEL_ERROR.
+-- src/lib/use-realtime.ts subscribes to all six, one channel each. A table
+-- missing here loses live updates for that table only — realtime-js matches
+-- bindings against the server's by index and unsubscribes the channel with
+-- CHANNEL_ERROR, which is why they are no longer bound to one shared channel:
+-- a single unrun migration used to take all six down together.
 --
 -- This note used to say the opposite — that the channel would still report
 -- SUBSCRIBED and silently never deliver that table's changes. That was true

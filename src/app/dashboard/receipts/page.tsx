@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
+import { getPledgeDays } from "@/lib/pledge-days";
 import { getMyName, getVolunteerNames } from "@/lib/volunteer-names";
 import { volunteerName } from "@/lib/receipt-utils";
 import type { DailyTotal, Receipt } from "@/lib/types";
@@ -26,7 +27,7 @@ export default async function ReceiptsPage({
   // the real order arrives.
   const query = parseReceiptQuery(await searchParams);
 
-  const [{ data, error, count }, myName, user, names, daily, unpaidRows] =
+  const [{ data, error, count }, myName, user, names, daily, pledgeDays] =
     await Promise.all([
       // First page only; the client appends further pages on demand, through
       // the same query so the pages belong to the same result.
@@ -42,11 +43,9 @@ export default async function ReceiptsPage({
         .select("*")
         .order("collection_date", { ascending: false })
         .limit(400),
-      supabase
-        .from("receipts")
-        .select("amount, paid_amount, payment_status, collection_date")
-        .eq("payment_status", "Unpaid")
-        .limit(1000),
+      // Aggregated by day, and shared with the overview, which asks the same
+      // question — see lib/pledge-days.ts.
+      getPledgeDays(),
     ]);
 
   if (error) {
@@ -71,12 +70,7 @@ export default async function ReceiptsPage({
       myName={myName ?? volunteerName(user?.email) ?? "—"}
       names={names}
       daily={(daily.data ?? []) as DailyTotal[]}
-      unpaid={
-        (unpaidRows.data ?? []) as Pick<
-          Receipt,
-          "amount" | "paid_amount" | "payment_status" | "collection_date"
-        >[]
-      }
+      pledgeDays={pledgeDays}
     />
   );
 }

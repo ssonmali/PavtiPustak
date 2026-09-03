@@ -18,12 +18,8 @@ import type {
   Receipt,
   VolunteerTotal,
 } from "@/lib/types";
-import {
-  displayName,
-  formatAmount,
-  outstanding,
-  received,
-} from "@/lib/receipt-utils";
+import { displayName, formatAmount } from "@/lib/receipt-utils";
+import type { PledgeDay } from "@/lib/pledge-aggregate";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import {
@@ -50,21 +46,15 @@ import {
 } from "./period-filter";
 import { FilterSection, FilterSheet } from "@/components/filter-sheet";
 
-/**
- * The subset of a pledge row the overview needs: enough to derive what is
- * still owed, which is why payment_status and paid_amount come along.
- */
-export type UnpaidDay = Pick<
-  Receipt,
-  "amount" | "paid_amount" | "payment_status" | "collection_date"
->;
+/* Pledges arrive aggregated by day — see lib/pledge-days.ts. This used to be
+   a Pick of the raw receipt columns, reduced on the client. */
 
 export function Overview({
   daily,
   volunteers,
   expenseDays,
   pledges,
-  unpaidDays,
+  pledgeDays,
   due,
   donations,
   mandalName,
@@ -74,8 +64,8 @@ export function Overview({
   volunteers: VolunteerTotal[];
   expenseDays: ExpenseDailyTotal[];
   pledges: PledgeTotals | null;
-  /** Unpaid receipt amounts with the date they were recorded. */
-  unpaidDays: UnpaidDay[];
+  /** Unpaid pledges, one row per day they were recorded on. */
+  pledgeDays: PledgeDay[];
   due: Receipt[];
   donations: Donation[];
   mandalName: string;
@@ -123,14 +113,16 @@ export function Overview({
   // up with the collected figure beside it.
   const unpaid = React.useMemo(
     () =>
-      // outstanding(), not amount: a part-paid row's received half is already
-      // inside the collected total, so adding its full amount here would count
-      // that money twice — and the Estimated tile adds the two together.
-      filterByPeriod(unpaidDays, period).reduce(
-        (sum, r) => sum + outstanding(r),
+      // outstanding_total, not the face amounts: a part-paid row's received
+      // half is already inside the collected total, so adding its full amount
+      // here would count that money twice — and the Estimated tile adds the
+      // two together. The view sums the `outstanding` generated column, which
+      // is outstanding() in SQL.
+      filterByPeriod(pledgeDays, period).reduce(
+        (sum, d) => sum + d.outstanding_total,
         0,
       ),
-    [unpaidDays, period],
+    [pledgeDays, period],
   );
   // Rows that brought in nothing yet: the daily view counts only receipts that
   // contributed money, so a pledge with no instalment against it is missing
@@ -138,9 +130,11 @@ export function Overview({
   // here would report more receipts than were written.
   const pledgeOnlyCount = React.useMemo(
     () =>
-      filterByPeriod(unpaidDays, period).filter((r) => received(r) === 0)
-        .length,
-    [unpaidDays, period],
+      filterByPeriod(pledgeDays, period).reduce(
+        (sum, d) => sum + d.pledge_only_count,
+        0,
+      ),
+    [pledgeDays, period],
   );
   // Every receipt written in the window, paid or not.
   const count =
@@ -148,10 +142,13 @@ export function Overview({
 
   const unpaidCount = React.useMemo(
     () =>
-      // A row whose remainder has reached zero is not still owed.
-      filterByPeriod(unpaidDays, period).filter((r) => outstanding(r) > 0)
-        .length,
-    [unpaidDays, period],
+      // A row whose remainder has reached zero is not still owed; the view's
+      // owing_count applies that filter in SQL.
+      filterByPeriod(pledgeDays, period).reduce(
+        (sum, d) => sum + d.owing_count,
+        0,
+      ),
+    [pledgeDays, period],
   );
 
   /**

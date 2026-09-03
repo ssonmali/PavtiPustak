@@ -4,14 +4,12 @@ import * as React from "react";
 import { toast } from "sonner";
 import type { DailyTotal, NameMap, Receipt } from "@/lib/types";
 import { useI18n } from "@/lib/i18n/client";
-import {
-  formatAmount,
-  outstanding,
-} from "@/lib/receipt-utils";
+import { formatAmount } from "@/lib/receipt-utils";
 import { useOfflineReceipts, type FlushResult } from "@/lib/offline";
 import { isDefaultQuery, type ReceiptQuery } from "../receipts-query";
 import { useReceiptQueryNav } from "../use-receipt-query";
 import { useEditingPresence } from "@/lib/use-editing-presence";
+import type { PledgeDay } from "@/lib/pledge-aggregate";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OfflineBadge } from "@/components/offline-badge";
@@ -40,7 +38,7 @@ export function ReceiptsView({
   total,
   myName,
   daily,
-  unpaid,
+  pledgeDays,
   query,
 }: {
   receipts: Receipt[];
@@ -52,11 +50,8 @@ export function ReceiptsView({
   myName: string;
   /** Per-day paid totals for the whole ledger, for the heading summary. */
   daily: DailyTotal[];
-  /** Every unpaid pledge — enough of each to derive what is still owed. */
-  unpaid: Pick<
-    Receipt,
-    "amount" | "paid_amount" | "payment_status" | "collection_date"
-  >[];
+  /** Unpaid pledges, one row per day they were recorded on. */
+  pledgeDays: PledgeDay[];
   /** The four controls, parsed from the URL by the page. */
   query: ReceiptQuery;
 }) {
@@ -135,9 +130,9 @@ export function ReceiptsView({
    * now.
    *
    * The two filterByPeriod calls further down are a different matter and must
-   * stay: they narrow `daily` and `unpaid`, which are separate whole-ledger
-   * queries feeding the collected and due figures in the heading, not this
-   * paginated list.
+   * stay: they narrow `daily` and `pledgeDays`, which are separate
+   * whole-ledger aggregates feeding the collected and due figures in the
+   * heading, not this paginated list.
    */
   const visible = local;
 
@@ -158,17 +153,17 @@ export function ReceiptsView({
   }, [daily, period]);
 
   /**
-   * What is still owed, and how many pledges owe it. Both come from the unpaid
-   * rows rather than the loaded page, for the same reason the collected figures
-   * come from the day aggregates.
+   * What is still owed, and how many pledges owe it. Both come from the
+   * whole-ledger day aggregate rather than the loaded page, for the same
+   * reason the collected figures do.
    */
   const due = React.useMemo(() => {
-    const rows = filterByPeriod(unpaid, period);
+    const days = filterByPeriod(pledgeDays, period);
     return {
-      total: rows.reduce((sum, r) => sum + outstanding(r), 0),
-      count: rows.length,
+      total: days.reduce((sum, d) => sum + d.outstanding_total, 0),
+      count: days.reduce((sum, d) => sum + d.pledge_rows, 0),
     };
-  }, [unpaid, period]);
+  }, [pledgeDays, period]);
 
 
   return (

@@ -180,6 +180,21 @@ export type PledgeTotals = {
   overdue: number;
 };
 
+/**
+ * One row of `public.pledge_daily_totals` — unpaid pledges for one day.
+ *
+ * The sums arrive as strings: numeric does not fit a JS number safely, so
+ * postgrest sends it as text and every caller coerces. lib/pledge-days.ts is
+ * the only one, and it does.
+ */
+export type PledgeDailyTotal = {
+  collection_date: string;
+  outstanding_total: number;
+  pledge_rows: number;
+  pledge_only_count: number;
+  owing_count: number;
+};
+
 /** One row of `public.donor_directory` — powers donor autocomplete. */
 export type Donor = {
   donor_name: string;
@@ -333,6 +348,7 @@ export type Database = {
       expense_daily_totals: { Row: ExpenseDailyTotal; Relationships: [] };
       activity_log: { Row: ActivityEntry; Relationships: [] };
       pledge_totals: { Row: PledgeTotals; Relationships: [] };
+      pledge_daily_totals: { Row: PledgeDailyTotal; Relationships: [] };
       payable_totals: { Row: PayableTotals; Relationships: [] };
     };
     Functions: {

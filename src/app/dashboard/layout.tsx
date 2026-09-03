@@ -39,7 +39,13 @@ export default async function DashboardLayout({
       .order("amount", { ascending: false }),
   ]);
 
-  // proxy.ts is an optimistic gate only — this is the authoritative check.
+  /*
+   * proxy.ts is an optimistic gate only — this is the authoritative check, and
+   * since that gate moved to getClaims() it is also the ONLY one that talks to
+   * Supabase. getClaims verifies a signature, which stays valid until the
+   * token expires, so a volunteer whose account was deleted or disabled is
+   * caught here rather than there. Keep this a getUser().
+   */
   if (!user) redirect("/login");
 
   return (

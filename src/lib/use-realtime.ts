@@ -5,6 +5,25 @@ import { useRouter } from "next/navigation";
 
 export type RealtimeStatus = "connecting" | "live" | "polling";
 
+/**
+ * The tables whose changes should reach every volunteer's device.
+ *
+ * The audit tables are here alongside the ledgers because an edit that changes
+ * nothing else still writes an audit row, and the activity feed is a view of
+ * them. Publication membership for all six is what
+ * supabase/17-realtime-complete.sql guarantees.
+ */
+const TABLES = [
+  "receipts",
+  "receipt_audit",
+  "expenses",
+  "expense_audit",
+  // 11-donation-box.sql publishes these so a donation logged on one phone
+  // shows on another; without them here it never did.
+  "donations",
+  "donation_audit",
+] as const;
+
 /** Safety-net refresh cadence, in ms. */
 // Even "live" gets a safety net, but a very slack one. Every tick costs a full
 // router.refresh() — the layout's queries plus the page's — on a volunteer's
@@ -18,9 +37,11 @@ export type RealtimeStatus = "connecting" | "live" | "polling";
 // a real diagnosis the wrong way: _updatePostgresBindings matches the client's
 // bindings against the server's BY INDEX, and on any mismatch it unsubscribes
 // and fires CHANNEL_ERROR. A table missing from the publication therefore
-// fails the whole channel, loudly, and lands in the handler below. What is
-// left for this net is what stays genuinely invisible: a blocked websocket, a
-// socket dropped on a phone, or an event lost in a reconnect gap. Ten minutes
+// fails its channel, loudly, and lands in the handler below — which is also
+// why each table now gets a channel of its own, so one missing table costs
+// one table rather than all six. What is left for this net is what stays
+// genuinely invisible: a blocked websocket, a socket dropped on a phone, or
+// an event lost in a reconnect gap. Ten minutes
 // bounds that without putting a refresh in the middle of someone's typing;
 // returning to the tab refreshes anyway, which is when staleness is noticed.
 const POLL_LIVE = 600_000;
@@ -67,40 +88,27 @@ export function useRealtimeReceipts(delay = 400) {
       if (disposed) return;
       const supabase = createClient();
 
-      const channel = supabase
-        .channel("receipts-changes")
-        .on(
+      /*
+       * One channel PER TABLE, not one channel with six bindings.
+       *
+       * This is a resilience fix, not a style preference. realtime-js matches
+       * the client's bindings against the server's by index and unsubscribes
+       * the whole channel with CHANNEL_ERROR on the first mismatch, so with
+       * all six on one channel a single table missing from the publication —
+       * one unrun migration — killed live updates for everything and dropped
+       * every device to a 30-second full-page poll. Split, the five that were
+       * accepted stay live and only the missing one is dead.
+       *
+       * They share the one websocket, so this costs six cheap channel
+       * handshakes rather than six connections.
+       */
+      const channels = TABLES.map((table) =>
+        supabase.channel(`pp-${table}`).on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "receipts" },
+          { event: "*", schema: "public", table },
           refreshSoon,
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "receipt_audit" },
-          refreshSoon,
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "expenses" },
-          refreshSoon,
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "expense_audit" },
-          refreshSoon,
-        )
-        // 11-donation-box.sql puts these in the publication so a donation
-        // logged on one phone shows on another; without them here it never did.
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "donations" },
-          refreshSoon,
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "donation_audit" },
-          refreshSoon,
-        );
+        ),
+      );
 
       // Keep the socket authorised across token refreshes.
       const { data: authSub } = supabase.auth.onAuthStateChange(
@@ -115,7 +123,7 @@ export function useRealtimeReceipts(delay = 400) {
       // mid-handshake still has something to tear down.
       closeSocket = () => {
         authSub.subscription.unsubscribe();
-        void supabase.removeChannel(channel);
+        for (const channel of channels) void supabase.removeChannel(channel);
       };
       if (disposed) {
         closeSocket();
@@ -132,42 +140,64 @@ export function useRealtimeReceipts(delay = 400) {
         await supabase.realtime.setAuth(session.access_token);
       }
 
-      channel.subscribe((state, err) => {
-        if (disposed) return;
-        if (state === "SUBSCRIBED") {
-          setStatus("live");
-          return;
-        }
-        if (
-          state === "CHANNEL_ERROR" ||
-          state === "TIMED_OUT" ||
-          state === "CLOSED"
-        ) {
-          /*
-           * Falls back to polling rather than going stale.
-           *
-           * `err` is passed on because it is the only thing here that names
-           * the cause — for a rejected binding the server says which table
-           * and why. This callback took only the state and dropped it, which
-           * left the message below as the sole clue.
-           *
-           * And that message named 03-realtime.sql alone, which was actively
-           * misleading: with 11 unrun you would check 03, find it correct,
-           * and be no wiser. The question is never "did 03 run" but "which of
-           * the six bindings was rejected" — see the note on POLL_LIVE for why
-           * one is enough to fail them all, and verify.sql for the answer.
-           */
-          console.warn(
-            `[realtime] ${state} — falling back to periodic refresh. ` +
-              "If this persists, run the 'realtime publication' query in " +
-              "supabase/verify.sql: this channel binds receipts, " +
-              "receipt_audit, expenses, expense_audit, donations and " +
-              "donation_audit, and any one of them missing from the " +
-              "publication fails all of them.",
-            err ?? "(no error detail from the server)",
-          );
-          setStatus("polling");
-        }
+      /*
+       * Per-channel, so a rejected table is reported BY NAME.
+       *
+       * Status stays "live" only while every table is subscribed. That is not
+       * pessimism: the interval is the backstop for whatever is not arriving
+       * over the socket, so one dead binding genuinely does need the faster
+       * poll — the difference from before is that the other five now deliver
+       * instantly instead of everything falling back together.
+       */
+      const failed = new Set<string>();
+      const subscribed = new Set<string>();
+
+      channels.forEach((channel, i) => {
+        const table = TABLES[i];
+        channel.subscribe((state, err) => {
+          if (disposed) return;
+
+          if (state === "SUBSCRIBED") {
+            subscribed.add(table);
+            failed.delete(table);
+            if (failed.size === 0 && subscribed.size === TABLES.length) {
+              setStatus("live");
+            }
+            return;
+          }
+
+          if (
+            state === "CHANNEL_ERROR" ||
+            state === "TIMED_OUT" ||
+            state === "CLOSED"
+          ) {
+            subscribed.delete(table);
+            // Once per table, or a channel that retries logs on every attempt.
+            if (!failed.has(table)) {
+              failed.add(table);
+              /*
+               * `err` is passed on because it is the only thing here that
+               * names the cause — for a rejected binding the server says why.
+               * This callback used to take only the state and drop it.
+               *
+               * The message used to name 03-realtime.sql alone, which was
+               * actively misleading: with 11 unrun you would check 03, find it
+               * correct, and be no wiser. Now that each table has its own
+               * channel it can say which one, so the message points at the
+               * table and at the one migration that fixes all of them.
+               */
+              console.warn(
+                `[realtime] ${state} on "${table}" — that table's changes ` +
+                  "will arrive by periodic refresh instead. If this persists, " +
+                  "run supabase/17-realtime-complete.sql, then the " +
+                  "'realtime publication' query in supabase/verify.sql to " +
+                  "confirm.",
+                err ?? "(no error detail from the server)",
+              );
+            }
+            setStatus("polling");
+          }
+        });
       });
     })();
 

@@ -31,10 +31,33 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // getUser() (not getSession()) — it validates the JWT with Supabase.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  /*
+   * getClaims(), not getUser() — and never getSession().
+   *
+   * All three answer "who is this", at very different prices. getSession()
+   * only decodes the cookie and is therefore forgeable, so it is not an option
+   * for a gate. getUser() POSTs the JWT to Supabase's auth endpoint and waits
+   * for an answer: correct, but a network round trip on EVERY matched request,
+   * which on a phone is the slowest thing in a tab switch.
+   *
+   * getClaims() verifies the token's signature locally with WebCrypto against
+   * the project's cached public keys, so it is exactly as trustworthy as
+   * getUser() for identity while usually costing no round trip at all. It
+   * still refreshes the session first if the token is close to expiry, which
+   * is what keeps the cookie-refresh behaviour this proxy exists for.
+   *
+   * The caveat worth knowing: local verification needs the project to be on
+   * ASYMMETRIC JWT signing keys (Dashboard > Auth > Signing Keys). On the
+   * legacy symmetric secret this falls back to a network call by itself, so it
+   * is safe either way — it simply buys nothing until that migration is done.
+   *
+   * What this does NOT do is notice a volunteer whose account was deleted or
+   * disabled mid-token: a valid signature stays valid until it expires. That
+   * is why dashboard/layout.tsx still calls getUser() as the authoritative
+   * check on every page render — the fast gate here, the real one there.
+   */
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims ?? null;
 
   const { pathname } = request.nextUrl;
 
@@ -53,12 +76,13 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Everything except static assets. Each match costs an auth.getUser()
-    // round-trip to Supabase, so the service worker and the manifest are
-    // excluded too — they are fetched on every load and carry nothing to gate.
+    // Everything except static assets. Each match costs a JWT verification
+    // (see getClaims above — local where the project allows it, a round trip
+    // otherwise), so the service worker and the manifest are excluded too:
+    // they are fetched on every load and carry nothing to gate.
     //
     // api/health is excluded for a second reason: it exists to answer "did a
-    // request reach the server", and running it through an auth round-trip
+    // request reach the server", and putting an auth check in front of it
     // would make that answer depend on Supabase being quick. A slow database
     // would then time the probe out and report a working connection as
     // offline, which is the bug the probe was added to fix.
