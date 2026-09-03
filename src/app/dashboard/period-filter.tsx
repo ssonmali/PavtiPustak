@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ViewTransition } from "react";
 
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -25,15 +26,40 @@ export function PeriodPresets({
   period: Period;
   onChange: (period: Period) => void;
 }) {
+  /*
+   * A single saffron-lit pill travels between the chips instead of one chip
+   * losing its fill and another gaining one.
+   *
+   * The chips all wear the same glass now; what says "selected" is this
+   * marker, which is ONE element that React morphs from the old chip's box to
+   * the new one. Two fills swapping is two events to notice; one pill moving
+   * is a thing following the tap.
+   *
+   * The name is scoped with useId so that two instances of this row — the
+   * desktop chip row and the copy inside the filter sheet, or two of these on
+   * one page — cannot claim the same view-transition-name, which is undefined
+   * behaviour rather than a shared animation. Pairing still works: the marker
+   * moves within one component instance, and that instance's id is stable
+   * across its own re-renders.
+   *
+   * startTransition is what makes it animate at all. ViewTransition activates
+   * inside a React Transition; a route change already is one, but these chips
+   * also drive plain local state on the expenses and activity tabs, and
+   * without this the marker would jump there and glide on receipts — the same
+   * control behaving two ways.
+   */
+  const markerName = `period-chip-${React.useId()}`;
   const { t } = useI18n();
 
   return (
     <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
-      {PRESETS.map((preset) => (
+      {PRESETS.map((preset) => {
+        const selected = samePeriod(period, preset);
+        return (
         <Button
           key={periodLabelKey(preset)}
           size="sm"
-          variant={samePeriod(period, preset) ? "secondary" : "outline"}
+          variant="outline"
           /* The `outline` variant is bg-background, which is the opaque mesh
              base — so these chips sat on the glass as flat panels. Only the
              unselected ones become glass: the chosen chip keeps its solid
@@ -43,14 +69,27 @@ export function PeriodPresets({
              puts a 44px floor under every button on a phone, so this stays
              the desktop density. */
           className={cn(
-            "shrink-0 rounded-full sm:border-transparent sm:shadow-none",
-            !samePeriod(period, preset) && "glass-pill",
+            "glass-pill relative shrink-0 rounded-full sm:border-transparent sm:shadow-none",
+            // The marker below carries the fill, so the selected chip only
+            // needs the ink that used to come with the `secondary` variant.
+            selected && "text-secondary-foreground",
           )}
-          onClick={() => onChange(preset)}
+          onClick={() => React.startTransition(() => onChange(preset))}
         >
-          {t(periodLabelKey(preset))}
+          {selected ? (
+            <ViewTransition name={markerName} share="chip-marker" default="none">
+              <span
+                aria-hidden
+                className="absolute inset-0 rounded-full bg-secondary"
+              />
+            </ViewTransition>
+          ) : null}
+          {/* Above the marker: the marker is absolutely positioned and would
+              otherwise paint over a bare text node. */}
+          <span className="relative">{t(periodLabelKey(preset))}</span>
         </Button>
-      ))}
+        );
+      })}
     </div>
   );
 }

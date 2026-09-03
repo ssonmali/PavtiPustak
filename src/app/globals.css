@@ -2170,6 +2170,28 @@
    * a highlight to be coming from, and a bar that shimmers for no reason is
    * the kind of motion that makes an app feel busy rather than alive.
    */
+  /*
+   * A bar travels to its new length rather than teleporting to it.
+   *
+   * All four themes, unlike the gleam below: this is not decoration. These
+   * bars are how a volunteer reads "about a third of it has arrived" without
+   * reading the figures, and the length changes when a part-payment is
+   * recorded here or by a colleague over realtime. Snapping means the change
+   * happens between two frames with nothing to notice; growing means the eye
+   * is drawn to the one bar that moved.
+   *
+   * The transition only fires on a CHANGE, so a bar renders at its true length
+   * on first paint and does not sweep up from zero on every page load.
+   *
+   * width, not transform: a scaled bar would scale the travelling highlight
+   * inside it and blur its own rounded end. The bars are a few pixels tall and
+   * there are at most a handful on screen, so the layout cost is not the one
+   * worth optimising here.
+   */
+  .bar-fill {
+    transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
   .devasthan-day .bar-fill,
   .devasthan-night .bar-fill {
     position: relative;
@@ -2585,4 +2607,68 @@
   to {
     opacity: 0;
   }
+}
+
+/*
+ * One beat, when a count changes. See lib/use-pulse-on-change.ts for why it is
+ * one and not a loop.
+ *
+ * Unlayered alongside the other animations added here, and transform-only —
+ * these badges sit on chips and toolbars that carry backdrop-filter, and a
+ * filter keyframe on those is the flicker this file has now been bitten by
+ * twice.
+ *
+ * The scale is small and the ease overshoots slightly at the top, which is
+ * what makes it read as a beat rather than as a zoom. Any bigger and a badge
+ * two digits wide visibly collides with the chip label beside it.
+ */
+.pulse-once {
+  animation: pulse-once 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pulse-once {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/*
+ * A row arriving from "Load more".
+ *
+ * Quieter than .row-new on purpose — that one is a saffron wash meaning "this
+ * was just written", and a page of older receipts is not that. See the note in
+ * receipts-table.tsx.
+ *
+ * Un-staggered. A stagger down fifty appended rows would be a performance, and
+ * the last of them would still be arriving after the volunteer had started
+ * reading. They come in together, quickly, and the list stops moving.
+ *
+ * `both`, so the row does not paint at full opacity for one frame before the
+ * animation takes hold — the same flicker the card riseIn stagger needed it
+ * for. The translate is small and may be ignored on a <tr> in older engines,
+ * which degrades to the fade alone: still an arrival, just a flatter one.
+ */
+.row-paged {
+  animation: row-paged 240ms ease-out both;
+}
+
+@keyframes row-paged {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* The filter chips' travelling pill. Slightly quicker than the nav marker:
+   the chips sit in one short row, so the distance is smaller and the same
+   duration would read as sluggish. */
+::view-transition-group(.chip-marker) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }

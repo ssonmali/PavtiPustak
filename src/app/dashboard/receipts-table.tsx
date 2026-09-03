@@ -222,6 +222,22 @@ export function ReceiptsTable({
   // by Load more are old rows arriving late, not new ones.
   const arrived = useNewRows(React.useMemo(() => receipts.map((r) => r.id), [receipts]));
 
+  /**
+   * The rows appended by "Load more", so they can arrive rather than appear.
+   *
+   * Deliberately NOT reusing `row-new`. That is the saffron wash meaning "this
+   * receipt was just written", and firing it for a page of older rows would
+   * say something false about every one of them. This is the quieter thing: a
+   * fade and a small rise that says where the list grew.
+   *
+   * The class can stay on these rows for good without repeating itself — a CSS
+   * animation runs when the element MOUNTS, and a re-render is not a mount.
+   */
+  const paged = React.useMemo(
+    () => new Set(tail.key === pageKey ? tail.rows.map((r) => r.id) : []),
+    [tail, pageKey],
+  );
+
   async function loadMore() {
     setLoadingMore(true);
     const { rows } = await fetchReceipts(query, all.length);
@@ -495,6 +511,7 @@ export function ReceiptsTable({
                   key={receipt.id}
                   className={cn(
                     arrived.has(receipt.id) && "row-new",
+                    paged.has(receipt.id) && "row-paged",
                     leaving.includes(receipt.id) && "row-leaving",
                   )}
                 >
@@ -655,6 +672,7 @@ export function ReceiptsTable({
                 // The card paints its own background, so its wash has to end
                 // on that rather than on nothing.
                 arrived.has(receipt.id) && "row-new [--row-new-end:var(--card)]",
+                paged.has(receipt.id) && "row-paged",
                 leaving.includes(receipt.id) && "row-leaving",
               )}
             >

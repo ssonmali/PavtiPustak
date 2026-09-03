@@ -4,8 +4,10 @@ import * as React from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
+import { usePulseOnChange } from "@/lib/use-pulse-on-change";
 import { formatAmount } from "@/lib/receipt-utils";
 import type { Receipt } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -27,6 +29,7 @@ export function NotificationBell({ dueToday }: { dueToday: DueRow[] }) {
   // Controlled so the popover closes on navigation — Link doesn't unmount
   // the trigger the way a real page load would, so it stays open otherwise.
   const [open, setOpen] = React.useState(false);
+  const pulse = usePulseOnChange(count);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -42,7 +45,7 @@ export function NotificationBell({ dueToday }: { dueToday: DueRow[] }) {
       >
         <Bell className="size-4" />
         {count > 0 ? (
-          <span className="absolute -top-1 -right-1 rounded-full bg-primary px-1 py-px text-[9px] leading-none font-semibold text-primary-foreground tabular-nums">
+          <span className={cn("absolute -top-1 -right-1 rounded-full bg-primary px-1 py-px text-[9px] leading-none font-semibold text-primary-foreground tabular-nums", pulse)}>
             {count}
           </span>
         ) : null}
