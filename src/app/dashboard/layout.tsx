@@ -45,6 +45,19 @@ export default async function DashboardLayout({
   return (
     <I18nProvider locale={locale}>
       <ServiceWorkerRegistrar />
+      {/* Lamplight on the Devasthan backdrop: a halo behind the balance card
+          in Day, three diya sparks in Night, and nothing at all in the other
+          two themes (globals.css hides the whole layer). Four empty spans, so
+          rendering them unconditionally is cheaper than making the dashboard
+          shell care which theme is active — which it cannot know on the
+          server anyway, and guessing is a hydration mismatch. */}
+      <div aria-hidden data-devasthan-decor>
+        <span className="devasthan-halo" />
+        <span className="devasthan-spark devasthan-spark--1" />
+        <span className="devasthan-spark devasthan-spark--2" />
+        <span className="devasthan-spark devasthan-spark--3" />
+      </div>
+
       <div className="flex min-h-full flex-1 flex-col">
         <header className="glass-bar sticky top-0 z-20 border-b print:hidden">
           <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-4">

@@ -94,7 +94,7 @@ export function CategoryBreakdown({
                   <span className="block h-2 overflow-hidden rounded-full bg-muted">
                     <span
                       className={cn(
-                        "block h-full rounded-full",
+                        "bar-fill bar-fill--slow block h-full rounded-full",
                         active ? "bg-primary" : "bg-muted-foreground/50",
                       )}
                       style={{ width: `${share}%` }}

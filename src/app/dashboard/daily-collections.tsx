@@ -45,7 +45,13 @@ export function DailyCollections({ days }: { days: DailyTotal[] }) {
           --series-cash: #2a78d6;
           --series-upi: #eb6834;
         }
-        .dark .viz-root {
+        /* Every dark-family theme, matching the \`dark\` custom variant in
+           globals.css — the Devasthan themes are dark themes and do not carry
+           the .dark class, so listing only .dark left them on the light-mode
+           pair against a near-black card. */
+        .dark .viz-root,
+        .devasthan-day .viz-root,
+        .devasthan-night .viz-root {
           --series-cash: #3987e5;
           --series-upi: #d95926;
         }

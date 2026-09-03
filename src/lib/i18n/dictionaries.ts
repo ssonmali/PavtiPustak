@@ -106,6 +106,10 @@ const en = {
   "theme.system": "System",
   "theme.light": "Light",
   "theme.dark": "Dark",
+  // Devasthan — "the god's place". Named for what the theme puts on screen:
+  // the mandal's own idol behind everything, rather than a generic template.
+  "theme.devasthanDay": "Devasthan",
+  "theme.devasthanNight": "Devasthan Night",
 
   // Errors & empty states
   "error.title": "Something went wrong",
@@ -464,6 +468,8 @@ const mr: Record<MessageKey, string> = {
   "theme.system": "सिस्टीमनुसार",
   "theme.light": "उजळ",
   "theme.dark": "गडद",
+  "theme.devasthanDay": "देवस्थान",
+  "theme.devasthanNight": "देवस्थान — रात्र",
 
   "error.title": "काहीतरी चूक झाली",
   "error.body": "नोंदवही उघडता आली नाही. तुमच्या पावत्या सुरक्षित आहेत.",

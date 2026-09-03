@@ -63,7 +63,25 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${tiro.variable} h-full antialiased`}
     >
-      <body className="app-surface flex min-h-full flex-col">
+      <body
+        className="app-surface flex min-h-full flex-col"
+        /* The Devasthan themes' backdrop, as a CSS variable rather than an
+           <img>: it is a decorative ground, and a background-image on a
+           selector that does not match is never fetched, so the photo costs
+           nothing in the other two themes. A mandal points this at its own
+           idol by setting NEXT_PUBLIC_MANDAP_PHOTO; the fallback is the same
+           file the header already shows.
+
+           Worth knowing before changing it: the scrim over this photo is what
+           guarantees text contrast, and it is tuned to the shipped image. A
+           markedly brighter photo needs --scrim-mid raised — see the
+           Devasthan block in globals.css. */
+        style={{
+          ["--mandap-photo" as string]: `url("${
+            process.env.NEXT_PUBLIC_MANDAP_PHOTO ?? "/idol.jpg"
+          }")`,
+        }}
+      >
         <ThemeProvider>
           <MobileKeyboard />
           {children}

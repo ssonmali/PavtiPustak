@@ -40,7 +40,9 @@ export function PaidProgress({
       )}
     >
       <span
-        className="block h-full rounded-full bg-positive"
+        // bar-fill carries a travelling highlight under the Devasthan themes
+        // and nothing at all under the others — see globals.css.
+        className="bar-fill block h-full rounded-full bg-positive"
         // A sliver rather than nothing at 1%: the bar exists to say "some of it
         // has arrived", and rounding that away contradicts the badge beside it.
         style={{ width: `${Math.max(share, 6)}%` }}

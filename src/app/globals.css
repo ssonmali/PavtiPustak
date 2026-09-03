@@ -2,7 +2,20 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * Every dark-family theme, not just `.dark`.
+ *
+ * The two Devasthan themes are dark themes — light text over a dimmed photo —
+ * so the several hundred `dark:` utilities across the app have to fire under
+ * them too. They cannot simply also carry the `.dark` class: next-themes sets
+ * one class from `value`, and classList.add rejects a space-separated pair. So
+ * the family is spelled out here, once, and everything downstream follows.
+ *
+ * Adding a third dark theme means adding it in exactly three places: this
+ * variant, the shared token block below, and `.viz-root` in
+ * dashboard/daily-collections.tsx.
+ */
+@custom-variant dark (&:is(.dark *, .devasthan-day *, .devasthan-night *));
 
 @theme inline {
   --color-background: var(--background);
@@ -213,6 +226,15 @@
    */
   --card-nested: oklch(1 0 0 / 0.44);
   --card-nested-solid: oklch(0.99 0.006 85);
+  /*
+   * Hooks for a theme that wants a heavier hero surface or a differently
+   * tinted chrome bar than the panes. They alias the plain tokens here and in
+   * .dark, so light and dark render exactly as they did before these existed —
+   * only the Devasthan themes give them values of their own.
+   */
+  --card-strong: var(--card);
+  --border-strong: var(--border);
+  --bar-bg: color-mix(in oklab, var(--card-solid) 72%, transparent);
   /* How far the pane blurs what is behind it. A variable so the whole effect
      can be turned off in one place — see the @supports gate below. */
   --glass-blur: 22px;
@@ -223,7 +245,15 @@
   );
 }
 
-.dark {
+/*
+ * The shared dark base. Both Devasthan themes inherit the whole of it and then
+ * override only what the photo backdrop changes — which is why their blocks
+ * below are short rather than another 60-token transcription. Anything added
+ * here is picked up by all three.
+ */
+.dark,
+.devasthan-day,
+.devasthan-night {
   --background: oklch(0.17 0.03 250);        /* deep indigo-charcoal mesh base */
   --foreground: oklch(0.97 0.008 220);
   --card: oklch(1 0 0 / 0.06);                /* glass: translucent white-on-dark */
@@ -299,12 +329,184 @@
   --card-sheen-nested: transparent;
   --card-nested: oklch(1 0 0 / 0.07);
   --card-nested-solid: oklch(0.26 0.025 250);
+  --card-strong: var(--card);
+  --border-strong: var(--border);
+  --bar-bg: color-mix(in oklab, var(--card-solid) 72%, transparent);
   --glass-blur: 16px;
   --brand-gradient: linear-gradient(
     135deg,
     oklch(0.8 0.14 72) 0%,
     oklch(0.68 0.15 46) 100%
   );
+}
+
+/* ---------------------------------------------------------------------------
+   Devasthan — the mandal's own idol photo as the ground.
+
+   Two variants of one theme: Day is the photo dimmed and warm, Night is the
+   same photo graded near-black with diya glow. Both inherit the whole `.dark`
+   block above and change only what the backdrop forces.
+
+   What makes these different in kind from Light and Dark: the ground is a
+   PHOTOGRAPH, so no contrast figure here is a property of the tokens alone.
+   Every number below was measured by compositing public/idol.jpg — cover-
+   scaled into a 412x915 viewport — under the photo filter, then the scrim,
+   then each surface veil, and taking the WORST pixel of the whole viewport,
+   not the average. The averages were never the problem: the spec's own values
+   measured a median of 12:1 and a worst case of 2.33:1, because this mandal's
+   crop puts the idol's lit face and silver ornament at about 31% down the
+   page — exactly where the cards sit.
+
+   Consequences worth knowing before editing:
+
+    - THE SCRIM IS THE CONTRAST GUARANTEE, not decoration. It is tuned to the
+      photo that ships in public/idol.jpg. Swapping a brighter photo in via
+      NEXT_PUBLIC_MANDAP_PHOTO WILL break the measured figures: the same
+      scrim over the undimmed photo measured muted text at 2.11:1. If a
+      mandal changes the photo, --scrim-mid is the one number to raise.
+    - The card veil is DARK here, not the white one the light theme uses. A
+      white veil over a dark ground lightens what light text sits on and works
+      against contrast — the same reason .dark drops --card-sheen entirely.
+   --------------------------------------------------------------------------- */
+.devasthan-day,
+.devasthan-night {
+  /* Under the photo, so it only shows for the instant before the image
+     decodes, and behind the transparent edges of nothing else. */
+  --background: oklch(0.14 0.02 40);
+  --foreground: oklch(0.98 0.005 90);
+  --card-foreground: oklch(0.98 0.005 90);
+
+  /* Warm gold. Bright enough to read as lamplight on a dark ground; measured
+     as text it reaches 6.33:1 on a card and 8.47:1 on the header bar. It does
+     measure 4.42:1 bare on the ground, just under the gate — the same
+     situation the light theme documents, and safe for the same reason:
+     --primary as text only ever lands on .glass-bar and on card surfaces,
+     never bare on the ground. */
+  --primary: oklch(0.87 0.14 78);
+  --primary-foreground: oklch(0.15 0.03 50);
+  --ring: oklch(0.87 0.14 78);
+
+  /* The gradient partner from the spec's --primary-2, expressed through the
+     token the app already uses for it — this drives the nav underline, the
+     volunteer bars and the brand tile. */
+  --brand-gradient: linear-gradient(
+    135deg,
+    oklch(0.87 0.14 78) 0%,
+    oklch(0.65 0.14 45) 100%
+  );
+
+  --positive: oklch(0.82 0.13 155);
+  --positive-ink: oklch(0.85 0.11 158);
+  --pending: oklch(0.85 0.11 80);
+  --pending-ink: oklch(0.88 0.09 82);
+  --destructive: oklch(0.7 0.19 27);
+
+  /* Gold rather than white, so an edge reads as light catching the pane from
+     the diyas rather than as a drawn outline. */
+  --card-highlight: oklch(0.9 0.12 80 / 0.28);
+  --card-ring-raised: oklch(0.85 0.12 78 / 0.3);
+  --border: oklch(0.85 0.12 78 / 0.26);
+  --input: oklch(0.85 0.12 78 / 0.32);
+  --border-strong: oklch(0.85 0.12 78 / 0.34);
+
+  /* Chrome sits directly on the photo, so it is darker than the panes: it is
+     the one surface that has to stay legible over the brightest part of the
+     image whatever scrolls behind it. */
+  --bar-bg: oklch(0.12 0.015 40 / 0.55);
+  --sidebar: oklch(0.12 0.015 40 / 0.55);
+  --sidebar-border: oklch(0.85 0.12 78 / 0.26);
+  --sidebar-foreground: oklch(0.98 0.005 90);
+
+  /* Selected chips and the accent fill. Warmer and a touch stronger than
+     .dark's, because they have a photo rather than a flat mesh to stand out
+     from. */
+  --secondary: oklch(0.85 0.12 80 / 0.2);
+  --secondary-foreground: oklch(0.92 0.09 84);
+  --accent: oklch(0.85 0.12 80 / 0.2);
+  --accent-foreground: oklch(0.92 0.09 84);
+  --muted: oklch(1 0 0 / 0.08);
+
+  /* Deliberately still opaque, and deliberately NOT the spec's translucent
+     --sheet-bg. Two reasons, and the first applies to every theme: a dropdown
+     or a date picker floats over arbitrary page content rather than over the
+     backdrop, so a veil there shows the text underneath it and stops being
+     readable. The second is specific to this app — the receipt and expense
+     dialogs are the surface a volunteer types into, they were the subject of a
+     keyboard-and-contrast bug fixed at some cost, and an opaque panel is the
+     verified state. Glass on the form is not worth re-opening that. */
+  --card-solid: oklch(0.19 0.02 45);
+  --card-nested-solid: oklch(0.22 0.022 45);
+  --popover: oklch(0.19 0.02 45);
+  --popover-foreground: oklch(0.98 0.005 90);
+
+  /* No sheen, for the reason .dark gives: over light text a white wash costs
+     contrast and buys only decoration. The gold edge carries the glass. */
+  --card-sheen: transparent;
+  --card-sheen-nested: transparent;
+
+  /* Per the spec's blur budget: 16px for a standard pane. The hero and the
+     chrome take theirs from --glass-blur-strong. */
+  --glass-blur: 16px;
+  --glass-blur-strong: 22px;
+
+  /* How far down the page the scrim reaches its thinnest point, and how thin.
+     Named because it is the contrast knob — see the block comment above. */
+  --scrim-top: 0.62;
+  --scrim-mid: 0.5;
+  --scrim-bottom: 0.82;
+}
+
+.devasthan-day {
+  /*
+   * Measured, worst pixel of the viewport, with the values in this block:
+   *
+   *                       body text   muted text   gold as text
+   *   bare on the ground     6.40         4.89          4.42
+   *   on a glass card        9.17         6.68          6.33
+   *   nested row on a card   7.92         5.88          5.46
+   *   header / nav bar      12.27         8.57          8.47
+   *
+   * The spec asks for saturate(1.08) and no dimming. Undimmed, the same
+   * surfaces measured 2.60 / 2.11 bare and 2.33 / 1.94 on a card — a failure
+   * of roughly a factor of two, not a rounding error. brightness(.8) plus the
+   * slightly heavier scrim below is the smallest change that clears 4.5:1
+   * everywhere while leaving the photo plainly the brightest thing on screen.
+   */
+  --mandap-filter: brightness(0.8) saturate(1.08);
+  --card: oklch(0.14 0.02 40 / 0.3);
+  --card-nested: oklch(1 0 0 / 0.07);
+  --card-strong: oklch(0.14 0.02 40 / 0.4);
+  --muted-foreground: oklch(1 0 0 / 0.78);
+  --whatsapp: oklch(0.42 0.1 155 / 0.8);
+  --whatsapp-ink: oklch(0.93 0.06 155);
+}
+
+.devasthan-night {
+  /*
+   * Measured the same way, including the three diya/moonlight radials in the
+   * scrim, which are the brightest thing the text has to survive:
+   *
+   *                       body text   muted text
+   *   bare on the ground     8.92         5.61
+   *   on a glass card       11.29         6.78
+   *   nested row on a card   9.68         6.00
+   *
+   * The spec's --muted-foreground of 0.60 alpha measures 4.60:1 bare — it
+   * passes, with 0.10 of margin and against a radial gradient my harness can
+   * only approximate. 0.70 costs nothing visible and buys back a whole point.
+   */
+  --mandap-filter: brightness(0.4) saturate(1.05) contrast(1.05);
+  --card: oklch(0.16 0.02 285 / 0.3);
+  --card-nested: oklch(1 0 0 / 0.06);
+  --card-strong: oklch(0.16 0.02 285 / 0.38);
+  --muted-foreground: oklch(1 0 0 / 0.7);
+  --whatsapp: oklch(0.4 0.1 155 / 0.8);
+  --whatsapp-ink: oklch(0.93 0.06 155);
+  --scrim-top: 0.5;
+  --scrim-mid: 0.42;
+  --scrim-bottom: 0.92;
+  --bar-bg: oklch(0.08 0.01 285 / 0.62);
+  --sidebar: oklch(0.08 0.01 285 / 0.62);
 }
 
 @layer base {
@@ -710,6 +912,244 @@
         transparent 70%
       );
   }
+
+  /* -------------------------------------------------------------------------
+     Devasthan: the photo backdrop.
+
+     No <img> and no next/image, on purpose. The mesh already established a
+     pair of fixed, full-bleed, compositor-only layers behind everything, and
+     the photo is the same kind of thing — so it reuses them rather than adding
+     a second mechanism plus DOM plus a layout dependency. Three things fall
+     out of that which are worth having:
+
+      - The image is only fetched when one of these two themes is active. A
+        hidden <img> is still downloaded; a background-image on an unmatched
+        selector is not.
+      - Nothing about it can affect layout or be read by a screen reader,
+        which is right for a decorative ground.
+      - `background-attachment: fixed` is NOT used to pin it — Chrome Android
+        and iOS Safari both silently downgrade that to scrolling. The layer is
+        `position: fixed`, which they honour, and which is what makes the
+        cards appear to travel across the photo as you scroll.
+
+     ::before is the photo and it is the layer that moves. ::after is the
+     scrim and it must not: a scrim that breathed with the image would let the
+     bright parts of the photo swim in and out from under the text, and the
+     scrim is what guarantees that text stays readable.
+
+     The z-indices are spelled out rather than left at the mesh's shared -1.
+     All of these are negative children of the same stacking context (body is
+     `position: relative`), so they sort by z-index and then by tree order —
+     and the decor div sits between ::before and ::after in tree order, which
+     without explicit values would paint the sparks underneath the scrim.
+     ------------------------------------------------------------------------- */
+  .devasthan-day .app-surface::before,
+  .devasthan-night .app-surface::before {
+    /* Set from the env var on <body> — see app/layout.tsx. */
+    background: var(--mandap-photo, url("/idol.jpg")) center / cover no-repeat;
+    filter: var(--mandap-filter);
+    /* inset 0 rather than the mesh's -25%: at scale(1) a `cover` background
+       exactly fills the layer, and the breathe scales up from there, so the
+       overscan the mesh needed for its drift is already covered. */
+    inset: 0;
+    z-index: -3;
+    animation: devasthan-breathe 12s ease-in-out infinite;
+  }
+
+  .devasthan-day .app-surface::after,
+  .devasthan-night .app-surface::after {
+    /* inset 0 matters here beyond tidiness: the gradient's 0%-100% maps to
+       the layer's height, so the mesh's -25% inset would put the bottom of
+       the visible page at about 83% of the ramp and the densest part of the
+       scrim off-screen entirely. */
+    inset: 0;
+    z-index: -2;
+    animation: none;
+    will-change: auto;
+  }
+
+  .devasthan-day .app-surface::after {
+    background: linear-gradient(
+      180deg,
+      oklch(0.1 0.01 40 / var(--scrim-top)) 0%,
+      oklch(0.1 0.01 40 / var(--scrim-mid)) 30%,
+      oklch(0.1 0.01 40 / var(--scrim-bottom)) 100%
+    );
+  }
+
+  .devasthan-night .app-surface::after {
+    /* Two warm points and one cool one over a much denser ramp: diyas either
+       side of the idol, and a suggestion of moonlight between them. These are
+       part of the measured stack, not free decoration — they are the
+       brightest thing the light text has to survive, and the night figures in
+       the token block are taken with them composited in. */
+    background:
+      radial-gradient(
+        circle at 18% 12%,
+        oklch(0.8 0.14 78 / 0.16),
+        transparent 26%
+      ),
+      radial-gradient(
+        circle at 82% 8%,
+        oklch(0.8 0.14 78 / 0.12),
+        transparent 22%
+      ),
+      radial-gradient(
+        circle at 55% 22%,
+        oklch(0.65 0.1 250 / 0.14),
+        transparent 30%
+      ),
+      linear-gradient(
+        180deg,
+        oklch(0.05 0.015 285 / var(--scrim-top)) 0%,
+        oklch(0.05 0.015 285 / var(--scrim-mid)) 26%,
+        oklch(0.05 0.015 285 / var(--scrim-bottom)) 100%
+      );
+  }
+
+  /*
+   * 12s, and the scale is 3.5%. Slow enough to read as "alive" rather than as
+   * drift you can catch in the act — anything under about 10s starts to
+   * register as movement and competes with the figures on the cards. Cost is
+   * the same as the mesh's: a transform on an already-rasterised fixed layer
+   * with no text in it, so the compositor moves a texture and nothing repaints.
+   */
+  @keyframes devasthan-breathe {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.035);
+    }
+  }
+
+  /*
+   * The decor layer: a halo behind the hero card in Day, three diya sparks in
+   * Night. Rendered on every dashboard page and hidden unless one of the two
+   * themes is on — four empty spans, so there is nothing to gain by making
+   * this conditional in React and a hydration mismatch to lose.
+   */
+  [data-devasthan-decor] {
+    display: none;
+  }
+
+  .devasthan-day [data-devasthan-decor],
+  .devasthan-night [data-devasthan-decor] {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    /* Clipped to the viewport: the halo is 260px wide and centred, which on a
+       320px screen would otherwise widen the page and trigger the mobile
+       "shrink to fit" that @layer base guards against. */
+    overflow: hidden;
+  }
+
+  .devasthan-spark,
+  .devasthan-halo {
+    display: none;
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .devasthan-night .devasthan-spark {
+    display: block;
+    border-radius: 50%;
+    background: oklch(0.9 0.15 80);
+  }
+
+  /* Three different periods and two different delays, so they never pulse in
+     unison — in step they read as a UI element blinking rather than as flame. */
+  .devasthan-night .devasthan-spark--1 {
+    top: 22%;
+    left: 16%;
+    width: 6px;
+    height: 6px;
+    box-shadow: 0 0 8px 2px oklch(0.9 0.15 80 / 0.8);
+    animation: glowpulse 3.4s ease-in-out infinite;
+  }
+
+  .devasthan-night .devasthan-spark--2 {
+    top: 14%;
+    right: 22%;
+    width: 4px;
+    height: 4px;
+    box-shadow: 0 0 7px 2px oklch(0.9 0.15 80 / 0.75);
+    animation: glowpulse 4.1s ease-in-out infinite 0.8s;
+  }
+
+  .devasthan-night .devasthan-spark--3 {
+    top: 32%;
+    right: 12%;
+    width: 5px;
+    height: 5px;
+    box-shadow: 0 0 8px 2px oklch(0.9 0.15 80 / 0.8);
+    animation: glowpulse 3.8s ease-in-out infinite 1.4s;
+  }
+
+  /* Day's counterpart: a soft glow where the balance card sits, so the number
+     that matters reads as lit from behind rather than merely placed. */
+  .devasthan-day .devasthan-halo {
+    display: block;
+    top: 130px;
+    left: 50%;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(
+      circle,
+      oklch(0.85 0.15 78 / 0.3),
+      transparent 70%
+    );
+    animation: glowpulse 4.2s ease-in-out infinite;
+  }
+
+  /* Shared by the sparks, the halo and the overdue badge. */
+  @keyframes glowpulse {
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.95;
+      transform: scale(1.06);
+    }
+  }
+
+  /* The halo is the one user of this keyframe that also needs a static
+     transform, and `transform` in the keyframe would overwrite its centring. */
+  .devasthan-day .devasthan-halo {
+    animation-name: halopulse;
+  }
+
+  @keyframes halopulse {
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: translateX(-50%) scale(1);
+    }
+    50% {
+      opacity: 0.95;
+      transform: translateX(-50%) scale(1.06);
+    }
+  }
+
+  /* Held still on request, like the mesh. Everything above is decoration; the
+     photo and the scrim are just as legible motionless, and the sparks and
+     halo are still visible — they simply stop pulsing. */
+  @media (prefers-reduced-motion: reduce) {
+    .devasthan-day .app-surface::before,
+    .devasthan-night .app-surface::before,
+    .devasthan-night .devasthan-spark,
+    .devasthan-day .devasthan-halo {
+      animation: none;
+      will-change: auto;
+    }
+  }
 }
 
 
@@ -931,14 +1371,23 @@
    * the panes, so they say so in one place.
    */
   .glass-bar {
-    background-color: color-mix(in oklab, var(--card-solid) 72%, transparent);
+    /* Via a token rather than inline, because a theme whose ground is a
+       photograph needs the chrome darker than the panes: the header and the
+       tab bar are the two surfaces that have to stay legible over whatever
+       part of the image happens to scroll behind them. --bar-bg aliases this
+       same color-mix in light and dark, so those are unchanged. */
+    background-color: var(--bar-bg);
     box-shadow: inset 0 1px 0 var(--card-highlight);
   }
 
   @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
     .glass-bar {
-      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-      backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+      /* The top of the spec's blur budget, where it defines one; falls back to
+         the pane blur in themes that do not distinguish the two. */
+      -webkit-backdrop-filter: blur(var(--glass-blur-strong, var(--glass-blur)))
+        saturate(1.4);
+      backdrop-filter: blur(var(--glass-blur-strong, var(--glass-blur)))
+        saturate(1.4);
     }
   }
 
@@ -1061,6 +1510,157 @@
   }
 
   /*
+   * The hero surface: the one pane on a screen that should read as "the" card.
+   *
+   * A modifier on top of the card treatment, not a replacement — it inherits
+   * the sheen, the edge and the shadow and only makes the glass heavier. In
+   * light and dark --card-strong and --border-strong alias the plain tokens,
+   * so adding this class there is a no-op and the balance card renders exactly
+   * as it did; only the Devasthan themes give them values of their own.
+   */
+  [data-slot="card"].card-hero:not(.shadow-none) {
+    background-color: var(--card-strong);
+    border-color: var(--border-strong);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    [data-slot="card"].card-hero:not(.shadow-none) {
+      -webkit-backdrop-filter: blur(var(--glass-blur-strong, var(--glass-blur)))
+        saturate(1.05);
+      backdrop-filter: blur(var(--glass-blur-strong, var(--glass-blur)))
+        saturate(1.05);
+    }
+  }
+
+  /* Night only: an ambient gold bloom around the hero, so the collected total
+     sits in its own pool of lamplight. Day gets the same effect from the halo
+     behind it instead, which is a layer on the backdrop rather than a shadow
+     on the card. */
+  .devasthan-night [data-slot="card"].card-hero:not(.shadow-none) {
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-md),
+      0 0 40px -10px oklch(0.85 0.15 78 / 0.3);
+  }
+
+  /* The figure the whole screen is about, lit from within. Text-shadow rather
+     than colour, so it costs no contrast — it only adds light around glyphs
+     that are already at 11:1. */
+  .devasthan-day .hero-amount,
+  .devasthan-night .hero-amount {
+    text-shadow: 0 0 24px oklch(0.85 0.15 78 / 0.5);
+  }
+
+  /*
+   * A progress bar's travelling highlight.
+   *
+   * On the fill rather than as an extra element: every bar in the app is a
+   * track span wrapping a fill span, and threading a third sibling through
+   * five call sites to carry a purely decorative sweep is a lot of surface
+   * area for a gleam. The fill already clips (the track is overflow-hidden),
+   * so ::after inside it needs no clipping of its own.
+   *
+   * Gated to the Devasthan themes: on the flat mesh there is no lamplight for
+   * a highlight to be coming from, and a bar that shimmers for no reason is
+   * the kind of motion that makes an app feel busy rather than alive.
+   */
+  .devasthan-day .bar-fill,
+  .devasthan-night .bar-fill {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .devasthan-day .bar-fill::after,
+  .devasthan-night .bar-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    /* Narrower than the bar so it reads as a highlight crossing it rather
+       than the bar itself pulsing. */
+    width: 35%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(1 0 0 / 0.5),
+      transparent
+    );
+    animation: bar-sweep 2.6s ease-in-out infinite;
+  }
+
+  /* The volunteer bars run 3s against the hero's 2.6s. Several bars are on
+     screen at once on the overview, and at one period they sweep in step,
+     which reads as a loading state rather than as a finished figure. */
+  .devasthan-day .bar-fill.bar-fill--slow::after,
+  .devasthan-night .bar-fill.bar-fill--slow::after {
+    width: 30%;
+    animation-duration: 3s;
+  }
+
+  @keyframes bar-sweep {
+    from {
+      transform: translateX(-120%);
+    }
+    to {
+      transform: translateX(320%);
+    }
+  }
+
+  /* The spec also asks for a pulsing overdue badge. Not added: due-panel.tsx
+     already pulses its overdue count, and stops once the card is open — the
+     reasoning there is that a badge still blinking while a volunteer works
+     down the list is nagging rather than informing. That is the better rule,
+     and it should not be theme-dependent. */
+
+  /*
+   * Cards rise into place, in reading order.
+   *
+   * Done here with :nth-of-type rather than with a stagger class on each card,
+   * because it costs nothing at the call sites and it cannot go stale when a
+   * card is added or reordered. Capped at six: past that the last card would
+   * wait 360ms to appear, and a list of receipts is not an entrance.
+   *
+   * `both` matters — without the backwards fill the cards paint at full
+   * opacity for one frame before the animation takes hold, which reads as a
+   * flicker rather than an entrance.
+   */
+  .devasthan-day main > * > [data-slot="card"],
+  .devasthan-night main > * > [data-slot="card"] {
+    animation: riseIn 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .devasthan-day main > * > [data-slot="card"]:nth-of-type(2),
+  .devasthan-night main > * > [data-slot="card"]:nth-of-type(2) {
+    animation-delay: 60ms;
+  }
+  .devasthan-day main > * > [data-slot="card"]:nth-of-type(3),
+  .devasthan-night main > * > [data-slot="card"]:nth-of-type(3) {
+    animation-delay: 120ms;
+  }
+  .devasthan-day main > * > [data-slot="card"]:nth-of-type(4),
+  .devasthan-night main > * > [data-slot="card"]:nth-of-type(4) {
+    animation-delay: 180ms;
+  }
+  .devasthan-day main > * > [data-slot="card"]:nth-of-type(5),
+  .devasthan-night main > * > [data-slot="card"]:nth-of-type(5) {
+    animation-delay: 240ms;
+  }
+  .devasthan-day main > * > [data-slot="card"]:nth-of-type(n + 6),
+  .devasthan-night main > * > [data-slot="card"]:nth-of-type(n + 6) {
+    animation-delay: 300ms;
+  }
+
+  @keyframes riseIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /*
    * Same family of preference as reduced-motion, which this file already
    * honours: if translucency is unwelcome the surface is simply solid. Note
    * this needs --card-solid, not --card — --card is the veil itself now, so
@@ -1068,10 +1668,25 @@
    */
   @media (prefers-reduced-transparency: reduce) {
     [data-slot="card"]:not(.shadow-none),
+    [data-slot="card"].card-hero:not(.shadow-none),
     .glass-pill {
       background-color: var(--card-solid);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
+    }
+
+    /*
+     * The photo goes too, not just the panes.
+     *
+     * Solid cards over a photograph is the worst of both: the reason to turn
+     * translucency off is to stop content competing with what is behind it,
+     * and here the ground IS the competition. The scrim stays and becomes the
+     * background outright, which is the flat dark ground the tokens were
+     * measured against anyway.
+     */
+    .devasthan-day .app-surface::before,
+    .devasthan-night .app-surface::before {
+      display: none;
     }
   }
 }

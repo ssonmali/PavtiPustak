@@ -198,9 +198,13 @@ export function Overview({
       {/* Collected less spent. Shown even at zero spend so the figure is a
           fixture of the dashboard rather than something that appears once the
           first expense is recorded. */}
+      {/* card-hero marks this as the one pane a screen is about. In light and
+          dark it is a no-op — the tokens it reads alias the plain ones — and
+          under Devasthan it takes the heavier glass and, at night, the gold
+          bloom. */}
       <Card
         className={cn(
-          "card-elevated accent-top",
+          "card-elevated card-hero accent-top",
           balance < 0
             ? "[--accent-line:var(--destructive)]"
             : "[--accent-line:var(--positive)]",
@@ -222,7 +226,7 @@ export function Overview({
           </CardDescription>
           <CardTitle
             className={cn(
-              "text-3xl font-semibold tabular-nums sm:text-4xl",
+              "hero-amount text-3xl font-semibold tabular-nums sm:text-4xl",
               // A negative balance is a real state — the mandal has committed
               // more than it has taken in — so it is called out, not hidden.
               balance < 0 ? "text-destructive" : "text-positive-ink",
@@ -362,7 +366,11 @@ export function Overview({
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full rounded-full bg-[image:var(--brand-gradient)]"
+                        /* bar-fill--slow: several of these are on screen at
+                           once, so they sweep at a different rate from the
+                           single bars elsewhere — in step they read as a
+                           loading state. */
+                        className="bar-fill bar-fill--slow h-full rounded-full bg-[image:var(--brand-gradient)]"
                         style={{ width: `${share}%` }}
                       />
                     </div>

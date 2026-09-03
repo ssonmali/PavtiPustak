@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useTheme } from "next-themes";
 import {
+  Flame,
+  Lamp,
   Languages,
   LogOut,
   Monitor,
@@ -11,6 +13,7 @@ import {
   Sun,
   User,
 } from "lucide-react";
+import { THEMES as THEME_NAMES } from "@/components/theme-provider";
 import { logout } from "@/app/actions/auth";
 import { setLocale } from "@/app/actions/locale";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/dictionaries";
@@ -37,12 +40,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const THEMES = ["system", "light", "dark"] as const;
+/* "system" first because it is the default, then the two plain themes, then
+   the festival pair. The names come from theme-provider so the menu cannot
+   offer a theme next-themes has not been told about. */
+const THEMES = ["system", ...THEME_NAMES] as const;
 
 const THEME_ICONS = {
   system: Monitor,
   light: Sun,
   dark: Moon,
+  /* A lamp and a flame: both Devasthan variants are the same photo, so the
+     icons have to distinguish the light rather than the subject. */
+  "devasthan-day": Lamp,
+  "devasthan-night": Flame,
+} as const;
+
+/* The dictionary keys are camelCase; the theme names are the CSS class names,
+   which are not. */
+const THEME_LABEL_KEYS = {
+  system: "theme.system",
+  light: "theme.light",
+  dark: "theme.dark",
+  "devasthan-day": "theme.devasthanDay",
+  "devasthan-night": "theme.devasthanNight",
 } as const;
 
 /**
@@ -115,7 +135,7 @@ export function SettingsMenu({
                   closeOnClick={false}
                 >
                   <Icon />
-                  {t(`theme.${option}`)}
+                  {t(THEME_LABEL_KEYS[option])}
                 </DropdownMenuRadioItem>
               );
             })}
