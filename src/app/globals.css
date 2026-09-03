@@ -932,10 +932,9 @@
         `position: fixed`, which they honour, and which is what makes the
         cards appear to travel across the photo as you scroll.
 
-     ::before is the photo and it is the layer that moves. ::after is the
-     scrim and it must not: a scrim that breathed with the image would let the
-     bright parts of the photo swim in and out from under the text, and the
-     scrim is what guarantees that text stays readable.
+     ::before is the photo, ::after is the scrim, and neither one moves. Both
+     layers are static and the scroll supplies all the motion: they are fixed,
+     so the cards travel across the image.
 
      The z-indices are spelled out rather than left at the mesh's shared -1.
      All of these are negative children of the same stacking context (body is
@@ -948,12 +947,22 @@
     /* Set from the env var on <body> — see app/layout.tsx. */
     background: var(--mandap-photo, url("/idol.jpg")) center / cover no-repeat;
     filter: var(--mandap-filter);
-    /* inset 0 rather than the mesh's -25%: at scale(1) a `cover` background
-       exactly fills the layer, and the breathe scales up from there, so the
-       overscan the mesh needed for its drift is already covered. */
+    /* inset 0 rather than the mesh's -25%: a `cover` background exactly fills
+       the layer, and nothing moves it, so the overscan the drifting mesh
+       needed buys nothing here. */
     inset: 0;
     z-index: -3;
-    animation: devasthan-breathe 12s ease-in-out infinite;
+    /* Held still. The mesh drifts because it is an abstraction — there is
+       nothing in it to recognise, so movement is all it has. A photograph of
+       the idol is the opposite: it is the thing being looked at, and scaling
+       it slowly in and out makes the face swell and shrink under the cards.
+       The scroll already supplies the motion the design wanted, because the
+       layer is fixed and the cards travel across it. */
+    animation: none;
+    /* The mesh sets this because it animates a transform. Nothing transforms
+       this layer, and will-change on a full-viewport image is real GPU memory
+       held for no reason. */
+    will-change: auto;
   }
 
   .devasthan-day .app-surface::after,
@@ -1005,23 +1014,6 @@
         oklch(0.05 0.015 285 / var(--scrim-mid)) 26%,
         oklch(0.05 0.015 285 / var(--scrim-bottom)) 100%
       );
-  }
-
-  /*
-   * 12s, and the scale is 3.5%. Slow enough to read as "alive" rather than as
-   * drift you can catch in the act — anything under about 10s starts to
-   * register as movement and competes with the figures on the cards. Cost is
-   * the same as the mesh's: a transform on an already-rasterised fixed layer
-   * with no text in it, so the compositor moves a texture and nothing repaints.
-   */
-  @keyframes devasthan-breathe {
-    0%,
-    100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.035);
-    }
   }
 
   /*
@@ -1138,16 +1130,12 @@
     }
   }
 
-  /* Held still on request, like the mesh. Everything above is decoration; the
-     photo and the scrim are just as legible motionless, and the sparks and
-     halo are still visible — they simply stop pulsing. */
+  /* Held still on request. The sparks and the halo stay visible — they simply
+     stop pulsing. The photo itself never moves in any case. */
   @media (prefers-reduced-motion: reduce) {
-    .devasthan-day .app-surface::before,
-    .devasthan-night .app-surface::before,
     .devasthan-night .devasthan-spark,
     .devasthan-day .devasthan-halo {
       animation: none;
-      will-change: auto;
     }
   }
 }
