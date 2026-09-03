@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { getPledgeDays } from "@/lib/pledge-days";
 import { getMyName, getVolunteerNames } from "@/lib/volunteer-names";
 import { volunteerName } from "@/lib/receipt-utils";
@@ -36,7 +36,7 @@ export default async function ReceiptsPage({
         query,
       ).range(0, DEFAULT_LIMIT - 1),
       getMyName(),
-      getUser(),
+      getViewer(),
       getVolunteerNames(),
       supabase
         .from("receipt_daily_totals")

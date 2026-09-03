@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { getUser } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { NameMap } from "@/lib/types";
 
@@ -35,7 +35,7 @@ export const getVolunteerNames = cache(async (): Promise<NameMap> => {
  * and without this each caller repeated both the auth call and the query.
  */
 export const getMyName = cache(async () => {
-  const user = await getUser();
+  const user = await getViewer();
   if (!user?.email) return null;
 
   const supabase = await createClient();

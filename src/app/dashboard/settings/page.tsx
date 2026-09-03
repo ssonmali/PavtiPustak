@@ -1,4 +1,4 @@
-import { getUser } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { getMyName } from "@/lib/volunteer-names";
 import { getDictionary } from "@/lib/i18n/server";
 import { volunteerName } from "@/lib/receipt-utils";
@@ -8,7 +8,7 @@ import { NameForm } from "@/components/name-form";
 export const metadata = { title: "Your name · SGMM Pustak" };
 
 export default async function SettingsPage() {
-  const [user, name] = await Promise.all([getUser(), getMyName()]);
+  const [user, name] = await Promise.all([getViewer(), getMyName()]);
 
   const { t } = await getDictionary();
   const email = user?.email ?? "";

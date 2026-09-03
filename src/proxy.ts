@@ -52,9 +52,11 @@ export async function proxy(request: NextRequest) {
    * is safe either way — it simply buys nothing until that migration is done.
    *
    * What this does NOT do is notice a volunteer whose account was deleted or
-   * disabled mid-token: a valid signature stays valid until it expires. That
-   * is why dashboard/layout.tsx still calls getUser() as the authoritative
-   * check on every page render — the fast gate here, the real one there.
+   * disabled mid-token: a valid signature stays valid until it expires. The
+   * layout used to cover that with a getUser() on every render, and no longer
+   * does — that round trip was the slowest thing in a tab switch. What catches
+   * a revoked account now is every Server Action, which is where it costs one
+   * check per write instead of one per render. See lib/auth.ts.
    */
   const { data: claimsData } = await supabase.auth.getClaims();
   const user = claimsData?.claims ?? null;

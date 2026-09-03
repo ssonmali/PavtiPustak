@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { getUser } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getMyName } from "@/lib/volunteer-names";
 import { todayInIst, volunteerName } from "@/lib/receipt-utils";
@@ -21,9 +21,11 @@ export default async function DashboardLayout({
   // All four together rather than the auth check first: proxy.ts has already
   // gated this path, so waiting on a second validation before even starting the
   // other reads added a round-trip to every dashboard load. getMyName() shares
-  // the same cached user, so this is still one validation.
+  // the same cached viewer, so this is still one verification — and since that
+  // verification is now local (see getViewer), getMyName's own query no longer
+  // waits on a network hop before it can start.
   const [user, { locale }, myName, { data: dueToday }] = await Promise.all([
-    getUser(),
+    getViewer(),
     getDictionary(),
     getMyName(),
     // Pledges due exactly today, for the bell — overdue-but-older pledges
@@ -40,11 +42,15 @@ export default async function DashboardLayout({
   ]);
 
   /*
-   * proxy.ts is an optimistic gate only — this is the authoritative check, and
-   * since that gate moved to getClaims() it is also the ONLY one that talks to
-   * Supabase. getClaims verifies a signature, which stays valid until the
-   * token expires, so a volunteer whose account was deleted or disabled is
-   * caught here rather than there. Keep this a getUser().
+   * Both this and proxy.ts now verify the signature locally, so neither is a
+   * revocation check: a valid signature stays valid until the token expires.
+   * That is a deliberate trade and the reasoning — including what still DOES
+   * catch a disabled account, which is every Server Action — is written out in
+   * lib/auth.ts. Read it before turning this back into a getUser().
+   *
+   * This redirect still matters: the proxy gates /dashboard on the request,
+   * but a route can also be reached with a cookie that expired between the two,
+   * and rendering the shell for nobody is not something to leave possible.
    */
   if (!user) redirect("/login");
 
