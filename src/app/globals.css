@@ -2393,3 +2393,97 @@
     }
   }
 }
+
+/*
+ * View transitions.
+ *
+ * Deliberately NOT inside an @layer. These select ::view-transition
+ * pseudo-elements, which live in their own tree on the root and so cannot
+ * collide with anything in the layers above — and unlayered declarations beat
+ * layered ones, which is the behaviour wanted for the reduced-motion override
+ * at the bottom of this block. The layer trap in this file has cost enough
+ * time already; this is the one place where staying out of them is the answer.
+ *
+ * Every keyframe here moves opacity and transform ONLY. The obvious thing to
+ * reach for is a blur on the crossfade — it hides interpolation artifacts and
+ * the Next guide itself suggests it — but this app is full of surfaces with
+ * backdrop-filter, and a filter animating on top of a backdrop-filter is
+ * exactly what made the filter sheet flicker on dismiss. Not worth relearning.
+ */
+
+/* The nav marker travelling between tabs.
+   One duration for both bars; the rail's slides down the list and the bottom
+   bar's slides across it, but they are the same gesture and should take the
+   same time. 260ms is long enough to be seen as movement and short enough
+   that it has finished before the new page paints. */
+::view-transition-group(.nav-marker) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/*
+ * The skeleton handing over to the content.
+ *
+ * Asymmetric on purpose: the old content leaves quickly so it is not
+ * competing for attention, and the new content arrives more gently and only
+ * once the old one has gone. The 8px is small — this is a handover between two
+ * versions of the same page, not an entrance, and anything larger reads as a
+ * route change that did not happen.
+ */
+::view-transition-old(.main-exit) {
+  animation: 120ms ease-in both vt-fade-out;
+}
+
+::view-transition-new(.main-enter) {
+  animation:
+    200ms ease-out 100ms both vt-fade-in,
+    320ms cubic-bezier(0.2, 0.8, 0.2, 1) both vt-rise;
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-rise {
+  from {
+    transform: translateY(8px);
+  }
+}
+
+/*
+ * Held still on request.
+ *
+ * The blanket `*` rule further up does not reach these: view-transition
+ * pseudo-elements are not descendants of any element it matches, so they need
+ * saying again. `none` rather than a 0.01ms duration, because a view
+ * transition with no animation simply resolves immediately and the new page
+ * appears — which is the correct reduced-motion behaviour, not a workaround.
+ */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/*
+ * Never on paper. A print stylesheet cannot see a transition, but the snapshot
+ * pseudo-elements can exist at the moment a print is triggered, and the report
+ * page is the one that is printed.
+ */
+@media print {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

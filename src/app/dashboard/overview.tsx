@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { AnimatedAmount } from "@/components/animated-amount";
 import {
   Clock,
   IndianRupee,
@@ -161,20 +163,20 @@ export function Overview({
     {
       // Everything recorded, received or not — what the mandal is counting on.
       label: t("stats.estimated"),
-      value: formatAmount(total + unpaid),
+      value: <AnimatedAmount value={total + unpaid} />,
       icon: Sigma,
       tone: "info" as const,
     },
     {
       label: t("stats.total"),
-      value: formatAmount(total),
+      value: <AnimatedAmount value={total} />,
       icon: IndianRupee,
       tone: "positive" as const,
     },
     { label: t("stats.receipts"), value: String(count), icon: ReceiptIcon },
     {
       label: t("stats.unpaid"),
-      value: formatAmount(unpaid),
+      value: <AnimatedAmount value={unpaid} />,
       icon: Clock,
       tone: "pending" as const,
       hint: unpaidCount
@@ -268,7 +270,7 @@ export function Overview({
               balance < 0 ? "text-destructive" : "text-positive-ink",
             )}
           >
-            {formatAmount(balance)}
+            <AnimatedAmount value={balance} />
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             {balance < 0 ? (
@@ -288,13 +290,13 @@ export function Overview({
                 {t("balance.collected")}
               </dt>
               <dd className="font-medium tabular-nums text-positive-ink">
-                +{formatAmount(total)}
+                +<AnimatedAmount value={total} />
               </dd>
             </div>
             <div className="flex items-baseline gap-2">
               <dt className="text-muted-foreground">{t("balance.spent")}</dt>
               <dd className="font-medium tabular-nums text-destructive">
-                &minus;{formatAmount(spent)}
+                &minus;<AnimatedAmount value={spent} />
               </dd>
             </div>
             {/* Bills committed but not settled. Beside the spent figure, never
@@ -303,7 +305,7 @@ export function Overview({
               <div className="flex items-baseline gap-2">
                 <dt className="text-muted-foreground">{t("expenses.owed")}</dt>
                 <dd className="font-medium tabular-nums text-pending-ink">
-                  {formatAmount(owed)}
+                  <AnimatedAmount value={owed} />
                 </dd>
               </div>
             ) : null}
@@ -311,7 +313,7 @@ export function Overview({
               <div className="flex items-baseline gap-2">
                 <dt className="text-muted-foreground">{t("due.expected")}</dt>
                 <dd className="font-medium tabular-nums text-pending-ink">
-                  {formatAmount(pledges.expected)}
+                  <AnimatedAmount value={Number(pledges.expected)} />
                 </dd>
               </div>
             ) : null}

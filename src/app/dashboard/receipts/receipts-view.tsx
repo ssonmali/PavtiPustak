@@ -13,6 +13,7 @@ import type { PledgeDay } from "@/lib/pledge-aggregate";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OfflineBadge } from "@/components/offline-badge";
+import { AnimatedAmount } from "@/components/animated-amount";
 import { ReceiptsTable, type ReceiptsTableHandle } from "../receipts-table";
 import {
   ALL_TIME,
@@ -186,7 +187,7 @@ export function ReceiptsView({
                 <>
                   {t("due.expected")}:{" "}
                   <span className="font-medium tabular-nums text-foreground">
-                    {formatAmount(due.total)}
+                    <AnimatedAmount value={due.total} />
                   </span>{" "}
                   · {t("chart.receiptsCount", { count: due.count })}
                 </>
@@ -194,7 +195,7 @@ export function ReceiptsView({
                 <>
                   {t("stats.total")}:{" "}
                   <span className="font-medium tabular-nums text-foreground">
-                    {formatAmount(collected.total)}
+                    <AnimatedAmount value={collected.total} />
                   </span>{" "}
                   · {t("chart.receiptsCount", { count: collected.count })}
                 </>
@@ -202,7 +203,7 @@ export function ReceiptsView({
                 <>
                   {t("stats.grandTotal")}:{" "}
                   <span className="font-medium tabular-nums text-foreground">
-                    {formatAmount(collected.total + due.total)}
+                    <AnimatedAmount value={collected.total + due.total} />
                   </span>{" "}
                   ·{" "}
                   {t("stats.receivedShort", {

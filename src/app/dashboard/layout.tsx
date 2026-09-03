@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { getViewer } from "@/lib/auth";
@@ -101,7 +102,37 @@ export default async function DashboardLayout({
 
         <div className="mx-auto flex w-full max-w-7xl flex-1">
           <SidebarNav />
-          <main className="min-w-0 flex-1 p-3 sm:p-4">{children}</main>
+          {/*
+            * The skeleton hands over to the content instead of being swapped
+            * for it in one frame.
+            *
+            * Every route here has a loading.tsx, so a tab tap paints a
+            * skeleton and then replaces it the instant the data lands. That
+            * replacement was a hard cut — the more so now that the data
+            * arrives quickly, because a skeleton that appears and vanishes
+            * within a few frames reads as a flash rather than as loading.
+            *
+            * Wrapped once here rather than in each of the five loading.tsx
+            * files and their five pages. That is not only less code: the
+            * animation is a property of "the main area is changing", and
+            * putting it in ten places is ten places for it to drift.
+            *
+            * default="none" for the same reason as the nav marker — this must
+            * not animate on the timed router.refresh() from the realtime
+            * safety net, which changes the content underneath without any
+            * navigation and would otherwise dissolve the page a volunteer is
+            * reading.
+            *
+            * The keyframes are opacity and transform only. The stock enter/
+            * exit ones animate `filter`, and this subtree is full of surfaces
+            * carrying backdrop-filter — that exact combination is what caused
+            * the filter sheet to flicker on dismiss.
+            */}
+          <main className="min-w-0 flex-1 p-3 sm:p-4">
+            <ViewTransition enter="main-enter" exit="main-exit" default="none">
+              {children}
+            </ViewTransition>
+          </main>
         </div>
 
         <BottomNav />
