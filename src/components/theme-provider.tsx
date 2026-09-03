@@ -24,14 +24,17 @@ export type Theme = "system" | (typeof THEMES)[number];
  * variant at the top of that file, which lists all three so the app's `dark:`
  * utilities fire under any of them.
  *
- * Defaults to the device setting: volunteers collecting after dark get the
- * dark UI without being asked.
+ * Defaults to devasthan-day rather than the device setting: this is the
+ * mandal's theme, and a volunteer's first open should show it without asking.
+ * `enableSystem` stays on so "System" remains a choice in the menu — it just
+ * is not the initial one — and it still governs what `system` resolves to
+ * for anyone who picks it.
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemeProvider
       attribute="class"
-      defaultTheme="system"
+      defaultTheme="devasthan-day"
       // Without this next-themes only recognises light and dark, and picking
       // either Devasthan theme would be written to storage and then dropped
       // on the next load.

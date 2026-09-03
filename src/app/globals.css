@@ -349,21 +349,42 @@
 
    What makes these different in kind from Light and Dark: the ground is a
    PHOTOGRAPH, so no contrast figure here is a property of the tokens alone.
-   Every number below was measured by compositing public/idol.jpg — cover-
-   scaled into a 412x915 viewport — under the photo filter, then the scrim,
-   then each surface veil, and taking the WORST pixel of the whole viewport,
-   not the average. The averages were never the problem: the spec's own values
-   measured a median of 12:1 and a worst case of 2.33:1, because this mandal's
-   crop puts the idol's lit face and silver ornament at about 31% down the
-   page — exactly where the cards sit.
+   Every number below was measured by compositing public/idol.jpg at full
+   resolution — cover-scaled into this layer's real geometry — under the photo
+   filter, then the scrim, then each surface veil, and taking the WORST point
+   of the whole viewport rather than the average. The averages were never the
+   problem: the spec's own values measure a median around 12:1 and a worst
+   case of 2.09:1, because this mandal's crop puts the idol's lit face and
+   silver ornament about 30% down the page — exactly where the cards sit.
+
+   Two details of the method, because both change the answer materially and an
+   honest figure needs them stated:
+
+    - "Worst point" is the worst 1.5px-blurred pixel, not the worst single
+      pixel. The relevant question is what sits behind a glyph STROKE, and a
+      lone specular pixel from the silver ornament is not that. It is not a
+      free pass either: measured per-pixel, bare muted text on the ground is
+      3.9:1 where the glyph-scale figure is 5.1:1. An earlier version of this
+      block quoted 4.89:1 from a harness that downsampled before measuring,
+      which smoothed those highlights away and flattered the result — that is
+      the specific mistake this note exists to stop being repeated.
+    - Card surfaces are measured THROUGH their backdrop-filter blur, 16px, and
+      the chrome through its 22px. That blur is not a modelling convenience;
+      it is what the browser actually puts between the text and the photo, and
+      it averages the ornament away for real.
 
    Consequences worth knowing before editing:
 
     - THE SCRIM IS THE CONTRAST GUARANTEE, not decoration. It is tuned to the
       photo that ships in public/idol.jpg. Swapping a brighter photo in via
-      NEXT_PUBLIC_MANDAP_PHOTO WILL break the measured figures: the same
-      scrim over the undimmed photo measured muted text at 2.11:1. If a
-      mandal changes the photo, --scrim-mid is the one number to raise.
+      NEXT_PUBLIC_MANDAP_PHOTO WILL break the measured figures: the shipped
+      shipped scrim over the same photo undimmed measures bare muted text at
+      3.72:1, and the spec's lighter scrim over it 2.09:1. If a mandal changes
+      the photo, --scrim-mid is the one number to raise — it is the thinnest
+      point of the ramp and every worst case below lands on it. Raise it only
+      as far as needed, and prefer --muted-foreground first: the scrim buys
+      contrast by dimming the idol, which is the thing the theme exists to
+      show.
     - The card veil is DARK here, not the white one the light theme uses. A
       white veil over a dark ground lightens what light text sits on and works
       against contrast — the same reason .dark drops --card-sheen entirely.
@@ -376,12 +397,14 @@
   --foreground: oklch(0.98 0.005 90);
   --card-foreground: oklch(0.98 0.005 90);
 
-  /* Warm gold. Bright enough to read as lamplight on a dark ground; measured
-     as text it reaches 6.33:1 on a card and 8.47:1 on the header bar. It does
-     measure 4.42:1 bare on the ground, just under the gate — the same
-     situation the light theme documents, and safe for the same reason:
-     --primary as text only ever lands on .glass-bar and on card surfaces,
-     never bare on the ground. */
+  /* Warm gold. Bright enough to read as lamplight on a dark ground, and it
+     clears the gate on both surfaces it actually lands on: 5.74:1 on a card
+     and 8.15:1 on the header bar. Bare on the undimmed photo it would be
+     2.94:1, well under — the same situation the light theme documents, and
+     safe for the same reason: --primary as text only ever appears on
+     .glass-bar and on card surfaces, never bare on the mesh or the photo.
+     That is the claim to re-check before using text-primary somewhere new;
+     bare it would be relying on the halo, which cards cancel. */
   --primary: oklch(0.87 0.14 78);
   --primary-foreground: oklch(0.15 0.03 50);
   --ring: oklch(0.87 0.14 78);
@@ -426,18 +449,44 @@
   --accent-foreground: oklch(0.92 0.09 84);
   --muted: oklch(1 0 0 / 0.08);
 
-  /* Deliberately still opaque, and deliberately NOT the spec's translucent
-     --sheet-bg. Two reasons, and the first applies to every theme: a dropdown
-     or a date picker floats over arbitrary page content rather than over the
-     backdrop, so a veil there shows the text underneath it and stops being
-     readable. The second is specific to this app — the receipt and expense
-     dialogs are the surface a volunteer types into, they were the subject of a
-     keyboard-and-contrast bug fixed at some cost, and an opaque panel is the
-     verified state. Glass on the form is not worth re-opening that. */
+  /* --card-solid stays genuinely opaque: it is the fallback every glass
+     surface falls back TO, and .paper's ground. Nothing about the overlays
+     below changes that. */
   --card-solid: oklch(0.19 0.02 45);
   --card-nested-solid: oklch(0.22 0.022 45);
-  --popover: oklch(0.19 0.02 45);
+  /*
+   * The overlays — every dialog, dropdown, select menu and popover reads this
+   * one token — get a hint of glass rather than the flat panel they were.
+   *
+   * A white veil was tried here, matching the panes, on the reasoning that
+   * a thin white wash is what reads as glass. It was correct about the
+   * mechanism but wrong for these surfaces on the phone: overlays sit on top
+   * of the busiest part of the page (their own dimming layer plus whatever
+   * they cover) and a near-black veil read better there than white did.
+   * Reverted to the near-black colour this token started at — but kept it
+   * translucent rather than going back to the original 0.88, which reads as
+   * a flat panel and defeats the point of the theme.
+   *
+   * 0.55: against a WHITE veil, lowering the alpha this far changed almost
+   * nothing, because the failure there was the colour, not the opacity —
+   * near-black stayed a dark panel regardless. That reasoning does not carry
+   * over here: against near-black, alpha is the only knob, so 0.55 is
+   * exactly the difference between a solid card and glass. The halo still
+   * reaches these slots — they portal to <body>, outside `main`, so it had
+   * to be extended to them by name — and it is what keeps light text legible
+   * as the veil thins.
+   */
+  --popover: oklch(0.12 0.02 40 / 0.55);
   --popover-foreground: oklch(0.98 0.005 90);
+  /*
+   * "Extremely small" on purpose, and much smaller than the panes.
+   *
+   * A dialog is not trying to look like a window onto the idol — it is a
+   * sheet of paper held in front of one. 6px is enough to destroy the detail
+   * of whatever is behind it while still passing the colour and the light
+   * through, which is what makes it read as glass rather than as card stock.
+   */
+  --glass-blur-soft: 6px;
 
   /* No sheen, for the reason .dark gives: over light text a white wash costs
      contrast and buys only decoration. The gold edge carries the glass. */
@@ -452,31 +501,90 @@
   /* How far down the page the scrim reaches its thinnest point, and how thin.
      Named because it is the contrast knob — see the block comment above. */
   --scrim-top: 0.62;
+  /* 0.50 rather than the 0.56 a previous pass raised it to. The heavier scrim
+     bought contrast margin by dimming the idol, which is the wrong place to
+     spend it: the photo is the point of the theme. The margin comes from
+     --muted-foreground in the Day block instead, where it costs nothing but a
+     slightly brighter grey on secondary text. */
   --scrim-mid: 0.5;
   --scrim-bottom: 0.82;
 }
 
 .devasthan-day {
   /*
-   * Measured, worst pixel of the viewport, with the values in this block:
+   * Measured, worst point of the viewport, with the values in this block:
    *
    *                       body text   muted text   gold as text
-   *   bare on the ground     6.40         4.89          4.42
-   *   on a glass card        9.17         6.68          6.33
-   *   nested row on a card   7.92         5.88          5.46
-   *   header / nav bar      12.27         8.57          8.47
+   *   bare on the ground     10.78         8.76          7.44
+   *   card, row, chip        10.03         8.21          6.92
+   *   the hero card           9.72         7.98          6.71
+   *   nested row on a card    9.37         7.72          6.47
+   *   header / nav bar       11.82         9.52          8.15
    *
-   * The spec asks for saturate(1.08) and no dimming. Undimmed, the same
-   * surfaces measured 2.60 / 2.11 bare and 2.33 / 1.94 on a card — a failure
-   * of roughly a factor of two, not a rounding error. brightness(.8) plus the
-   * slightly heavier scrim below is the smallest change that clears 4.5:1
-   * everywhere while leaving the photo plainly the brightest thing on screen.
+   * Every row above except the last includes the halo, because every surface
+   * above except the last is a 7% veil that the halo now reaches. Without it
+   * they are 4.26 / 3.77 bare and 3.73 / 3.34 on a pane — those are the
+   * figures a conformance checker will report, since it cannot see a
+   * text-shadow. The chrome bar needs no halo and gets none: it is a 55%
+   * veil over a 22px blur.
+   *
+   * The spec asks for saturate(1.08), no dimming, and a WHITE card veil.
+   * Measured that way the surfaces above give 3.09 / 2.41 on a card — a
+   * failure by a factor of two, not a rounding error. What fixes it is the
+   * card veil being dark rather than white, plus the scrim's thin point at
+   * 0.50 rather than 0.30. Both are in this block.
+   *
+   * The photo itself runs undimmed. Two earlier passes bought contrast by
+   * darkening it — brightness(0.8), then the scrim's thin point to 0.56 — and
+   * both were the wrong trade for the same reason: the shortfall is confined
+   * to text sitting directly on the image, which is a page heading and its
+   * subtitle, and they were paying for it across the whole photograph. The
+   * halo on .devasthan-* main pays for it locally, and pays more: the bare
+   * figures go to 10.79 / 8.77 where dimming reached 5.89 / 5.05.
+   *
+   * Note the two bare rows are BOTH true and neither is the whole story. A
+   * conformance checker sees the first: it has no concept of a text-shadow.
+   * The second is what a volunteer's eye gets. Anything new that puts text
+   * bare on the photo inherits the halo automatically; anything that gives
+   * that text a surface of its own cancels the halo and lands on the card row
+   * instead, which passes on its own.
    */
-  --mandap-filter: brightness(0.8) saturate(1.08);
-  --card: oklch(0.14 0.02 40 / 0.3);
+  /* No brightness() at all — the photo runs at its own exposure, which is
+     what the design asked for and what the mandal's photo deserves. The
+     dimming this used to carry (0.8) was buying contrast for the handful of
+     places text sits directly on the image, and it bought it by crushing the
+     idol's own tonality across the entire screen to fix a problem confined to
+     two lines of type. The halo on .devasthan-* main does that job locally
+     instead. Photo lightness measures L* 22.3 here against 18.2 dimmed. */
+  --mandap-filter: saturate(1.08);
+  /*
+   * The same veil the activity and receipt rows wear, because on the photo a
+   * card and a row are the same pane of glass and looked like two materials.
+   *
+   * This was a dark 0.30 veil, which is the safe choice over a photograph and
+   * the wrong one here: dark smoked glass beside the rows' clear glass is
+   * exactly the mismatch. Matching them means accepting that a 7% veil is not
+   * really a surface — it is a tint on the image — so the text on it needs the
+   * halo just as bare text does, and .devasthan-* main no longer takes the
+   * halo away from panes. With it, this measures 10.03:1 body and 8.21:1
+   * muted, better than the dark veil managed.
+   */
+  --card: oklch(1 0 0 / 0.07);
   --card-nested: oklch(1 0 0 / 0.07);
-  --card-strong: oklch(0.14 0.02 40 / 0.4);
-  --muted-foreground: oklch(1 0 0 / 0.78);
+  /* The same veil as every other pane, not a heavier one.
+     --card-strong exists so a theme CAN give the hero more substance, and on
+     the photo that is the wrong idea: a balance card three points more opaque
+     than the rows below it is the "veil" that reads as a different material,
+     which is the whole complaint this section fixes. In these themes the hero
+     distinguishes itself by the gold bloom at night and by the halo behind
+     its figure, not by being cloudier. */
+  --card-strong: oklch(1 0 0 / 0.07);
+  /* 0.85, and this is where Day's contrast margin is bought. At 0.78 against
+     the lighter scrim this token measured 4.50:1 bare on the ground — passing
+     by nothing at all. Raising it to 0.85 gives 4.99:1 and leaves the idol at
+     the brightness it should be; raising the scrim instead gave the same
+     margin by dimming the photo, which is the wrong thing to trade away. */
+  --muted-foreground: oklch(1 0 0 / 0.85);
   --whatsapp: oklch(0.42 0.1 155 / 0.8);
   --whatsapp-ink: oklch(0.93 0.06 155);
 }
@@ -487,26 +595,72 @@
    * scrim, which are the brightest thing the text has to survive:
    *
    *                       body text   muted text
-   *   bare on the ground     8.92         5.61
-   *   on a glass card       11.29         6.78
-   *   nested row on a card   9.68         6.00
+   *   bare on the ground    15.33         8.56
+   *   card, row, chip       14.32         8.14
+   *   the hero card         13.82         7.93
+   *   nested row on a card  13.37         7.73
+   *   header / nav bar      16.97         9.19
    *
-   * The spec's --muted-foreground of 0.60 alpha measures 4.60:1 bare — it
-   * passes, with 0.10 of margin and against a radial gradient my harness can
-   * only approximate. 0.70 costs nothing visible and buys back a whole point.
+   * Night needs no scrim correction — brightness(0.4) already does the work
+   * that Day asks of the scrim, so the ramp stays at the spec's values. The
+   * one deviation is --muted-foreground: the spec's 0.60 alpha passes at
+   * 4.60:1 bare, but with only 0.10 of margin and against radials my harness
+   * approximates. 0.70 costs nothing visible and buys back a whole point.
    */
   --mandap-filter: brightness(0.4) saturate(1.05) contrast(1.05);
-  --card: oklch(0.16 0.02 285 / 0.3);
+  --card: oklch(1 0 0 / 0.06);
   --card-nested: oklch(1 0 0 / 0.06);
-  --card-strong: oklch(0.16 0.02 285 / 0.38);
+  --card-strong: oklch(1 0 0 / 0.06);
   --muted-foreground: oklch(1 0 0 / 0.7);
   --whatsapp: oklch(0.4 0.1 155 / 0.8);
   --whatsapp-ink: oklch(0.93 0.06 155);
+  /* Cooler than Day's, matching the rest of the night palette. Reverted to
+     near-black with Day's --popover, kept translucent — see the comment
+     there. */
+  --popover: oklch(0.08 0.015 285 / 0.55);
   --scrim-top: 0.5;
   --scrim-mid: 0.42;
   --scrim-bottom: 0.92;
   --bar-bg: oklch(0.08 0.01 285 / 0.62);
   --sidebar: oklch(0.08 0.01 285 / 0.62);
+}
+
+/*
+ * The overlay veil, withdrawn where it would be unsafe.
+ *
+ * UNLAYERED, and that is not incidental. --popover is declared unlayered in
+ * the two blocks above, and an unlayered declaration beats a layered one no
+ * matter how specific the layered selector is — the first version of this sat
+ * in @layer utilities and was silently dead. Between the layer trap and this
+ * one, the rule for editing this file is: check where a declaration lives
+ * before writing its override.
+ *
+ * Both cases withdraw it for the same reason. The veil is only safe because
+ * the blur destroys what is behind it; with no blur, 12% of the page shows
+ * through a dialog as legible text under legible text, which is worse than a
+ * flat panel. So where the blur cannot happen, the panel goes flat.
+ */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .devasthan-day,
+  .devasthan-night {
+    --popover: var(--card-solid);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .devasthan-day,
+  .devasthan-night {
+    --popover: var(--card-solid);
+  }
+
+  /* The blur would be invisible behind an opaque panel, but it would still
+     cost a composited layer on every dialog — and this preference is often
+     set on the phones least able to afford one. */
+  .devasthan-day :is([data-slot="dialog-content"], [data-slot="select-content"]),
+  .devasthan-night :is([data-slot="dialog-content"], [data-slot="select-content"]) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 @layer base {
@@ -947,10 +1101,44 @@
     /* Set from the env var on <body> — see app/layout.tsx. */
     background: var(--mandap-photo, url("/idol.jpg")) center / cover no-repeat;
     filter: var(--mandap-filter);
-    /* inset 0 rather than the mesh's -25%: a `cover` background exactly fills
-       the layer, and nothing moves it, so the overscan the drifting mesh
-       needed buys nothing here. */
+    /*
+     * Two separate bugs made this layer appear to move on a phone, and these
+     * three declarations are one fix each. Both were reported as "the image
+     * zooms when I scroll" and neither was an animation.
+     *
+     * 1. SIZE. A fixed layer at `inset: 0` is the viewport, and on a phone the
+     *    viewport is not a constant: scrolling down retracts the address bar
+     *    and it grows, 915px to about 972px on a typical handset. `cover`
+     *    re-derives its scale from the box it fills, so the image zoomed on
+     *    the way down and un-zoomed on the way back up. `lvh` is defined as
+     *    the viewport with browser UI retracted, so it is the one length here
+     *    that does not change as that UI comes and goes.
+     *
+     *    Note `inset: 0` is still declared and still needed, for `left`. Where
+     *    it conflicts, width and height win — with left, right and width all
+     *    non-auto the box is over-constrained and `right` is ignored.
+     *
+     * 2. POSITION. Constant size stopped the zoom but not a residual drift,
+     *    which is a different thing: `position: fixed` places a layer against
+     *    the LAYOUT viewport, while what you see is the VISUAL viewport, and
+     *    the address bar retracting slides those apart. The layer held still
+     *    with respect to the document and therefore moved with respect to the
+     *    screen. --visual-top is that exact offset, published on <html> by
+     *    components/mobile-keyboard.tsx from visualViewport.offsetTop and
+     *    resynced on both resize and scroll. Translating by it re-anchors the
+     *    layer to the glass. It falls back to 0px, which is also its value on
+     *    any desktop browser and whenever nothing has shifted.
+     *
+     * No vh fallback pair for the lvh lengths: a browser too old for lvh drops
+     * those two declarations and is left with `inset: 0`, which is the old
+     * behaviour rather than a broken layout. Writing `width: 100vw` above them
+     * would not survive the minifier as a duplicate anyway, so it would only
+     * have been a comment claiming a fallback that did not ship.
+     */
     inset: 0;
+    width: 100lvw;
+    height: 100lvh;
+    transform: translateY(var(--visual-top, 0px));
     z-index: -3;
     /* Held still. The mesh drifts because it is an abstraction — there is
        nothing in it to recognise, so movement is all it has. A photograph of
@@ -967,11 +1155,30 @@
 
   .devasthan-day .app-surface::after,
   .devasthan-night .app-surface::after {
-    /* inset 0 matters here beyond tidiness: the gradient's 0%-100% maps to
-       the layer's height, so the mesh's -25% inset would put the bottom of
-       the visible page at about 83% of the ramp and the densest part of the
-       scrim off-screen entirely. */
+    /*
+     * The same large-viewport sizing as the photo, and it has to be the same:
+     * the scrim's ramp maps to its own height, so a scrim that resized with
+     * the address bar while the photo did not would slide its gradient across
+     * a static image. That reads as the dimming breathing — the same illusion
+     * one layer up, just harder to place.
+     *
+     * Overriding the mesh's -25% inset also matters for the ramp itself: at
+     * that inset the bottom of the visible page sits at about 83% of the
+     * gradient and the densest part of the scrim is off-screen entirely.
+     *
+     * No overscan here, and none on the photo either. A previous pass gave
+     * both layers 120px of it as insurance against a lag frame during the
+     * address bar's animation, which is a real but unobserved risk — and it
+     * cost something certain in exchange: overscan enlarges the box, `cover`
+     * derives its scale from the box, so the photo was silently cropped 13%
+     * tighter than the design's framing. Steady-state coverage needs none of
+     * it, because the layer is 100lvh and the visible viewport is never taller
+     * than that.
+     */
     inset: 0;
+    width: 100lvw;
+    height: 100lvh;
+    transform: translateY(var(--visual-top, 0px));
     z-index: -2;
     animation: none;
     will-change: auto;
@@ -1030,7 +1237,15 @@
   .devasthan-night [data-devasthan-decor] {
     display: block;
     position: fixed;
+    /* The same geometry as the two layers behind it, and it has to be exactly
+       the same: the sparks are placed in percentages of this box, so any
+       difference in how it is sized or anchored would drift them across a
+       photo that is now pinned — and they are meant to be sitting on
+       particular points of it. */
     inset: 0;
+    width: 100lvw;
+    height: 100lvh;
+    transform: translateY(var(--visual-top, 0px));
     z-index: -1;
     pointer-events: none;
     /* Clipped to the viewport: the halo is 260px wide and centred, which on a
@@ -1097,6 +1312,196 @@
       transparent 70%
     );
     animation: glowpulse 4.2s ease-in-out infinite;
+  }
+
+  /*
+   * A dark halo behind text that sits directly on the photo.
+   *
+   * This is what lets the photo run undimmed. Only a few things are ever bare
+   * on the image — a page heading and the subtitle under it, essentially —
+   * and dimming the whole photograph to make those two lines legible was
+   * paying globally for a local problem. A shadow is the local answer: it
+   * darkens the ground in the millimetre around each glyph and nowhere else.
+   *
+   * Modelled, it is worth more than the dimming ever was. A shadow is the
+   * glyph shape blurred, so at the glyph's own outline its coverage is about
+   * half its peak alpha; the two layers below compose to roughly 0.51 alpha of
+   * black right where it matters. Against that, bare text on the undimmed
+   * photo measures 8.77:1 for the subtitle and 10.79:1 for body, where it was
+   * 3.77 and 4.26 unshadowed and 5.05 and 5.89 with the photo dimmed instead.
+   *
+   * Stated plainly, because it is the honest caveat: WCAG scores a foreground
+   * against a background and has no concept of a shadow, so those two figures
+   * are a model of mine, not a conformance result. They are quoted to show the
+   * direction and rough size of the effect. The unshadowed numbers are the
+   * ones a checker will report.
+   *
+   * Applied by inheritance from `main`, and cancelled only on .paper.
+   *
+   * It used to be cancelled on every pane as well, on the reasoning that a
+   * halo behind text already sitting on a surface reads as smudged. That was
+   * true while the panes were dark 30% veils. They are 7% veils now, matched
+   * to the activity and receipt rows, and a 7% veil is not a surface — it is
+   * a tint on the photograph, measuring 3.73:1 unaided. So the halo has to
+   * reach the panes too, and it is what makes the clear-glass look safe.
+   *
+   * .paper is the exception because it is genuinely opaque. Popovers, menus
+   * and dialogs need no exception: they portal to <body>, outside `main`, so
+   * this never reaches them.
+   */
+  .devasthan-day
+    :is(
+      main,
+      [data-slot="dialog-content"],
+      [data-slot="alert-dialog-content"],
+      [data-slot="select-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="popover-content"]
+    ),
+  .devasthan-night
+    :is(
+      main,
+      [data-slot="dialog-content"],
+      [data-slot="alert-dialog-content"],
+      [data-slot="select-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="popover-content"]
+    ) {
+    text-shadow:
+      0 1px 2px oklch(0 0 0 / 0.7),
+      0 0 8px oklch(0 0 0 / 0.5);
+  }
+
+  .devasthan-day .paper,
+  .devasthan-night .paper {
+    text-shadow: none;
+  }
+
+  /*
+   * .report-paper is the one .paper that goes back to glass on screen, so its
+   * text needs the halo back that the rule above just took away. Only the
+   * text-shadow lives here: the background and the blur have to sit in
+   * @layer utilities beside `.paper` itself, because that is the layer .paper
+   * is declared in and a later layer beats any specificity in an earlier one.
+   * See the note on that rule.
+   */
+  .devasthan-day .report-paper,
+  .devasthan-night .report-paper {
+    text-shadow:
+      0 1px 2px oklch(0 0 0 / 0.7),
+      0 0 8px oklch(0 0 0 / 0.5);
+  }
+
+  @media print {
+    .devasthan-day .report-paper,
+    .devasthan-night .report-paper {
+      text-shadow: none;
+    }
+  }
+
+  /* -------------------------------------------------------------------------
+     One material for every surface that sits on the photo.
+
+     A card on the Overview, a receipt row, an expense row and a category row
+     are all the same thing — a pane of glass over the idol — and on the photo
+     they have to look it. Three things were stopping that:
+
+      1. .glass-inset declines a backdrop-filter, on the reasoning that its
+         parent already blurred what is behind it. That was true when a row
+         lived inside a wrapping pane; it stopped being true when the receipt
+         and expense lists were unnested so their rows sit directly on the
+         ground. On a flat mesh an unblurred row was merely flatter. Over a
+         photograph it is a hole: measured, body text on one was 3.73:1.
+      2. Those rows wore a white veil, which over a bright photo lightens the
+         ground under light text — see --card-nested above.
+      3. The Overview's cards wear .accent-top, which trades the lit rim for a
+         2px colour bar. Next to a receipt row's gold rim that reads as a
+         different material, which is exactly what it looked like.
+
+     Fixed here rather than at the call sites, and scoped to these two themes,
+     so Light and Dark keep the treatment they were signed off with.
+     ------------------------------------------------------------------------- */
+  /*
+   * The lit rim, given back to the cards that .accent-top took it from.
+   *
+   * The colour bar itself goes. It was a third carrier of a state that is
+   * already said twice on every card that uses it — the balance card colours
+   * its own figure and carries a tinted wallet icon, the stat tiles carry
+   * coloured icon swatches, the due panel has a tinted border and an overdue
+   * badge — so dropping it costs no information, and keeping it would keep
+   * these cards looking like a different material from every row below them.
+   */
+  .devasthan-day .accent-top::before,
+  .devasthan-night .accent-top::before {
+    display: none;
+  }
+
+  /*
+   * A list row that becomes glass only where the ground is a photograph.
+   *
+   * The category rows in "Where it went" are flat text on their pane, unlike
+   * the receipt and expense rows, which are individual panes. On a mesh that
+   * reads as restraint; on the photo it reads as the one list that was
+   * forgotten. A hook class rather than .glass-inset at the call site,
+   * because outside these two themes the flat treatment is the signed-off
+   * design and this rule is deliberately a no-op there.
+   */
+  .devasthan-day .glass-row,
+  .devasthan-night .glass-row {
+    background-color: var(--card-nested);
+    border: 1px solid var(--card-ring-raised);
+    border-radius: var(--radius);
+    /* --elevation-md and no backdrop-filter, which is not a free choice: it is
+       what .glass-inset does, and the point of this rule is to be the same
+       material as a receipt row rather than merely a similar one. */
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-md);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    /* .glass-inset is already covered by the general rule further down; only
+       .glass-row is new and needs its own line. */
+    .devasthan-day .glass-row,
+    .devasthan-night .glass-row {
+      background-color: var(--card-nested-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /*
+   * The report's per-row cards on a phone, asked for by name to look like the
+   * dropdowns rather than a receipt row: thinner, and with the blur
+   * .glass-row deliberately declines. Same veil colour as the rest of the
+   * cards, --glass-blur-soft rather than the panes' full --glass-blur —
+   * these sit one below a card in the hierarchy, not above the page.
+   */
+  .devasthan-day .glass-row-blur,
+  .devasthan-night .glass-row-blur {
+    background-color: var(--card-nested);
+    border: 1px solid var(--card-ring-raised);
+    border-radius: var(--radius);
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-md);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .devasthan-day .glass-row-blur,
+    .devasthan-night .glass-row-blur {
+      -webkit-backdrop-filter: blur(var(--glass-blur-soft));
+      backdrop-filter: blur(var(--glass-blur-soft));
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .devasthan-day .glass-row-blur,
+    .devasthan-night .glass-row-blur {
+      background-color: var(--card-nested-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
 
   /* Shared by the sparks, the halo and the overdue badge. */
@@ -1322,6 +1727,54 @@
     }
   }
 
+  /*
+   * Devasthan: no blur on a card, and the lit rim given back to .accent-top.
+   *
+   * IN @layer utilities DELIBERATELY, and that is the whole reason this rule
+   * works. Both of the declarations it overrides are set in this layer a few
+   * lines up, and a cascade layer beats ANY specificity in an earlier one —
+   * the first version of this sat in @layer components and was silently dead,
+   * which is the exact trap the comment at the top of this block describes.
+   * Check the layer before adding anything here.
+   *
+   * The blur goes because .glass-inset declines a backdrop-filter, so the
+   * receipt and activity rows show the idol crisply through themselves. That
+   * is most of why they read as glass over a photograph rather than frosted
+   * plastic laid on one, and a blurred card beside them was the giveaway. It
+   * costs about 1.4:1 of contrast — blur averages the bright ornament away —
+   * and the halo more than covers the difference.
+   *
+   * The colour bar that .accent-top puts in place of the rim is hidden in
+   * @layer components, where its ::before is defined. Both halves are needed:
+   * this one restores the rim, that one removes the bar.
+   *
+   * Neither applies to Light or Dark, whose ground is a flat mesh the blur is
+   * doing something quite different to.
+   */
+  .devasthan-day [data-slot="card"]:not(.shadow-none),
+  .devasthan-night [data-slot="card"]:not(.shadow-none),
+  .devasthan-day [data-slot="card"].card-hero:not(.shadow-none),
+  .devasthan-night [data-slot="card"].card-hero:not(.shadow-none) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .devasthan-day [data-slot="card"].accent-top:not(.shadow-none),
+  .devasthan-night [data-slot="card"].accent-top:not(.shadow-none) {
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-md);
+  }
+
+  .devasthan-day
+    [data-slot="card"].card-elevated.accent-top:not(.shadow-none):hover,
+  .devasthan-night
+    [data-slot="card"].card-elevated.accent-top:not(.shadow-none):hover {
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-lg);
+  }
+
   /* Cards with a brand hairline already own their top edge, so the highlight
      would sit underneath it doing nothing. Drop it and keep the shadow. */
   [data-slot="card"].accent-top:not(.shadow-none) {
@@ -1348,6 +1801,58 @@
    */
   .paper {
     background-color: var(--card-solid);
+  }
+
+  /*
+   * ...except the report, on screen, in the two photo themes.
+   *
+   * IN THIS LAYER ON PURPOSE, and this is the trap this file keeps setting:
+   * `.paper` above is in @layer utilities, so a `.devasthan-day .report-paper`
+   * rule over in @layer components loses to it despite being far more
+   * specific — a later layer beats any specificity in an earlier one. It has
+   * to be a neighbour of the rule it overrides. (The matching text-shadow does
+   * live in components, because there it only competes with the
+   * `.paper { text-shadow: none }` in that same layer.)
+   *
+   * Why the report and not the single receipt: the report's per-row cards were
+   * asked to be translucent, and that is structurally impossible while their
+   * ancestor is opaque — a 6% veil over a solid colour is just that colour, 6%
+   * lighter. The receipt page keeps .paper solid; it was never part of the ask
+   * and it is a column of figures checked digit by digit.
+   *
+   * Screen only. Print and prefers-reduced-transparency both put --card-solid
+   * back: a photograph behind printed figures is exactly the noise .paper
+   * exists to refuse, and paper has no backdrop-filter to blur it away with.
+   */
+  .devasthan-day .report-paper,
+  .devasthan-night .report-paper {
+    background-color: var(--card);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .devasthan-day .report-paper,
+    .devasthan-night .report-paper {
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  @media print {
+    .devasthan-day .report-paper,
+    .devasthan-night .report-paper {
+      background-color: var(--card-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .devasthan-day .report-paper,
+    .devasthan-night .report-paper {
+      background-color: var(--card-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
 
   /*
@@ -1495,6 +2000,106 @@
     .glass-pill {
       background-color: var(--card-solid);
     }
+  }
+
+  /*
+   * Devasthan: the controls are the same glass as the panes.
+   *
+   * The filter chips, the search box and the sort trigger are the last things
+   * on these screens that read as a different material, and two separate
+   * causes were doing it.
+   *
+   * The blur is the obvious one, removed for the same reason it comes off the
+   * cards: .glass-inset declines it, so a row shows the idol crisply and a
+   * blurred control beside it looks like frosted plastic.
+   *
+   * The second was invisible until it was measured. The base Input, the base
+   * SelectTrigger and the button's `outline` variant all carry
+   * `dark:bg-input/30`, and these themes are dark themes, so that variant
+   * fires — painting the controls a GOLD wash at 0.096 alpha rather than the
+   * neutral white 0.07 the panes wear. --input is a gold hairline colour, and
+   * as a 30% fill it tints. It also out-specifies a bare `.glass-pill`, which
+   * is why re-declaring the background here is not redundant: the theme
+   * selector is what gets this past it.
+   *
+   * The chosen chip is deliberately untouched. It keeps its solid `secondary`
+   * fill, because "selected" needs a cue the others do not have and
+   * translucency is the wrong axis to say it with — the rule this file has
+   * followed everywhere else.
+   */
+  .devasthan-day .glass-pill,
+  .devasthan-night .glass-pill {
+    background-color: var(--card);
+    border-color: var(--card-ring-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-md);
+  }
+
+  /* Same for the hover state, which otherwise re-applies the gold wash at a
+     heavier 50% the moment a finger lands on a chip. */
+  .devasthan-day .glass-pill:hover,
+  .devasthan-night .glass-pill:hover {
+    background-color: var(--card-nested);
+  }
+
+  /*
+   * Devasthan: the overlays get their blur.
+   *
+   * One list, because one token (--popover) already backs all of them — the
+   * receipt and expense and donation dialogs, the sort menu, the settings
+   * dropdown, the date popover, the confirm dialogs. Only the blur has to be
+   * named per slot, because there is no `backdrop-filter` utility on them to
+   * inherit it from.
+   *
+   * saturate() is deliberately absent, unlike the panes. A pane is looking at
+   * the idol and wants the colour back that the blur washes out; a dialog is
+   * a sheet held in front of it, and boosting the chroma of a smear behind a
+   * form makes the form look stained.
+   */
+  .devasthan-day
+    :is(
+      [data-slot="dialog-content"],
+      [data-slot="alert-dialog-content"],
+      [data-slot="select-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="popover-content"]
+    ),
+  .devasthan-night
+    :is(
+      [data-slot="dialog-content"],
+      [data-slot="alert-dialog-content"],
+      [data-slot="select-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="popover-content"]
+    ) {
+    -webkit-backdrop-filter: blur(var(--glass-blur-soft));
+    backdrop-filter: blur(var(--glass-blur-soft));
+    /* The pane idiom's lit rim, and --elevation-lg rather than the panes'
+       --elevation-md because these float above the page rather than sitting
+       on it. This replaces the `ring-1 ring-foreground/10` those components
+       ship with — in Tailwind v4 a ring IS a box-shadow, so setting one here
+       would silently delete the ring if it were not restated as the rim. */
+    box-shadow:
+      inset 0 1px 0 var(--card-highlight),
+      var(--elevation-lg);
+    border: 1px solid var(--card-ring-raised);
+  }
+
+  /*
+   * The select's scroll arrows stay opaque, and they are the one place a
+   * translucent --popover would be a bug rather than a style: they sit ON the
+   * option list to hide the rows scrolling underneath them, so at 0.88 the
+   * text they exist to cover would show through. They are inside the menu's
+   * own blur already, so they need no backdrop-filter of their own.
+   */
+  .devasthan-day [data-slot="select-scroll-up-button"],
+  .devasthan-day [data-slot="select-scroll-down-button"],
+  .devasthan-night [data-slot="select-scroll-up-button"],
+  .devasthan-night [data-slot="select-scroll-down-button"] {
+    background-color: var(--card-solid);
   }
 
   /*

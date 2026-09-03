@@ -67,9 +67,16 @@ export function CategoryBreakdown({
                   type="button"
                   aria-pressed={active}
                   onClick={() => onSelect(active ? null : row.category)}
+                  /* glass-row is a no-op outside the Devasthan themes, where
+                     it turns each row into its own pane so this list matches
+                     the receipt and expense lists over the photo. Only the
+                     unselected rows get it: the chosen one keeps its solid
+                     `accent` fill, because "selected" needs a cue the others
+                     do not have and translucency is the wrong axis to say it
+                     with — the same rule the filter chips follow. */
                   className={cn(
                     "flex w-full flex-col gap-1 rounded-lg px-2 py-1.5 text-left transition-colors",
-                    active ? "bg-accent" : "hover:bg-accent/50",
+                    active ? "bg-accent" : "glass-row hover:bg-accent/50",
                   )}
                 >
                   <span className="flex items-baseline gap-2 text-sm">
