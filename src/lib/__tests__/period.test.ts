@@ -3,13 +3,16 @@ import {
   ALL_TIME,
   filterByPeriod,
   inPeriod,
+  isPeriodFiltered,
   isSingleDay,
   LAST_7,
+  periodLabelKey,
   rangeOf,
   samePeriod,
   TODAY,
   type Period,
 } from "@/app/dashboard/period";
+import { dictionaries } from "@/lib/i18n/dictionaries";
 
 const custom = (from: string | null, to: string | null): Period => ({
   kind: "custom",
@@ -113,5 +116,60 @@ describe("isSingleDay", () => {
     expect(isSingleDay(LAST_7)).toBe(false);
     expect(isSingleDay(ALL_TIME)).toBe(false);
     expect(isSingleDay(custom("2026-09-01", "2026-09-02"))).toBe(false);
+  });
+});
+
+/*
+ * The two helpers the collapsed filter button reads.
+ *
+ * Worth testing rather than eyeballing because the failure is silent and
+ * specific: a filter sheet hides the filter, so if the button says "All time"
+ * while a custom range is on, nothing on screen contradicts it — and this is
+ * a ledger, where a volunteer reading a partial total as the whole is the
+ * error the button exists to prevent.
+ */
+describe("isPeriodFiltered", () => {
+  it("is false only for the whole ledger", () => {
+    expect(isPeriodFiltered(ALL_TIME)).toBe(false);
+    expect(isPeriodFiltered(TODAY)).toBe(true);
+    expect(isPeriodFiltered(LAST_7)).toBe(true);
+    expect(isPeriodFiltered(custom("2026-09-01", null))).toBe(true);
+  });
+
+  it("counts a custom range that happens to be open-ended", () => {
+    // Both bounds null is not reachable from the UI — CustomDateRange sends
+    // ALL_TIME instead — but it must not read as unfiltered if it ever is.
+    expect(isPeriodFiltered(custom(null, null))).toBe(true);
+  });
+});
+
+describe("periodLabelKey", () => {
+  it("names each preset", () => {
+    expect(periodLabelKey(TODAY)).toBe("period.today");
+    expect(periodLabelKey(LAST_7)).toBe("period.7");
+    expect(periodLabelKey(ALL_TIME)).toBe("period.all");
+  });
+
+  it("returns keys that actually exist in both dictionaries", () => {
+    // periodLabelKey returns a translation KEY, so a typo in it renders the
+    // raw key on the filter button rather than failing anywhere loud.
+    for (const p of [TODAY, LAST_7, ALL_TIME, custom("2026-09-01", null)]) {
+      const key = periodLabelKey(p);
+      expect(dictionaries.en, key).toHaveProperty(key);
+      expect(dictionaries.mr, key).toHaveProperty(key);
+    }
+  });
+
+  it("never calls a custom range 'all time'", () => {
+    // The regression this guards: `custom` is not one of the presets, so a
+    // preset-only lookup fell through to "period.all" and labelled a filtered
+    // view as the unfiltered one.
+    for (const p of [
+      custom("2026-09-01", "2026-09-10"),
+      custom("2026-09-01", null),
+      custom(null, "2026-09-10"),
+    ]) {
+      expect(periodLabelKey(p)).toBe("period.custom");
+    }
   });
 });

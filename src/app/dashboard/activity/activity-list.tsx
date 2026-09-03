@@ -30,10 +30,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ALL_TIME,
+  CustomDateRange,
   inPeriod,
+  isPeriodFiltered,
+  periodLabelKey,
   PeriodFilter,
+  PeriodPresets,
   type Period,
 } from "../period-filter";
+import { FilterSection, FilterSheet } from "@/components/filter-sheet";
 
 const ACTION_FILTERS = [
   { key: "all", labelKey: "activity.filterAll" },
@@ -175,17 +180,127 @@ export function ActivityList({
       donation_date: t("donation.date"),
     })[field] ?? field;
 
+  /*
+   * The four filter controls, defined once and placed twice — inline from
+   * `sm` up, inside the sheet below it. As elements rather than duplicated
+   * JSX so the two layouts cannot drift: this tab has four of them, and four
+   * chip rows kept in step by hand is four chances to fix one and forget the
+   * other.
+   */
+  type Ledger = "all" | ActivityEntity;
+  type Action = "all" | AuditAction;
+
+  const ledgerRow = (current: Ledger, onChange: (next: Ledger) => void) => (
+    <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:w-fit sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
+      {LEDGERS.map(({ key, labelKey }) => {
+        const Icon = LEDGER_ICONS[key as ActivityEntity];
+        return (
+          <Button
+            key={key}
+            size="sm"
+            variant={current === key ? "secondary" : "outline"}
+            // No height forced: @media (pointer: coarse) in globals.css
+            // puts a 44px floor under every button on a phone.
+            className="shrink-0 rounded-full sm:border-transparent sm:shadow-none"
+            onClick={() => onChange(key)}
+          >
+            {Icon ? <Icon /> : null}
+            {t(labelKey)}
+          </Button>
+        );
+      })}
+    </div>
+  );
+
+  const actionRow = (current: Action, onChange: (next: Action) => void) => (
+    <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:w-fit sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
+      {ACTION_FILTERS.map(({ key, labelKey }) => (
+        <Button
+          key={key}
+          size="sm"
+          variant={current === key ? "secondary" : "outline"}
+          className="shrink-0 rounded-full sm:border-transparent sm:shadow-none"
+          onClick={() => onChange(key)}
+        >
+          {t(labelKey)}
+        </Button>
+      ))}
+    </div>
+  );
+
+  const actorPicker = (current: string, onChange: (next: string) => void) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="outline" size="sm" className="w-full justify-start">
+            <User />
+            <span className="truncate">
+              {current === "all"
+                ? t("activity.allVolunteers")
+                : displayName(current, names)}
+            </span>
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem onClick={() => onChange("all")}>
+          {t("activity.allVolunteers")}
+        </DropdownMenuItem>
+        {volunteers.map((email) => (
+          <DropdownMenuItem key={email} onClick={() => onChange(email)}>
+            {displayName(email, names)}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  /** The active filters, named — for the trigger and the sheet's own line. */
+  const summariseFilters = (v: {
+    ledger: Ledger;
+    action: Action;
+    actor: string;
+    period: Period;
+  }) => {
+    const active: string[] = [];
+    if (v.ledger !== "all") {
+      active.push(
+        t(
+          LEDGERS.find((l) => l.key === v.ledger)?.labelKey ??
+            "activity.allLedgers",
+        ),
+      );
+    }
+    if (v.action !== "all") {
+      active.push(
+        t(
+          ACTION_FILTERS.find((a) => a.key === v.action)?.labelKey ??
+            "activity.filterAll",
+        ),
+      );
+    }
+    if (v.actor !== "all") active.push(displayName(v.actor, names) ?? v.actor);
+    if (isPeriodFiltered(v.period)) active.push(t(periodLabelKey(v.period)));
+    return active;
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col items-start">
         <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
           {t("activity.title")}
         </h1>
+        {/* Below `sm` this picker is in the filter sheet instead, with the
+            other three controls — see the sheet further down. */}
         {volunteers.length > 1 ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button variant="outline" size="sm" className="mt-1 max-w-56">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-1 hidden max-w-56 sm:flex"
+                >
                   <User />
                   <span className="truncate">
                     {actor === "all"
@@ -209,48 +324,64 @@ export function ActivityList({
         ) : null}
       </div>
 
-      {/* Which ledger first, since it changes what the rest of the filters are
-          filtering. Its own row so the two levels read as a hierarchy. */}
-      <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:w-fit sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
-        {LEDGERS.map(({ key, labelKey }) => {
-          const Icon = LEDGER_ICONS[key as ActivityEntity];
-          return (
-            <Button
-              key={key}
-              size="sm"
-              variant={ledger === key ? "secondary" : "outline"}
-              // No height forced: @media (pointer: coarse) in globals.css
-              // puts a 44px floor under every button on a phone.
-              className="shrink-0 rounded-full sm:border-transparent sm:shadow-none"
-              onClick={() => setLedger(key)}
-            >
-              {Icon ? <Icon /> : null}
-              {t(labelKey)}
-            </Button>
-          );
-        })}
+      {/* From `sm` up all four rows stay as they were; below it they collapse
+          into one button. Activity is the tab that most needed it — ledger,
+          change, volunteer and period stacked to four rows above the feed,
+          which on a phone left almost none of the log itself on screen. */}
+      <div className="hidden flex-col gap-4 sm:flex">
+        {ledgerRow(ledger, setLedger)}
+        {actionRow(action, setAction)}
+        <PeriodFilter period={period} onChange={setPeriod} />
       </div>
 
-      {/* What. */}
-      <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:w-fit sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
-        {ACTION_FILTERS.map(({ key, labelKey }) => (
-          <Button
-            key={key}
-            size="sm"
-            variant={action === key ? "secondary" : "outline"}
-            className="shrink-0 rounded-full sm:border-transparent sm:shadow-none"
-            onClick={() => setAction(key)}
-          >
-            {t(labelKey)}
-          </Button>
-        ))}
+      <div className="sm:hidden">
+        <FilterSheet
+          value={{ ledger, action, actor, period }}
+          defaults={{
+            ledger: "all" as Ledger,
+            action: "all" as Action,
+            actor: "all",
+            period: ALL_TIME,
+          }}
+          onApply={(next) => {
+            setLedger(next.ledger);
+            setAction(next.action);
+            setActor(next.actor);
+            setPeriod(next.period);
+          }}
+          summarise={summariseFilters}
+        >
+          {(draft, patch) => (
+            <>
+              {/* Which ledger first, since it changes what the rest of the
+                  filters are filtering. */}
+              <FilterSection label={t("filters.ledger")}>
+                {ledgerRow(draft.ledger, (ledger) => patch({ ledger }))}
+              </FilterSection>
+              <FilterSection label={t("filters.action")}>
+                {actionRow(draft.action, (action) => patch({ action }))}
+              </FilterSection>
+              {volunteers.length > 1 ? (
+                <FilterSection label={t("filters.actor")}>
+                  {actorPicker(draft.actor, (actor) => patch({ actor }))}
+                </FilterSection>
+              ) : null}
+              <FilterSection label={t("filters.period")}>
+                <PeriodPresets
+                  period={draft.period}
+                  onChange={(period) => patch({ period })}
+                />
+              </FilterSection>
+              <FilterSection label={t("filters.dates")}>
+                <CustomDateRange
+                  period={draft.period}
+                  onChange={(period) => patch({ period })}
+                />
+              </FilterSection>
+            </>
+          )}
+        </FilterSheet>
       </div>
-
-      {/* When. Its own full-width row rather than squeezed beside the action
-          filters — that wrapping had no width of its own to hand the custom
-          date box, which is why it rendered at its cramped minimum instead
-          of the full row width every other custom-date box gets. */}
-      <PeriodFilter period={period} onChange={setPeriod} />
 
       {days.length === 0 ? (
         <Card>

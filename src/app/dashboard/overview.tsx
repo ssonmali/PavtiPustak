@@ -38,12 +38,17 @@ import { DonationBox } from "./donation-box";
 import { DuePanel } from "./due-panel";
 import {
   ALL_TIME,
+  CustomDateRange,
   filterByPeriod,
+  isPeriodFiltered,
   isSingleDay,
+  periodLabelKey,
   PeriodFilter,
+  PeriodPresets,
   rangeOf,
   type Period,
 } from "./period-filter";
+import { FilterSection, FilterSheet } from "@/components/filter-sheet";
 
 /**
  * The subset of a pledge row the overview needs: enough to derive what is
@@ -190,7 +195,41 @@ export function Overview({
           </h1>
           <p className="text-sm text-muted-foreground">{t("table.subtitle")}</p>
         </div>
-        <PeriodFilter period={period} onChange={setPeriod} />
+        {/* From `sm` up, the presets and the date box as they were. Below it
+            they collapse into one button — this heading row is the whole
+            reason: a chip row plus a two-field date box above the balance
+            card pushed the figure a volunteer opens the app to read below
+            the fold. */}
+        <div className="hidden sm:block">
+          <PeriodFilter period={period} onChange={setPeriod} />
+        </div>
+        <div className="sm:hidden">
+          <FilterSheet
+            value={{ period }}
+            defaults={{ period: ALL_TIME }}
+            onApply={(next) => setPeriod(next.period)}
+            summarise={(v) =>
+              isPeriodFiltered(v.period) ? [t(periodLabelKey(v.period))] : []
+            }
+          >
+            {(draft, patch) => (
+              <>
+                <FilterSection label={t("filters.period")}>
+                  <PeriodPresets
+                    period={draft.period}
+                    onChange={(period) => patch({ period })}
+                  />
+                </FilterSection>
+                <FilterSection label={t("filters.dates")}>
+                  <CustomDateRange
+                    period={draft.period}
+                    onChange={(period) => patch({ period })}
+                  />
+                </FilterSection>
+              </>
+            )}
+          </FilterSheet>
+        </div>
       </div>
 
       <DuePanel pledges={due} mandalName={mandalName} />

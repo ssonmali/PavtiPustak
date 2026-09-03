@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -7,20 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ALL_TIME,
-  LAST_7,
+  periodLabelKey,
   PRESETS,
   samePeriod,
-  TODAY,
   type Period,
 } from "./period";
 
 export * from "./period";
-
-function presetLabelKey(period: Period) {
-  if (samePeriod(period, TODAY)) return "period.today" as const;
-  if (samePeriod(period, LAST_7)) return "period.7" as const;
-  return "period.all" as const;
-}
 
 /** Today / Last 7 days / All time — the quick-pick row, on its own. */
 export function PeriodPresets({
@@ -36,7 +31,7 @@ export function PeriodPresets({
     <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 sm:mx-0 sm:rounded-lg sm:border sm:p-0.5 sm:px-0.5">
       {PRESETS.map((preset) => (
         <Button
-          key={presetLabelKey(preset)}
+          key={periodLabelKey(preset)}
           size="sm"
           variant={samePeriod(period, preset) ? "secondary" : "outline"}
           /* The `outline` variant is bg-background, which is the opaque mesh
@@ -53,7 +48,7 @@ export function PeriodPresets({
           )}
           onClick={() => onChange(preset)}
         >
-          {t(presetLabelKey(preset))}
+          {t(periodLabelKey(preset))}
         </Button>
       ))}
     </div>
@@ -74,6 +69,17 @@ export function CustomDateRange({
   onChange: (period: Period) => void;
 }) {
   const { t } = useI18n();
+  /**
+   * Per-instance ids rather than the fixed "period-from"/"period-to" these
+   * had. Since the filter sheet went in, two copies of this box are in the
+   * document at once on a phone — the inline one the tabs render from `sm` up,
+   * and the sheet's — and duplicate ids point every <label> at whichever came
+   * first, so tapping the label in the sheet focused the hidden field behind
+   * it. Invisible on desktop; the whole control on a phone.
+   */
+  const id = React.useId();
+  const fromId = `${id}-from`;
+  const toId = `${id}-to`;
 
   const custom = period.kind === "custom" ? period : null;
   const from = custom?.from ?? "";
@@ -100,11 +106,11 @@ export function CustomDateRange({
     <div className="glass-inset flex flex-col gap-2 rounded-lg border p-3">
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-36 flex-1 flex-col gap-1.5">
-          <Label htmlFor="period-from" className="text-xs text-muted-foreground">
+          <Label htmlFor={fromId} className="text-xs text-muted-foreground">
             {t("report.from")}
           </Label>
           <Input
-            id="period-from"
+            id={fromId}
             type="date"
             /* No glass-pill here: the from/to box around these already IS
                the glass, and a pill stacked inside it compounds two veils
@@ -119,11 +125,11 @@ export function CustomDateRange({
           />
         </div>
         <div className="flex min-w-36 flex-1 flex-col gap-1.5">
-          <Label htmlFor="period-to" className="text-xs text-muted-foreground">
+          <Label htmlFor={toId} className="text-xs text-muted-foreground">
             {t("report.to")}
           </Label>
           <Input
-            id="period-to"
+            id={toId}
             type="date"
             value={to}
             min={from || undefined}

@@ -55,9 +55,12 @@ import {
   ALL_TIME,
   CustomDateRange,
   filterByPeriod,
+  isPeriodFiltered,
+  periodLabelKey,
   PeriodPresets,
   type Period,
 } from "../period-filter";
+import { FilterSection, FilterSheet } from "@/components/filter-sheet";
 import { PaidPill, UnpaidBadge } from "../money-badges";
 import { PaidProgress } from "../paid-progress";
 import { ExpenseDialog } from "./expense-dialog";
@@ -89,6 +92,31 @@ export function ExpensesView({
   const [query, setQuery] = React.useState("");
   const [sort, setSort] = React.useState<SortKey>(DEFAULT_SORT);
   const [category, setCategory] = React.useState<ExpenseCategory | null>(null);
+  /**
+   * The active filters, named, for the sheet's button — see FilterSheet on why
+   * the trigger has to carry this rather than being a bare icon.
+   *
+   * The category is counted but NOT offered inside the sheet: it is chosen by
+   * tapping a row of "Where it went", which is a card on the page rather than
+   * a control, and duplicating it here would give two places to set one thing.
+   * Counting it is still right — it is filtering the list, so a button that
+   * ignored it would under-report. Clearing does reset it, because "Clear all"
+   * that left a category on would be a lie.
+   */
+  const summariseFilters = React.useCallback(
+    (v: {
+      period: Period;
+      category: ExpenseCategory | null;
+      sort: SortKey;
+    }) => {
+      const active: string[] = [];
+      if (isPeriodFiltered(v.period)) active.push(t(periodLabelKey(v.period)));
+      if (v.category) active.push(t(`category.${v.category}`));
+      if (v.sort !== DEFAULT_SORT) active.push(t("filters.sort"));
+      return active;
+    },
+    [t],
+  );
   const [editing, setEditing] = React.useState<Expense | undefined>();
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [toDelete, setToDelete] = React.useState<Expense | undefined>();
@@ -243,7 +271,11 @@ export function ExpensesView({
             <Plus /> {t("expenses.new")}
           </Button>
         </div>
-        <PeriodPresets period={period} onChange={setPeriod} />
+        {/* From `sm` up the chip row stays as it was; below `sm` it collapses
+            into the filter button beside the search box. */}
+        <div className="hidden sm:block">
+          <PeriodPresets period={period} onChange={setPeriod} />
+        </div>
       </div>
 
       {truncated ? (
@@ -284,16 +316,63 @@ export function ExpensesView({
               className="glass-pill pl-8"
             />
           </div>
+          {/* Phones get one filter button instead of the sort pill, the chip
+              row above and the date box below. */}
+          <FilterSheet
+            value={{ period, category, sort }}
+            defaults={{
+              period: ALL_TIME,
+              category: null as ExpenseCategory | null,
+              sort: DEFAULT_SORT,
+            }}
+            onApply={(next) => {
+              setPeriod(next.period);
+              setCategory(next.category);
+              setSort(next.sort);
+            }}
+            summarise={summariseFilters}
+          >
+            {(draft, patch) => (
+              <>
+                <FilterSection label={t("filters.period")}>
+                  <PeriodPresets
+                    period={draft.period}
+                    onChange={(period) => patch({ period })}
+                  />
+                </FilterSection>
+                <FilterSection label={t("filters.dates")}>
+                  <CustomDateRange
+                    period={draft.period}
+                    onChange={(period) => patch({ period })}
+                  />
+                </FilterSection>
+                <FilterSection label={t("filters.sort")}>
+                  {/* An expense has no serial number, so those two orders are
+                      not offered here rather than silently doing something
+                      else. */}
+                  <SortFilter
+                    value={draft.sort}
+                    onChange={(sort) => patch({ sort })}
+                    keys={EXPENSE_SORT_KEYS}
+                    showLabel
+                    className="glass-pill"
+                  />
+                </FilterSection>
+              </>
+            )}
+          </FilterSheet>
           {/* An expense has no serial number, so those two orders are not
             offered here rather than silently doing something else. */}
         <SortFilter
           value={sort}
           onChange={setSort}
           keys={EXPENSE_SORT_KEYS}
-          className="glass-pill"
+          className="glass-pill hidden sm:flex"
         />
         </div>
-        <CustomDateRange period={period} onChange={setPeriod} />
+        <div className="hidden sm:block">
+          <CustomDateRange period={period} onChange={setPeriod} />
+        </div>
 
         {/* Phones get the card list below; the table starts at sm. */}
         <div className="glass-inset card-elevated hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">

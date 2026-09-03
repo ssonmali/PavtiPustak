@@ -40,6 +40,7 @@ import { ReceiptDialog } from "./receipt-dialog";
 import { SortFilter } from "./sort-filter";
 import type { ReceiptQuery } from "./receipts-query";
 import { CustomDateRange, type Period } from "./period-filter";
+import { shouldAdoptTerm } from "./search-draft";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -135,6 +136,7 @@ export function ReceiptsTable({
   onPeriodChange,
   query,
   onQueryChange,
+  filters,
   ref,
 }: {
   receipts: LocalReceipt[];
@@ -158,6 +160,9 @@ export function ReceiptsTable({
   /** Rendered as a custom date-range row below the search/sort bar. */
   period: Period;
   onPeriodChange: (period: Period) => void;
+  /** The phone-only filter button, built by the owner of these controls and
+   *  placed beside the search box — see receipts-view.tsx. */
+  filters?: React.ReactNode;
   ref?: React.Ref<ReceiptsTableHandle>;
 }) {
   const { t, locale } = useI18n();
@@ -178,11 +183,21 @@ export function ReceiptsTable({
    * effect. Setting state in an effect for this schedules a second render
    * every time the URL changes, and React flags it as cascading; comparing
    * here re-renders once, before anything is painted.
+   *
+   * shouldAdoptTerm is what makes that safe, and it is not a refinement —
+   * without it this clobbered live typing while a debounced push was in
+   * flight. See that module for the failure it prevents; it is pure and
+   * tested because the naive version reads as obviously correct.
+   *
+   * Deliberately not a ref holding the last-sent term: reading a ref during
+   * render is not allowed, and the lint rule saying so is right — this has to
+   * be part of the render snapshot to stay correct if a render is replayed.
    */
   const [syncedQ, setSyncedQ] = React.useState(query.q);
   if (query.q !== syncedQ) {
+    const adopt = shouldAdoptTerm(query.q, syncedQ, draft);
     setSyncedQ(query.q);
-    setDraft(query.q);
+    if (adopt) setDraft(query.q);
   }
 
   React.useEffect(() => {
@@ -487,15 +502,18 @@ export function ReceiptsTable({
             disabled={!online}
           />
         </div>
+        {filters}
         <SortFilter
           value={query.sort}
           onChange={(sort) => onQueryChange({ sort })}
           disabled={!online}
-          className="glass-pill"
+          className="glass-pill hidden sm:flex"
         />
       </div>
 
-      <CustomDateRange period={period} onChange={onPeriodChange} />
+      <div className="hidden sm:block">
+        <CustomDateRange period={period} onChange={onPeriodChange} />
+      </div>
 
       {/* Phones get the card list below; the table starts at sm. */}
       <div className="glass-inset card-elevated hidden max-h-[70vh] overflow-auto rounded-xl border sm:block">

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { ArrowLeft, FileSpreadsheet, FileText, Printer } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,9 +17,10 @@ import { Label } from "@/components/ui/label";
 import { dictionaries } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
 import type { Donation, Expense, Receipt } from "@/lib/types";
-import type { ReportRange, ReportStatus } from "./report-range";
+import { reportUrl, type ReportRange, type ReportStatus } from "./report-range";
 import { type SortKey } from "../sort-rows";
 import { SortFilter } from "../sort-filter";
+import { FilterSection, FilterSheet } from "@/components/filter-sheet";
 
 type Labels = {
   statusAll: string;
@@ -76,6 +78,13 @@ export function ReportToolbar({
 }) {
   const { t, locale } = useI18n();
   const router = useRouter();
+  /* Distinct from the "from"/"to" ids on the desktop form above, which is in
+     the document at the same time: duplicate ids point both labels at
+     whichever field came first, so tapping "To" in the sheet focused the
+     hidden desktop "From". */
+  const sheetId = React.useId();
+  const sheetFromId = `${sheetId}-from`;
+  const sheetToId = `${sheetId}-to`;
 
   async function exportExcel() {
     if (
@@ -108,13 +117,25 @@ export function ReportToolbar({
    * A link for one part of the selection that keeps the other part. Without
    * this, choosing "Unpaid" and then "Today" would silently drop the status.
    */
-  const keep = (over: { range?: string; status?: string; sort?: string }) => {
+  const keep = (over: {
+    range?: string;
+    status?: string;
+    sort?: string;
+    /** Explicit bounds, for callers that navigate rather than submit. */
+    from?: string | null;
+    to?: string | null;
+  }) => {
     const p = new URLSearchParams();
-    const nextRange = over.range ?? range.key;
+    const dated = over.from !== undefined || over.to !== undefined;
+    const nextRange = over.range ?? (dated ? "custom" : range.key);
     if (nextRange === "today") p.set("range", "today");
     if (nextRange === "custom") {
-      if (range.from) p.set("from", range.from);
-      if (range.to) p.set("to", range.to);
+      // `?? range.x` rather than `|| range.x`: an explicit null is "clear this
+      // bound", which || would silently reinstate from the current range.
+      const from = over.from !== undefined ? over.from : range.from;
+      const to = over.to !== undefined ? over.to : range.to;
+      if (from) p.set("from", from);
+      if (to) p.set("to", to);
     }
     const nextStatus =
       over.status ?? (status === "all" ? "" : status.toLowerCase());
@@ -139,6 +160,31 @@ export function ReportToolbar({
     { key: "Donation", label: labels.statusDonation },
     { key: "Expense", label: labels.statusExpense },
   ] as const;
+
+  /**
+   * The active filters, named — for the trigger and the sheet's own line.
+   *
+   * Derived from the value passed in rather than tracked separately, so it
+   * cannot disagree with what is on the page. That matters more here than
+   * anywhere else in the app: this is the screen a treasurer prints from, and
+   * a printed sheet that silently covers only part of the ledger is the worst
+   * version of the mistake a hidden filter invites. Sort is counted but
+   * unnamed, as on the other tabs.
+   */
+  const summariseFilters = (v: {
+    status: ReportStatus;
+    range: ReportRange;
+    sort: SortKey;
+  }) => {
+    const active: string[] = [];
+    if (v.status !== "all") {
+      active.push(statuses.find((s) => s.key === v.status)?.label ?? v.status);
+    }
+    if (v.range.key === "today") active.push(labels.today);
+    if (v.range.key === "custom") active.push(t("period.custom"));
+    if (v.sort !== "date-asc") active.push(t("filters.sort"));
+    return active;
+  };
 
   return (
     // print:hidden keeps the toolbar out of the PDF itself.
@@ -182,14 +228,19 @@ export function ReportToolbar({
           glass-pill on the chips themselves, for the same reason the from/to
           box doesn't put one on its date inputs — a pill stacked inside a
           pane it is already sitting on compounds two veils into a white
-          patch. */}
+          patch.
+
+          Kept as a real GET form and shown from `sm` up. The phone sheet
+          below cannot reuse it: a dialog portals to <body>, which would move
+          these inputs OUT of the form element and drop them from the submit
+          without any visible sign — so the sheet navigates instead. */}
       <form
         // The date fields are uncontrolled, so a range picked elsewhere has to
         // arrive as a fresh instance; changing defaultValue in place is ignored.
         key={`${range.from ?? ""}:${range.to ?? ""}`}
         action="/dashboard/report"
         method="get"
-        className="glass-inset flex flex-col gap-3 rounded-lg border p-3"
+        className="glass-inset hidden flex-col gap-3 rounded-lg border p-3 sm:flex"
       >
         {/* Status sits with the ranges: both narrow what gets printed. */}
         <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3">
@@ -272,6 +323,134 @@ export function ReportToolbar({
           </span>
         </div>
       </form>
+
+      {/* The same controls for a phone. Chips are already <Link>s so they
+          work anywhere; the dates navigate on change instead of submitting,
+          which is what lets them live inside a portalled dialog at all. The
+          URL still ends up describing the page, so a bookmarked or reloaded
+          report is unaffected either way it was set. */}
+      <div className="sm:hidden">
+        <FilterSheet
+          value={{ status, range, sort }}
+          defaults={{
+            status: "all" as ReportStatus,
+            range: { key: "all", from: null, to: null } as ReportRange,
+            sort: "date-asc" as SortKey,
+          }}
+          /* One navigation for the whole selection. These chips are <Link>s on
+             desktop, which is right for one deliberate tap — but in a sheet
+             where a volunteer sets status, period and order before looking at
+             anything, that was three page loads to reach one report. */
+          onApply={(next) => router.push(reportUrl(next))}
+          summarise={summariseFilters}
+        >
+          {(draft, patch) => (
+            <>
+              <FilterSection label={t("filters.status")}>
+                <div className="-mx-1 flex flex-wrap items-center gap-1 px-1">
+                  {statuses.map((s) => (
+                    <Button
+                      key={s.key}
+                      size="sm"
+                      variant={draft.status === s.key ? "secondary" : "outline"}
+                      className="shrink-0 rounded-full"
+                      onClick={() => patch({ status: s.key })}
+                    >
+                      {s.label}
+                    </Button>
+                  ))}
+                </div>
+              </FilterSection>
+
+              <FilterSection label={t("filters.period")}>
+                <div className="-mx-1 flex flex-wrap items-center gap-1 px-1">
+                  {presets.map((p) => (
+                    <Button
+                      key={p.key}
+                      size="sm"
+                      variant={
+                        draft.range.key === p.key ? "secondary" : "outline"
+                      }
+                      className="shrink-0 rounded-full"
+                      onClick={() =>
+                        patch({
+                          // A preset drops any custom bounds, exactly as
+                          // navigating to it does on desktop.
+                          range: { key: p.key, from: null, to: null },
+                        })
+                      }
+                    >
+                      {p.label}
+                    </Button>
+                  ))}
+                </div>
+              </FilterSection>
+
+              <FilterSection label={t("filters.dates")}>
+                <div className="flex items-end gap-2">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <Label
+                      htmlFor={sheetFromId}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {labels.from}
+                    </Label>
+                    <Input
+                      id={sheetFromId}
+                      type="date"
+                      value={draft.range.from ?? ""}
+                      max={draft.range.to ?? undefined}
+                      className="w-full min-w-0"
+                      onChange={(e) =>
+                        patch({
+                          range: {
+                            // Typing a date IS choosing the custom range.
+                            key: "custom",
+                            from: e.target.value || null,
+                            to: draft.range.to,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <Label
+                      htmlFor={sheetToId}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {labels.to}
+                    </Label>
+                    <Input
+                      id={sheetToId}
+                      type="date"
+                      value={draft.range.to ?? ""}
+                      min={draft.range.from ?? undefined}
+                      className="w-full min-w-0"
+                      onChange={(e) =>
+                        patch({
+                          range: {
+                            key: "custom",
+                            from: draft.range.from,
+                            to: e.target.value || null,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </FilterSection>
+
+              <FilterSection label={t("filters.sort")}>
+                <SortFilter
+                  value={draft.sort}
+                  onChange={(sort) => patch({ sort })}
+                  showLabel
+                />
+              </FilterSection>
+            </>
+          )}
+        </FilterSheet>
+      </div>
     </div>
   );
 }

@@ -16,6 +16,31 @@ export const ALL_TIME: Period = { kind: "all" };
 /** The presets offered as buttons, in order. */
 export const PRESETS: Period[] = [TODAY, LAST_7, ALL_TIME];
 
+/** Whether a period is narrowing anything, i.e. worth counting as active. */
+export function isPeriodFiltered(period: Period) {
+  return !samePeriod(period, ALL_TIME);
+}
+
+/**
+ * The i18n key naming this period.
+ *
+ * Here rather than in period-filter.tsx so it can be tested and used without
+ * pulling in Button and the i18n hook — the same reason receipts-query.ts
+ * keeps its own copy of the status list. Five tabs need this one answer for
+ * their filter button, and a summary that disagrees with the chip underneath
+ * it is worse than no summary at all.
+ *
+ * `custom` is the case that matters: it is not one of the presets, so naming
+ * it by preset would report "All time" for a filtered view — the precise
+ * mistake a collapsed filter must never make.
+ */
+export function periodLabelKey(period: Period) {
+  if (period.kind === "custom") return "period.custom" as const;
+  if (samePeriod(period, TODAY)) return "period.today" as const;
+  if (samePeriod(period, LAST_7)) return "period.7" as const;
+  return "period.all" as const;
+}
+
 /** Inclusive bounds as `YYYY-MM-DD`, or null for open-ended. */
 export function rangeOf(period: Period): {
   from: string | null;

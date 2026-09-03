@@ -29,6 +29,7 @@ export function SortFilter({
   keys = SORT_KEYS,
   disabled = false,
   className,
+  showLabel = false,
 }: {
   value: SortKey;
   onChange: (key: SortKey) => void;
@@ -41,6 +42,15 @@ export function SortFilter({
   keys?: readonly SortKey[];
   /** Extra classes for the trigger, so a caller can give it the glass pill. */
   className?: string;
+  /**
+   * Show the chosen order as text rather than icon-only.
+   *
+   * Off beside the search box, where the icon is what keeps this from wrapping
+   * onto its own line. On inside the filter sheet, which has a full row for it
+   * and where an unlabelled icon under a "Sort by" heading would be the one
+   * control in there that does not say what it is currently doing.
+   */
+  showLabel?: boolean;
 }) {
   const { t } = useI18n();
 
@@ -59,12 +69,16 @@ export function SortFilter({
         title={
           disabled ? t("table.needsSignal") : t(LABEL_KEYS[value] ?? "sort.newest")
         }
-        className={cn("w-auto shrink-0 px-2.5", className)}
+        className={cn(
+          showLabel ? "w-full justify-between" : "w-auto shrink-0 px-2.5",
+          className,
+        )}
         disabled={disabled}
       >
         <ArrowDownUp className="size-4 shrink-0 text-muted-foreground" />
-        {/* Rendered for screen readers only — sighted users get the icon. */}
-        <SelectValue className="sr-only">
+        {/* Icon-only by default, so this is for screen readers; with showLabel
+            the same text is what sighted users read too. */}
+        <SelectValue className={showLabel ? undefined : "sr-only"}>
           {(v) => t(LABEL_KEYS[v as SortKey] ?? "sort.newest")}
         </SelectValue>
       </SelectTrigger>

@@ -86,3 +86,33 @@ export function parseRange(
   if (from || to) return { key: "custom", from, to };
   return { key: "all", from: null, to: null };
 }
+
+/**
+ * The whole report selection as a URL.
+ *
+ * Here rather than in the toolbar because it is the inverse of parseRange,
+ * parseStatus and parseSort above, and the pair has to agree: this is the
+ * screen a treasurer prints from, so a URL that round-trips to a different
+ * selection than it was built from means a printed sheet quietly covering the
+ * wrong rows. Kept beside its parsers, and tested against them.
+ *
+ * Defaults are omitted rather than written out, which is what keeps a plain
+ * /dashboard/report from growing a query string that says "all, all, oldest
+ * first" — and what makes the round-trip test meaningful in both directions.
+ */
+export function reportUrl(v: {
+  status: ReportStatus;
+  range: ReportRange;
+  sort: SortKey;
+}) {
+  const p = new URLSearchParams();
+  if (v.range.key === "today") p.set("range", "today");
+  if (v.range.key === "custom") {
+    if (v.range.from) p.set("from", v.range.from);
+    if (v.range.to) p.set("to", v.range.to);
+  }
+  if (v.status !== "all") p.set("status", v.status.toLowerCase());
+  if (v.sort !== DEFAULT_REPORT_SORT) p.set("sort", v.sort);
+  const qs = p.toString();
+  return qs ? `/dashboard/report?${qs}` : "/dashboard/report";
+}

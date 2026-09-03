@@ -17,7 +17,11 @@ import { Button } from "@/components/ui/button";
 import { OfflineBadge } from "@/components/offline-badge";
 import { ReceiptsTable, type ReceiptsTableHandle } from "../receipts-table";
 import {
+  ALL_TIME,
+  CustomDateRange,
   filterByPeriod,
+  isPeriodFiltered,
+  periodLabelKey,
   PeriodPresets,
   type Period,
 } from "../period-filter";
@@ -25,6 +29,9 @@ import {
   StatusFilterBar,
   type StatusFilter,
 } from "../status-filter";
+import { FilterSection, FilterSheet } from "@/components/filter-sheet";
+import { SortFilter } from "../sort-filter";
+import { DEFAULT_SORT, type SortKey } from "../sort-rows";
 
 export function ReceiptsView({
   receipts,
@@ -68,6 +75,30 @@ export function ReceiptsView({
     [onQueryChange],
   );
   const { editors, setEditing: setPresence } = useEditingPresence(myName);
+
+  /**
+   * The active filters, named, for the sheet's button.
+   *
+   * The search term is deliberately not in here: it has its own always-visible
+   * box beside the button, so counting it would report a filter the sheet does
+   * not contain and cannot clear. Sort is likewise left out of the NAMES but
+   * counted, because "Newest first" reads as a description of the list rather
+   * than as something switched on.
+   */
+  const summariseFilters = React.useCallback(
+    (v: { period: Period; status: StatusFilter; sort: SortKey }) => {
+      const active: string[] = [];
+      if (isPeriodFiltered(v.period)) active.push(t(periodLabelKey(v.period)));
+      if (v.status !== "all") {
+        active.push(
+          t(v.status === "Paid" ? "status.paidOnly" : "status.unpaidOnly"),
+        );
+      }
+      if (v.sort !== DEFAULT_SORT) active.push(t("filters.sort"));
+      return active;
+    },
+    [t],
+  );
 
   const onFlush = React.useCallback(
     (result: FlushResult) => {
@@ -196,14 +227,22 @@ export function ReceiptsView({
             <Plus /> {t("table.new")}
           </Button>
         </div>
-        <PeriodPresets period={period} onChange={setPeriod} />
+        {/* From `sm` up the chip rows stay exactly as they were: with room for
+            them they show the whole filter state and change it in one tap,
+            which no sheet can beat. Below `sm` they collapse into the button
+            the table renders beside its search box. */}
+        <div className="hidden sm:block">
+          <PeriodPresets period={period} onChange={setPeriod} />
+        </div>
       </div>
 
-      <StatusFilterBar
-        status={status}
-        onChange={setStatus}
-        unpaidCount={due.count}
-      />
+      <div className="hidden sm:block">
+        <StatusFilterBar
+          status={status}
+          onChange={setStatus}
+          unpaidCount={due.count}
+        />
+      </div>
 
       <OfflineBadge online={online} pending={pending} syncing={syncing} />
 
@@ -228,6 +267,57 @@ export function ReceiptsView({
         onPeriodChange={setPeriod}
         query={query}
         onQueryChange={onQueryChange}
+        /* Built here rather than in the table because this component owns
+           every control that goes in it — period, status and the query — and
+           passed down because the only sensible place for the trigger is
+           beside the search box, which the table renders. */
+        filters={
+          <FilterSheet
+            value={{ period, status, sort: query.sort }}
+            defaults={{
+              period: ALL_TIME,
+              status: "all" as StatusFilter,
+              sort: DEFAULT_SORT,
+            }}
+            /* One patch, so three taps in the sheet are one navigation and
+               one database query rather than three of each. */
+            onApply={(next) => onQueryChange(next)}
+            summarise={summariseFilters}
+          >
+            {(draft, patch) => (
+              <>
+                <FilterSection label={t("filters.period")}>
+                  <PeriodPresets
+                    period={draft.period}
+                    onChange={(period) => patch({ period })}
+                  />
+                </FilterSection>
+                <FilterSection label={t("filters.status")}>
+                  <StatusFilterBar
+                    status={draft.status}
+                    onChange={(status) => patch({ status })}
+                    unpaidCount={due.count}
+                  />
+                </FilterSection>
+                <FilterSection label={t("filters.dates")}>
+                  <CustomDateRange
+                    period={draft.period}
+                    onChange={(period) => patch({ period })}
+                  />
+                </FilterSection>
+                <FilterSection label={t("filters.sort")}>
+                  <SortFilter
+                    value={draft.sort}
+                    onChange={(sort) => patch({ sort })}
+                    disabled={!online}
+                    showLabel
+                    className="glass-pill"
+                  />
+                </FilterSection>
+              </>
+            )}
+          </FilterSheet>
+        }
         ref={tableRef}
       />
     </div>
