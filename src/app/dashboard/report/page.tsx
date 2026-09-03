@@ -466,7 +466,7 @@ export default async function ReportPage({
                 a report you can check. */}
             <div className="flex flex-col gap-2 sm:hidden print:hidden">
               {section.rows.map((r) => (
-                <div key={r.id} className="glass-row-blur rounded-lg border p-3 text-sm">
+                <div key={r.id} className="glass-row rounded-lg border p-3 text-sm">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="wrap-anywhere font-medium">{r.title}</span>
                     <span className="shrink-0 font-bold tabular-nums">
@@ -532,7 +532,7 @@ export default async function ReportPage({
 
             <div className="flex flex-col gap-2 sm:hidden print:hidden">
               {donations.map((d) => (
-                <div key={d.id} className="glass-row-blur rounded-lg border p-3 text-sm">
+                <div key={d.id} className="glass-row rounded-lg border p-3 text-sm">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="wrap-anywhere font-medium">
                       {d.donor_name}

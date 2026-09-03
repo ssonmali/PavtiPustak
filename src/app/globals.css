@@ -391,6 +391,21 @@
    --------------------------------------------------------------------------- */
 .devasthan-day,
 .devasthan-night {
+  /*
+   * Declared here because next-themes will not do it for these two.
+   *
+   * With enableColorScheme (on by default) it runs, in effect,
+   * `colorScheme = ["light","dark"].includes(theme) ? theme : defaultTheme`
+   * — and since neither the theme NOR the default is now `light`/`dark`, it
+   * assigns null and CLEARS the property. That was survivable while the
+   * default was `system`, which always resolved to one of the two.
+   *
+   * Cleared means the UA paints light-mode form controls, scrollbars, caret
+   * and autofill over a near-black photograph. These are dark themes, so say
+   * so once here rather than fighting each control.
+   */
+  color-scheme: dark;
+
   /* Under the photo, so it only shows for the instant before the image
      decodes, and behind the transparent edges of nothing else. */
   --background: oklch(0.14 0.02 40);
@@ -726,9 +741,14 @@
     break-inside: avoid;
   }
 
-  /* Both mesh layers are fixed, so without this they reprint on every sheet. */
+  /* Both mesh layers are fixed, so without this they reprint on every sheet.
+     [data-devasthan-decor] is the third one and needs naming for a reason the
+     rule above does not: the blanket `background-color: transparent` up there
+     cannot remove a background-IMAGE, and the halo is a radial-gradient. It
+     was reprinting a gold glow over the figures on every sheet. */
   .app-surface::before,
-  .app-surface::after {
+  .app-surface::after,
+  [data-devasthan-decor] {
     display: none !important;
   }
 }
@@ -1384,17 +1404,27 @@
    * @layer utilities beside `.paper` itself, because that is the layer .paper
    * is declared in and a later layer beats any specificity in an earlier one.
    * See the note on that rule.
+   *
+   * Written `.paper.report-paper` rather than `.report-paper` alone so it wins
+   * on SPECIFICITY (three classes to two) and not merely on being further down
+   * the file. As the bare selector it tied with the rule above and depended on
+   * source order, so reordering these two blocks — or hoisting one during a
+   * refactor — would have silently dropped the halo from the report.
    */
-  .devasthan-day .report-paper,
-  .devasthan-night .report-paper {
+  .devasthan-day .paper.report-paper,
+  .devasthan-night .paper.report-paper {
     text-shadow:
       0 1px 2px oklch(0 0 0 / 0.7),
       0 0 8px oklch(0 0 0 / 0.5);
   }
 
   @media print {
-    .devasthan-day .report-paper,
-    .devasthan-night .report-paper {
+    /* Matching the specificity of the rule above, not just its intent: a
+       media query adds nothing to specificity, so as `.report-paper` alone
+       this lost to the three-class selector and printed the halo — shadowed
+       figures on paper. */
+    .devasthan-day .paper.report-paper,
+    .devasthan-night .paper.report-paper {
       text-shadow: none;
     }
   }
@@ -1470,39 +1500,13 @@
     }
   }
 
-  /*
-   * The report's per-row cards on a phone, asked for by name to look like the
-   * dropdowns rather than a receipt row: thinner, and with the blur
-   * .glass-row deliberately declines. Same veil colour as the rest of the
-   * cards, --glass-blur-soft rather than the panes' full --glass-blur —
-   * these sit one below a card in the hierarchy, not above the page.
-   */
-  .devasthan-day .glass-row-blur,
-  .devasthan-night .glass-row-blur {
-    background-color: var(--card-nested);
-    border: 1px solid var(--card-ring-raised);
-    border-radius: var(--radius);
-    box-shadow:
-      inset 0 1px 0 var(--card-highlight),
-      var(--elevation-md);
-  }
-
-  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-    .devasthan-day .glass-row-blur,
-    .devasthan-night .glass-row-blur {
-      -webkit-backdrop-filter: blur(var(--glass-blur-soft));
-      backdrop-filter: blur(var(--glass-blur-soft));
-    }
-  }
-
-  @media (prefers-reduced-transparency: reduce) {
-    .devasthan-day .glass-row-blur,
-    .devasthan-night .glass-row-blur {
-      background-color: var(--card-nested-solid);
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
-    }
-  }
+  /* The report's per-row cards used to have a .glass-row-blur of their own,
+     adding blur(var(--glass-blur-soft)) on top of this. Removed, and they use
+     .glass-row now: .report-paper above them blurs at the full --glass-blur,
+     so a second blur inside it had nothing left to sample — the exact
+     reasoning .glass-inset states below, which that class was violating — and
+     it cost one composited layer PER ROW over a full-bleed photo, on the
+     mobile view of the one screen that can list a hundred of them. */
 
   /* Shared by the sparks, the halo and the overdue badge. */
   @keyframes glowpulse {
@@ -1581,6 +1585,14 @@
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    /* The delay has to go with the duration, not just the duration.
+       Collapsing an animation to 0.01ms while leaving its delay intact does
+       not remove the motion — with a `both` fill it PARKS the element on the
+       backwards keyframe for the whole delay and then snaps it into place.
+       The Devasthan entrance stagger delays up to 300ms, so the lower cards
+       sat invisible and then popped: a flash, which is the specific thing
+       this preference is asked to prevent. */
+    animation-delay: 0s !important;
   }
 }
 
@@ -2091,9 +2103,10 @@
   /*
    * The select's scroll arrows stay opaque, and they are the one place a
    * translucent --popover would be a bug rather than a style: they sit ON the
-   * option list to hide the rows scrolling underneath them, so at 0.88 the
-   * text they exist to cover would show through. They are inside the menu's
-   * own blur already, so they need no backdrop-filter of their own.
+   * option list to hide the rows scrolling underneath them, so at that
+   * token's 0.55 the text they exist to cover would show straight through.
+   * They are inside the menu's own blur already, so they need no
+   * backdrop-filter of their own.
    */
   .devasthan-day [data-slot="select-scroll-up-button"],
   .devasthan-day [data-slot="select-scroll-down-button"],
@@ -2280,6 +2293,22 @@
     .devasthan-day .app-surface::before,
     .devasthan-night .app-surface::before {
       display: none;
+    }
+
+    /*
+     * And the halo goes with it, for the reason the halo exists at all: it is
+     * a local contrast device for text sitting on a 7% veil over a
+     * PHOTOGRAPH. Two rules up the photo is gone and the surfaces are opaque
+     * --card-solid, so the shadow has no bright detail left to separate the
+     * glyphs from — it is just a double black smudge on every letter over a
+     * flat dark card, which is precisely the failure the note on this rule
+     * further up names as the reason it was once cancelled on every pane.
+     */
+    .devasthan-day main,
+    .devasthan-night main,
+    .devasthan-day .paper.report-paper,
+    .devasthan-night .paper.report-paper {
+      text-shadow: none;
     }
   }
 }

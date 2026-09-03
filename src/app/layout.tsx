@@ -36,9 +36,20 @@ export const viewport: Viewport = {
      the palette this replaced. Hexes because the manifest and meta tags
      predate CSS: these are the TOP of the mesh in each theme, sampled from a
      render, not --primary. A copper bar above a violet ground read as a
-     stripe of a different app. Keep them in step by hand. */
+     stripe of a different app. Keep them in step by hand.
+
+     A limit worth knowing before "fixing" the light value: themeColor can
+     only key off prefers-color-scheme, never the app's theme CLASS. Since
+     Devasthan Day became the default (see theme-provider.tsx) the common case
+     is a phone set to light running a dark, photographic theme — the old
+     #e6d0aa put a pale sand bar above it. Both Devasthan themes are dark, so
+     the light entry now carries the warm near-black at the top of their
+     scrim. Someone who explicitly picks Light gets a bar slightly darker than
+     their page; that is the smaller error, and the only one this API can
+     express. Making it exact needs a client-side <meta> swap on theme
+     change. */
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#e6d0aa" },
+    { media: "(prefers-color-scheme: light)", color: "#1a1410" },
     { media: "(prefers-color-scheme: dark)", color: "#0c1527" },
   ],
 };
