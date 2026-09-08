@@ -7,11 +7,26 @@ import type { Receipt } from "@/lib/types";
  * object stores and nothing an ORM would help with.
  */
 const DB_NAME = "pavti-pustak";
-const DB_VERSION = 1;
+/*
+ * 2 adds STORE_WALLPAPER. The bump is safe: onupgradeneeded only creates the
+ * stores it finds missing, so the receipts, outbox and meta stores are left
+ * alone and a device mid-sync keeps its queue across the upgrade.
+ */
+const DB_VERSION = 2;
 
 export const STORE_RECEIPTS = "receipts";
 export const STORE_OUTBOX = "outbox";
 export const STORE_META = "meta";
+/**
+ * The volunteer's chosen background photo, as two crops of it.
+ *
+ * Its own store rather than two rows in `meta`, for one reason:
+ * clearOfflineData() wipes `meta` on sign-out, because that store holds the
+ * ledger's sync state and the next volunteer must not inherit it. A wallpaper
+ * is a device preference and nobody's data, so losing it on every sign-out
+ * would be a bug rather than hygiene.
+ */
+export const STORE_WALLPAPER = "wallpaper";
 
 export type OutboxKind = "create" | "update" | "delete";
 
@@ -59,6 +74,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(STORE_META)) {
         db.createObjectStore(STORE_META, { keyPath: "key" });
+      }
+      if (!db.objectStoreNames.contains(STORE_WALLPAPER)) {
+        db.createObjectStore(STORE_WALLPAPER, { keyPath: "key" });
       }
     };
 
@@ -205,4 +223,36 @@ export async function getMeta<T>(key: string): Promise<T | undefined> {
     s.get(key) as IDBRequest<{ key: string; value: T }>,
   );
   return row?.value;
+}
+
+// --- Background photo ------------------------------------------------
+
+/** One crop of the volunteer's chosen background. */
+export type WallpaperKey = "portrait" | "landscape";
+
+/**
+ * Stored as a Blob, not a data URL.
+ *
+ * A base64 data URL is a third larger and has to be parsed into a string on
+ * every read; a Blob goes straight to URL.createObjectURL. IndexedDB stores
+ * Blobs natively in every browser this app supports.
+ */
+export async function putWallpaper(key: WallpaperKey, blob: Blob) {
+  await tx(STORE_WALLPAPER, "readwrite", (s) => s.put({ key, blob }));
+}
+
+export async function getWallpaper(
+  key: WallpaperKey,
+): Promise<Blob | undefined> {
+  const row = await tx<{ key: WallpaperKey; blob: Blob }>(
+    STORE_WALLPAPER,
+    "readonly",
+    (s) => s.get(key),
+  );
+  return row?.blob;
+}
+
+/** Both crops, so "use the mandal's photo again" is one call. */
+export async function clearWallpaper() {
+  await tx(STORE_WALLPAPER, "readwrite", (s) => s.clear());
 }

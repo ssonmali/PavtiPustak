@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTheme } from "next-themes";
 import {
   Flame,
+  ImagePlus,
   Lamp,
   Languages,
   LogOut,
@@ -19,6 +20,7 @@ import { setLocale } from "@/app/actions/locale";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
 import { NameForm } from "@/components/name-form";
+import { BackgroundCropper } from "@/components/background-cropper";
 import { clearOfflineData } from "@/lib/offline";
 import { clearPrivateCache } from "@/components/service-worker";
 import { Button } from "@/components/ui/button";
@@ -87,6 +89,7 @@ export function SettingsMenu({
   const { theme, setTheme } = useTheme();
   const [pending, startTransition] = React.useTransition();
   const [nameOpen, setNameOpen] = React.useState(false);
+  const [bgOpen, setBgOpen] = React.useState(false);
 
   // The theme is unknown during SSR, so which item reads as selected is decided
   // after hydration rather than guessed. useSyncExternalStore gives a stable
@@ -140,6 +143,27 @@ export function SettingsMenu({
               );
             })}
           </DropdownMenuRadioGroup>
+
+          {/*
+            * With the theme, because that is what it changes — and ABOVE the
+            * language and account groups because of where it ends up on a
+            * short screen.
+            *
+            * This menu is thirteen rows. Its popup is height-capped with
+            * overflow-y: auto, so on a 333px-tall viewport it renders 40..328
+            * and anything below that is reachable only by scrolling inside the
+            * menu, which nothing advertises. Measured: as the last-but-one item
+            * this sat at 335..363 — off the end, which is exactly the "I cannot
+            * see it" that sent me looking.
+            *
+            * Outside the radio group above rather than in it: that group is a
+            * set of mutually exclusive choices that apply on the tap, and an
+            * item which opens a dialog does not belong to it either
+            * semantically or for a screen reader.
+            */}
+          <DropdownMenuItem onClick={() => setBgOpen(true)}>
+            <ImagePlus /> {t("wallpaper.title")}
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
@@ -200,6 +224,20 @@ export function SettingsMenu({
             derived={derivedName}
             onSaved={() => setNameOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Scrollable: the cropper is a 280px frame plus a zoom slider and three
+          buttons, which is taller than a phone's visual viewport once the
+          dialog's own padding is counted. max-h-visual is the app's
+          keyboard-aware height — see MobileKeyboard. */}
+      <Dialog open={bgOpen} onOpenChange={setBgOpen}>
+        <DialogContent className="max-h-visual overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("wallpaper.title")}</DialogTitle>
+            <DialogDescription>{t("wallpaper.menuHint")}</DialogDescription>
+          </DialogHeader>
+          <BackgroundCropper hideHeading onDone={() => setBgOpen(false)} />
         </DialogContent>
       </Dialog>
     </>
