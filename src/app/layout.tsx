@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { WebAnalytics } from "@/components/web-analytics";
 import { Toaster } from "@/components/ui/sonner";
 import { MobileKeyboard } from "@/components/mobile-keyboard";
+import { CustomBackground } from "@/components/custom-background";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -95,6 +96,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       >
         <ThemeProvider>
           <MobileKeyboard />
+          {/* Overrides the defaults above with the volunteer's own crops, if
+              they have chosen a photo. A no-op otherwise — see the component. */}
+          <CustomBackground />
           {children}
           <Toaster
             position="top-center"

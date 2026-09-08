@@ -4,6 +4,7 @@ import { getDictionary } from "@/lib/i18n/server";
 import { volunteerName } from "@/lib/receipt-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { NameForm } from "@/components/name-form";
+import { BackgroundCropper } from "@/components/background-cropper";
 
 export const metadata = { title: "Your name · SGMM Pustak" };
 
@@ -33,6 +34,11 @@ export default async function SettingsPage() {
             // if the field is left blank rather than an unrelated example name.
             derived={volunteerName(email) ?? ""}
           />
+        </CardContent>
+      </Card>
+      <Card className="card-elevated">
+        <CardContent>
+          <BackgroundCropper />
         </CardContent>
       </Card>
     </div>

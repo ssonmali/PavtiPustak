@@ -1119,7 +1119,30 @@
   .devasthan-day .app-surface::before,
   .devasthan-night .app-surface::before {
     /* Set from the env var on <body> — see app/layout.tsx. */
-    background: var(--mandap-photo, url("/idol.jpg")) center / cover no-repeat;
+    /*
+     * The volunteer's own photo when they have set one, the mandal's
+     * otherwise — and a different CROP of theirs depending on which way the
+     * screen is.
+     *
+     * Two variables rather than one because one image cannot suit both: a 9:16
+     * portrait frame and a 16:9 landscape one keep different parts of the same
+     * photograph, and `cover` on the wrong one crops the idol's face off. The
+     * cropper writes both; components/custom-background.tsx publishes them.
+     *
+     * Keyed on `orientation`, not on a width breakpoint. What matters here is
+     * the shape of the hole the photo is filling, and a tablet held upright is
+     * portrait however wide it is.
+     *
+     * The fallback chain is deliberate and its order is the whole behaviour:
+     * the volunteer's crop, then whatever NEXT_PUBLIC_MANDAP_PHOTO put on
+     * <body>, then the shipped idol. Any link missing simply falls through, so
+     * a device that cannot read IndexedDB looks exactly as it did before.
+     */
+    background: var(
+        --mandap-photo-landscape,
+        var(--mandap-photo, url("/idol.jpg"))
+      )
+      center / cover no-repeat;
     filter: var(--mandap-filter);
     /*
      * Two separate bugs made this layer appear to move on a phone, and these
@@ -1171,6 +1194,21 @@
        this layer, and will-change on a full-viewport image is real GPU memory
        held for no reason. */
     will-change: auto;
+  }
+
+  /* The portrait crop, on a screen that is taller than it is wide. Only the
+     image changes: every other property above — the lvh sizing, the
+     --visual-top re-anchoring, the held animation — is orientation-agnostic
+     and must not be repeated here, or a future fix to one would miss the
+     other. */
+  @media (orientation: portrait) {
+    .devasthan-day .app-surface::before,
+    .devasthan-night .app-surface::before {
+      background-image: var(
+        --mandap-photo-portrait,
+        var(--mandap-photo, url("/idol.jpg"))
+      );
+    }
   }
 
   .devasthan-day .app-surface::after,
