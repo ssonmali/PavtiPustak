@@ -1415,6 +1415,11 @@
   .devasthan-day
     :is(
       main,
+      /* The rail lost its veil (see .glass-rail), so its labels are now bare
+         on the photograph exactly as a page heading is — and they need the
+         same halo for the same reason. Without this the change traded a
+         frosted strip for unreadable navigation. */
+      nav.glass-rail,
       [data-slot="dialog-content"],
       [data-slot="alert-dialog-content"],
       [data-slot="select-content"],
@@ -1424,6 +1429,11 @@
   .devasthan-night
     :is(
       main,
+      /* The rail lost its veil (see .glass-rail), so its labels are now bare
+         on the photograph exactly as a page heading is — and they need the
+         same halo for the same reason. Without this the change traded a
+         frosted strip for unreadable navigation. */
+      nav.glass-rail,
       [data-slot="dialog-content"],
       [data-slot="alert-dialog-content"],
       [data-slot="select-content"],
@@ -1941,6 +1951,46 @@
 
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .glass-bar {
+      background-color: var(--card-solid);
+    }
+  }
+
+  /*
+   * The desktop navigation rail: clear glass, no blur and no veil.
+   *
+   * It shared .glass-bar with the header, and the header's reasoning does not
+   * transfer. That bar is a strip the CONTENT scrolls under, so it has to stay
+   * legible over whatever part of the photo happens to be passing behind it —
+   * which is what the veil and the strong blur are for. The rail sits beside
+   * the content instead: nothing ever travels behind it, the region of the
+   * photograph it covers is the same one all session, and a volunteer on a
+   * desktop is looking at the murti through the left edge of their screen. A
+   * veil there is a strip of frosted tape over the picture for no gain.
+   *
+   * So what is left is the part of the glass idiom that is not alpha: the lit
+   * edge. That is the same claim made where --card-highlight is defined — the
+   * blur and the veil are not what read as glass, the highlight is.
+   *
+   * No selector guard needed for "desktop only": the rail is `hidden md:flex`,
+   * so this class exists nowhere else.
+   */
+  .glass-rail {
+    background-color: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: inset 0 1px 0 var(--card-highlight);
+  }
+
+  /*
+   * Opacity when it is asked for.
+   *
+   * prefers-reduced-transparency is a request not to look through surfaces,
+   * and "clear glass" is the most transparent surface in the app — so this one
+   * cannot simply be left alone the way an already-solid element could. It
+   * takes the same solid fill the other bars take.
+   */
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-rail {
       background-color: var(--card-solid);
     }
   }
