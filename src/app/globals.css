@@ -1140,7 +1140,7 @@
      */
     background: var(
         --mandap-photo-landscape,
-        var(--mandap-photo, url("/idol.jpg"))
+        var(--mandap-photo, url("/idol-desktop.jpg"))
       )
       center / cover no-repeat;
     filter: var(--mandap-filter);
@@ -1204,6 +1204,11 @@
   @media (orientation: portrait) {
     .devasthan-day .app-surface::before,
     .devasthan-night .app-surface::before {
+      /* idol.jpg, not idol-desktop.jpg: the two defaults are different
+         photographs, not two crops of one. The portrait shot is framed tight
+         on the murti so it survives a 9:16 hole; the landscape one includes
+         the mandap's carved surround, which is the part a wide screen has room
+         for and a phone would throw away. */
       background-image: var(
         --mandap-photo-portrait,
         var(--mandap-photo, url("/idol.jpg"))
