@@ -3,13 +3,12 @@ import type { StatusFilter } from "./status-filter";
 import { DEFAULT_SORT, SORT_KEYS, type SortKey } from "./sort-rows";
 
 /**
- * Reading the receipts list's four controls out of the URL, and turning them
- * into a database query.
+ * The receipts list's four controls, read out of the URL and turned into a
+ * database query.
  *
- * The controls live in the URL so they survive navigation — switching tabs
- * unmounted the state that used to hold them — and so a Server Component can
- * build the query before the first paint. Everything here is pure: no React,
- * no Supabase client, so it can be tested directly.
+ * They live in the URL so they survive navigation — switching tabs unmounted
+ * the state that held them — and so a Server Component can build the query
+ * before first paint. Pure: no React, no Supabase client.
  */
 
 /** Rows per page. Matches the range the receipts page has always sent. */
@@ -120,17 +119,11 @@ export function orderFor(sort: SortKey): Order[] {
 }
 
 /**
- * PostgREST's `.or()` filter for a search term, or null when there is nothing
- * to search for.
- *
- * Two kinds of escaping, for two different reasons:
- *
- *  - `%` and `_` are ilike wildcards. A donor called "100%" searched
- *    unescaped matches every row instead of one.
- *  - `,` separates clauses inside `or(...)`, and `.` separates a clause's
- *    parts, so a term containing either would break out of its own clause.
- *    Wrapping the pattern in double quotes is how PostgREST takes a value
- *    containing reserved characters literally.
+ * PostgREST's `.or()` filter for a search term, or null if there is nothing to
+ * search for. Two escapes: `%` and `_` are ilike wildcards, so a donor called
+ * "100%" would match every row; and `,` and `.` are `or(...)` separators, so a
+ * term containing either breaks out of its clause — double-quoting the pattern
+ * is how PostgREST takes it literally.
  */
 export function searchFilter(q: string): string | null {
   const term = q.trim();
@@ -209,13 +202,10 @@ export function applyReceiptQuery<T extends ReceiptFilterable<T>>(
 /**
  * Whether this query returns the whole newest page, unnarrowed.
  *
- * The offline copy in IndexedDB is cleared and replaced by whatever page is on
- * screen, so it may only be written from a view that is not filtered. Mirror a
- * filtered page and a volunteer who narrows to Unpaid and then loses signal is
- * left holding a ledger containing only unpaid receipts, with nothing to say
- * that is what happened — silently incomplete data presented as the ledger.
- *
- * A sort is not a filter: reordering returns the same rows, so it is safe.
+ * The offline copy is replaced by whatever page is on screen, so it may only be
+ * written from an unfiltered view: mirror a filtered one and a volunteer who
+ * narrows to Unpaid then loses signal holds a ledger of only unpaid receipts,
+ * with nothing to say so. A sort is not a filter — same rows, so it is safe.
  */
 export function isDefaultQuery(query: ReceiptQuery): boolean {
   return (
@@ -224,14 +214,10 @@ export function isDefaultQuery(query: ReceiptQuery): boolean {
 }
 
 /**
- * A query back into URL params — the inverse of `parseReceiptQuery`.
- *
- * Defaults are omitted rather than spelled out, so the plain view stays
- * `/dashboard/receipts` instead of `?sort=date-desc&status=all&…`. The
- * round-trip is the contract between the controls that write the URL and the
- * server that reads it: if these two disagree, a control appears to do nothing
- * — the URL changes, the server parses something else, the list comes back
- * identical.
+ * A query back into URL params — the inverse of `parseReceiptQuery`, and
+ * round-trip tested against it. Defaults are omitted so the plain view stays
+ * `/dashboard/receipts`. If the two disagree a control appears to do nothing:
+ * the URL changes, the server parses something else, the list is identical.
  */
 export function toSearchParams(query: ReceiptQuery): Record<string, string> {
   const params: Record<string, string> = {};

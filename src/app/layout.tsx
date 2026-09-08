@@ -33,22 +33,16 @@ const tiro = Tiro_Devanagari_Marathi({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  /* The browser's own chrome, so the address bar matches the app rather than
-     the palette this replaced. Hexes because the manifest and meta tags
-     predate CSS: these are the TOP of the mesh in each theme, sampled from a
-     render, not --primary. A copper bar above a violet ground read as a
-     stripe of a different app. Keep them in step by hand.
+  /* The address bar, matched to the app. Hexes because meta tags predate CSS:
+     these are the TOP of the mesh in each theme, sampled from a render, not
+     --primary. Keep them in step by hand.
 
-     A limit worth knowing before "fixing" the light value: themeColor can
-     only key off prefers-color-scheme, never the app's theme CLASS. Since
-     Devasthan Day became the default (see theme-provider.tsx) the common case
-     is a phone set to light running a dark, photographic theme — the old
-     #e6d0aa put a pale sand bar above it. Both Devasthan themes are dark, so
-     the light entry now carries the warm near-black at the top of their
-     scrim. Someone who explicitly picks Light gets a bar slightly darker than
-     their page; that is the smaller error, and the only one this API can
-     express. Making it exact needs a client-side <meta> swap on theme
-     change. */
+     A limit before "fixing" the light value: themeColor keys off
+     prefers-color-scheme, never the theme CLASS. With Devasthan Day the
+     default, the common case is a phone set to light running a dark
+     photographic theme, so the light entry carries their near-black. Someone
+     who explicitly picks Light gets a bar slightly darker than their page —
+     the smaller error, and the only one this API can express. */
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#1a1410" },
     { media: "(prefers-color-scheme: dark)", color: "#0c1527" },
@@ -77,28 +71,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body
         className="app-surface flex min-h-full flex-col"
-        /* The Devasthan themes' backdrop, as a CSS variable rather than an
-           <img>: it is a decorative ground, and a background-image on a
-           selector that does not match is never fetched, so the photo costs
-           nothing in the other two themes. A mandal points this at its own
-           idol by setting NEXT_PUBLIC_MANDAP_PHOTO; the fallback is the same
-           file the header already shows.
+        /* The Devasthan backdrop, as a CSS variable rather than an <img>: a
+           background-image on an unmatched selector is never fetched, so the
+           photo costs nothing in the other two themes. A mandal points this at
+           its own idol with NEXT_PUBLIC_MANDAP_PHOTO.
 
-           Worth knowing before changing it: the scrim over this photo is what
-           guarantees text contrast, and it is tuned to the shipped image. A
-           markedly brighter photo needs --scrim-mid raised — see the
-           Devasthan block in globals.css. */
+           The scrim over this photo is what guarantees text contrast and is
+           tuned to the shipped image; a markedly brighter one needs
+           --scrim-mid raised. See globals.css. */
         /*
-         * Set ONLY when the env override exists, which is a change from
-         * always writing it.
-         *
-         * globals.css now defaults the two orientations to two different
-         * photographs — idol-desktop.jpg wide, idol.jpg tall — and it does
-         * that through this variable's own fallback. Writing --mandap-photo
-         * unconditionally, even to "/idol.jpg", made the variable always
-         * defined, so those fallbacks could never fire and every screen got
-         * the portrait photo. Undefined is the signal that no override is
-         * configured.
+         * Set ONLY when the env override exists. globals.css defaults the two
+         * orientations to two different photographs through this variable's
+         * own fallback, so writing it unconditionally — even to "/idol.jpg" —
+         * left it always defined and those fallbacks could never fire.
+         * Undefined is the signal that no override is configured.
          */
         style={
           process.env.NEXT_PUBLIC_MANDAP_PHOTO

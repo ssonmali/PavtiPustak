@@ -18,13 +18,11 @@ export const STORE_RECEIPTS = "receipts";
 export const STORE_OUTBOX = "outbox";
 export const STORE_META = "meta";
 /**
- * The volunteer's chosen background photo, as two crops of it.
+ * The volunteer's chosen background photo.
  *
- * Its own store rather than two rows in `meta`, for one reason:
- * clearOfflineData() wipes `meta` on sign-out, because that store holds the
- * ledger's sync state and the next volunteer must not inherit it. A wallpaper
- * is a device preference and nobody's data, so losing it on every sign-out
- * would be a bug rather than hygiene.
+ * Its own store rather than rows in `meta`, which clearOfflineData() wipes on
+ * sign-out: a wallpaper is a device preference and nobody's data, so losing it
+ * every sign-out would be a bug rather than hygiene.
  */
 export const STORE_WALLPAPER = "wallpaper";
 
@@ -178,19 +176,17 @@ export async function dequeue(localId: string) {
 /**
  * Drops this device's cached ledger on logout.
  *
- * Volunteers share a mandal phone. `clearPrivateCache()` already removes the
- * service worker's rendered pages, but the cached rows here — donor names and
- * phone numbers, in STORE_RECEIPTS — outlived the session, so the next person
- * to sign in inherited the previous one's donor list.
+ * Volunteers share a mandal phone, and the cached rows here — donor names and
+ * phone numbers — outlived the session, so the next person to sign in
+ * inherited the previous one's donor list.
  *
- * The outbox is deliberately left alone. Those entries are receipts a volunteer
- * collected with no signal, and nobody else's privacy is worth silently
- * throwing away money someone recorded at a doorstep.
+ * The outbox is deliberately left alone: those are receipts collected with no
+ * signal, and no one's privacy is worth silently throwing away money someone
+ * recorded at a doorstep.
  *
  * NOTE: an entry queued by one volunteer and flushed after another signs in is
  * attributed to whoever is signed in at flush time — outbox entries carry no
- * user id (see ./sync.ts). Fixing that means stamping each entry at enqueue and
- * refusing to flush another user's, which is a change to the queue format.
+ * user id (see ./sync.ts). Fixing that changes the queue format.
  */
 export async function clearOfflineData(): Promise<void> {
   if (!isAvailable()) return;

@@ -27,26 +27,18 @@ export function PeriodPresets({
   onChange: (period: Period) => void;
 }) {
   /*
-   * A single saffron-lit pill travels between the chips instead of one chip
-   * losing its fill and another gaining one.
+   * One saffron pill travels between the chips instead of one losing its fill
+   * and another gaining one. Two fills swapping is two events to notice; one
+   * pill moving is a thing following the tap.
    *
-   * The chips all wear the same glass now; what says "selected" is this
-   * marker, which is ONE element that React morphs from the old chip's box to
-   * the new one. Two fills swapping is two events to notice; one pill moving
-   * is a thing following the tap.
+   * The name is scoped with useId because this row renders twice on some tabs
+   * — the desktop copy and the one inside the filter sheet — and two elements
+   * sharing a view-transition-name is undefined behaviour. Pairing still
+   * works: the marker moves within one instance, whose id is stable.
    *
-   * The name is scoped with useId so that two instances of this row — the
-   * desktop chip row and the copy inside the filter sheet, or two of these on
-   * one page — cannot claim the same view-transition-name, which is undefined
-   * behaviour rather than a shared animation. Pairing still works: the marker
-   * moves within one component instance, and that instance's id is stable
-   * across its own re-renders.
-   *
-   * startTransition is what makes it animate at all. ViewTransition activates
-   * inside a React Transition; a route change already is one, but these chips
-   * also drive plain local state on the expenses and activity tabs, and
-   * without this the marker would jump there and glide on receipts — the same
-   * control behaving two ways.
+   * startTransition is what makes it animate at all: ViewTransition needs a
+   * React Transition, and while a route change is one, these chips also drive
+   * plain local state on Expenses and Activity.
    */
   const markerName = `period-chip-${React.useId()}`;
   const { t } = useI18n();

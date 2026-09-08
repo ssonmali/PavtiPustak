@@ -34,29 +34,19 @@ export async function proxy(request: NextRequest) {
   /*
    * getClaims(), not getUser() — and never getSession().
    *
-   * All three answer "who is this", at very different prices. getSession()
-   * only decodes the cookie and is therefore forgeable, so it is not an option
-   * for a gate. getUser() POSTs the JWT to Supabase's auth endpoint and waits
-   * for an answer: correct, but a network round trip on EVERY matched request,
-   * which on a phone is the slowest thing in a tab switch.
+   * getSession() only decodes the cookie and is forgeable, so it cannot gate.
+   * getUser() POSTs the JWT and waits: correct, but a round trip on EVERY
+   * matched request. getClaims() verifies the signature locally with WebCrypto
+   * — as trustworthy for identity, usually with no round trip — and still
+   * refreshes a near-expiry session, which is what this proxy exists for.
    *
-   * getClaims() verifies the token's signature locally with WebCrypto against
-   * the project's cached public keys, so it is exactly as trustworthy as
-   * getUser() for identity while usually costing no round trip at all. It
-   * still refreshes the session first if the token is close to expiry, which
-   * is what keeps the cookie-refresh behaviour this proxy exists for.
+   * It needs the project on ASYMMETRIC signing keys; on the legacy symmetric
+   * secret auth-js falls back to a network call itself, so it is safe either
+   * way and simply buys nothing there.
    *
-   * The caveat worth knowing: local verification needs the project to be on
-   * ASYMMETRIC JWT signing keys (Dashboard > Auth > Signing Keys). On the
-   * legacy symmetric secret this falls back to a network call by itself, so it
-   * is safe either way — it simply buys nothing until that migration is done.
-   *
-   * What this does NOT do is notice a volunteer whose account was deleted or
-   * disabled mid-token: a valid signature stays valid until it expires. The
-   * layout used to cover that with a getUser() on every render, and no longer
-   * does — that round trip was the slowest thing in a tab switch. What catches
-   * a revoked account now is every Server Action, which is where it costs one
-   * check per write instead of one per render. See lib/auth.ts.
+   * What it does NOT do is notice a revoked account mid-token. Every Server
+   * Action catches that instead — one check per write rather than per render.
+   * See lib/auth.ts.
    */
   const { data: claimsData } = await supabase.auth.getClaims();
   const user = claimsData?.claims ?? null;

@@ -18,23 +18,14 @@ const MAX_ROWS = 1000;
 /**
  * Unpaid pledges, one row per day they were recorded on.
  *
- * The overview and the receipts ledger need the same four figures over a
- * period: what is still owed, how many pledges there are, how many have
- * brought in nothing yet, and how many still owe something. Both used to
- * fetch up to 1000 raw unpaid rows and derive those on the client, which meant
- * switching between the two tabs re-sent the same 1000 rows to compute the
- * same numbers twice. Aggregated in the database, the payload is one row per
- * day that has pledges on it — the same trick receipt_daily_totals already
- * plays for money in.
+ * The overview and the ledger need the same four figures over a period. Both
+ * used to fetch up to 1000 raw rows and derive them client-side, so switching
+ * tabs re-sent the same rows to compute the same numbers — the same trick
+ * receipt_daily_totals already plays for money in.
  *
- * `cache()` for the same reason getUser has it: two callers in one render
- * would otherwise ask twice.
- *
- * The fallback is not defensive padding. Migrations here are run by hand in
- * the Supabase dashboard, so code can reach production before migration 18
- * does; without it, that window is a broken overview and a broken ledger
- * rather than a slower one. Being wrong the other way costs one round trip on
- * a query that was about to run anyway. The two paths are held to the same
+ * The fallback is not defensive padding: migrations are run by hand, so code
+ * can reach production before migration 18 does, and that window would be a
+ * broken overview rather than a slower one. Both paths are held to the same
  * numbers by pledge-aggregate.test.ts.
  */
 export const getPledgeDays = cache(async (): Promise<PledgeDay[]> => {
