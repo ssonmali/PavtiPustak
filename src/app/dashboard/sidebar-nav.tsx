@@ -31,7 +31,7 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="glass-bar hidden w-56 shrink-0 flex-col gap-1 border-r p-3 md:flex print:hidden">
+    <nav className="glass-rail hidden w-56 shrink-0 flex-col gap-1 border-r p-3 md:flex print:hidden">
       {ITEMS.map(({ href, labelKey, icon: Icon }) => {
         const active = pathname === href;
         return (

@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { WebAnalytics } from "@/components/web-analytics";
 import { Toaster } from "@/components/ui/sonner";
 import { MobileKeyboard } from "@/components/mobile-keyboard";
+import { CustomBackground } from "@/components/custom-background";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -87,14 +88,31 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
            guarantees text contrast, and it is tuned to the shipped image. A
            markedly brighter photo needs --scrim-mid raised — see the
            Devasthan block in globals.css. */
-        style={{
-          ["--mandap-photo" as string]: `url("${
-            process.env.NEXT_PUBLIC_MANDAP_PHOTO ?? "/idol.jpg"
-          }")`,
-        }}
+        /*
+         * Set ONLY when the env override exists, which is a change from
+         * always writing it.
+         *
+         * globals.css now defaults the two orientations to two different
+         * photographs — idol-desktop.jpg wide, idol.jpg tall — and it does
+         * that through this variable's own fallback. Writing --mandap-photo
+         * unconditionally, even to "/idol.jpg", made the variable always
+         * defined, so those fallbacks could never fire and every screen got
+         * the portrait photo. Undefined is the signal that no override is
+         * configured.
+         */
+        style={
+          process.env.NEXT_PUBLIC_MANDAP_PHOTO
+            ? {
+                ["--mandap-photo" as string]: `url("${process.env.NEXT_PUBLIC_MANDAP_PHOTO}")`,
+              }
+            : undefined
+        }
       >
         <ThemeProvider>
           <MobileKeyboard />
+          {/* Overrides the defaults above with the volunteer's own crops, if
+              they have chosen a photo. A no-op otherwise — see the component. */}
+          <CustomBackground />
           {children}
           <Toaster
             position="top-center"
