@@ -3,13 +3,11 @@ import { outstanding, received, type Money } from "@/lib/receipt-utils";
 /**
  * Unpaid pledges reduced to one row per day.
  *
- * The shape is the contract between two implementations of the same four
- * figures: `public.pledge_daily_totals` in SQL (migration 18) and `aggregate`
- * below. Both are needed — the view is what makes the payload stop growing
- * with the ledger, the function is what keeps the pages working before the
- * migration has been run by hand in the dashboard — and the whole risk of
- * having two is that they drift. pledge-aggregate.test.ts pins the function to
- * numbers taken from the view running on a real Postgres.
+ * The shape is the contract between two implementations of the same figures:
+ * `public.pledge_daily_totals` (migration 18) and the function below. The view
+ * stops the payload growing with the ledger, the function keeps the pages
+ * working before the migration is run by hand — and the risk of two is drift,
+ * so the test pins the function to numbers from the view on a real Postgres.
  */
 export type PledgeDay = {
   /** The day the pledges were recorded, not when they fall due. */
@@ -24,14 +22,13 @@ export type PledgeDay = {
 export type PledgeRow = Money & { collection_date: string };
 
 /**
- * Its own module, with no "server-only" and no Supabase import, so it can be
- * tested directly — the reason the fallback is trustworthy at all.
+ * No "server-only" and no Supabase import, so it can be tested directly —
+ * which is why the fallback is trustworthy at all.
  *
- * Expressed in terms of received() and outstanding() rather than
- * reimplementing them: those two functions are what the rest of the app means
- * by "brought in nothing" and "still owes", and the view's own columns are
- * their SQL equivalents. Three definitions of one rule would be one too many;
- * this way there are two, and a test holds them together.
+ * Expressed via received() and outstanding() rather than reimplementing them:
+ * those are what the app means by "brought in nothing" and "still owes", and
+ * the view's columns are their SQL equivalents. Two definitions of one rule,
+ * held together by a test, rather than three.
  */
 export function aggregatePledgeDays(rows: PledgeRow[]): PledgeDay[] {
   const byDay = new Map<string, PledgeDay>();

@@ -1,17 +1,12 @@
 /**
  * The arithmetic behind a figure that moves when it changes.
  *
- * Pure and separate from the component for the usual reason: this is the part
- * that can be wrong in ways nobody sees on screen. A count-up that overshoots,
- * or that lands on 1,999 instead of 2,000, is a ledger showing the wrong
- * number — briefly, but a volunteer reading a total does not know it is still
- * moving. The tests pin the landing exactly.
+ * Pure and tested because it can be wrong invisibly: a count-up that lands on
+ * 1,999 instead of 2,000 is a ledger showing the wrong number, and a volunteer
+ * reading a total does not know it is still moving.
  */
 
-/**
- * Decelerating ease. Fast at the start so the change is noticed, slow at the
- * end so the final digits are readable rather than a blur.
- */
+/** Decelerating: noticed at the start, readable at the end. */
 export function easeOutCubic(t: number): number {
   return 1 - (1 - t) ** 3;
 }
@@ -19,13 +14,9 @@ export function easeOutCubic(t: number): number {
 /**
  * The value to show `elapsed` ms into a change from `from` to `to`.
  *
- * Rounded to whole rupees, which is what the ledger deals in — paise would
- * make the last frames flicker through digits that mean nothing.
- *
- * Guarantees, and each is a test:
- *  - at elapsed <= 0 it is exactly `from`
- *  - at elapsed >= duration it is exactly `to`, never a rounding of it
- *  - it is monotonic between them, so the figure never ticks backwards
+ * Whole rupees — paise would flicker through digits that mean nothing. Each
+ * guarantee has a test: exactly `from` at elapsed <= 0, exactly `to` at
+ * elapsed >= duration, and monotonic between, so it never ticks backwards.
  */
 export function valueAt(
   from: number,
@@ -39,16 +30,9 @@ export function valueAt(
 }
 
 /**
- * How long a change from `from` to `to` should take.
- *
- * Not a constant: a receipt of ₹101 landing on a ₹40,000 total is a small
- * change and should be a glance, while the total appearing for the first time
- * after a filter clears is a big one and deserves the full sweep. Scaled by
- * the RELATIVE size of the change, because ₹500 means something different on
- * a ₹1,000 total than on a ₹100,000 one.
- *
- * Bounded at both ends: below ~200ms a count-up is a flicker rather than a
- * movement, and above 900ms it is still going when the volunteer has moved on.
+ * How long a change should take, scaled by its RELATIVE size — ₹500 means
+ * something different on a ₹1,000 total than on a ₹100,000 one. Bounded: under
+ * 200ms is a flicker, over 900ms is still going once attention has moved on.
  */
 export function durationFor(from: number, to: number): number {
   const span = Math.abs(to - from);

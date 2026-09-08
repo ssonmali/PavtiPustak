@@ -6,12 +6,11 @@ import { useRouter } from "next/navigation";
 export type RealtimeStatus = "connecting" | "live" | "polling";
 
 /**
- * The tables whose changes should reach every volunteer's device.
+ * The tables whose changes should reach every device.
  *
- * The audit tables are here alongside the ledgers because an edit that changes
- * nothing else still writes an audit row, and the activity feed is a view of
- * them. Publication membership for all six is what
- * supabase/17-realtime-complete.sql guarantees.
+ * The audit tables are here because an edit that changes nothing else still
+ * writes an audit row, and the activity feed is a view of them. Publication
+ * membership for all six is what supabase/17-realtime-complete.sql guarantees.
  */
 const TABLES = [
   "receipts",
@@ -24,26 +23,15 @@ const TABLES = [
   "donation_audit",
 ] as const;
 
-/** Safety-net refresh cadence, in ms. */
-// Even "live" gets a safety net, but a very slack one. Every tick costs a full
-// router.refresh() — the layout's queries plus the page's — on a volunteer's
-// mobile data, and when realtime is healthy it has nothing to find: the events
-// it exists to backstop are the update/delete ones that need `replica identity
-// full`, and all six subscribed tables set it.
-//
-// This used to say the net was there for a table missing from the publication,
-// "where the channel reports SUBSCRIBED and simply never delivers". That is
-// not how realtime-js 2.x behaves and the correction matters, because it sent
-// a real diagnosis the wrong way: _updatePostgresBindings matches the client's
-// bindings against the server's BY INDEX, and on any mismatch it unsubscribes
-// and fires CHANNEL_ERROR. A table missing from the publication therefore
-// fails its channel, loudly, and lands in the handler below — which is also
-// why each table now gets a channel of its own, so one missing table costs
-// one table rather than all six. What is left for this net is what stays
-// genuinely invisible: a blocked websocket, a socket dropped on a phone, or
-// an event lost in a reconnect gap. Ten minutes
-// bounds that without putting a refresh in the middle of someone's typing;
-// returning to the tab refreshes anyway, which is when staleness is noticed.
+/*
+ * Safety-net refresh cadence, in ms.
+ *
+ * Even "live" gets a net, but a slack one: every tick is a full
+ * router.refresh() on mobile data, and a missing table fails its channel
+ * loudly rather than going quiet (see the per-table note below). What is left
+ * for the net is what stays invisible — a blocked websocket, a socket dropped
+ * on a phone, an event lost in a reconnect gap.
+ */
 const POLL_LIVE = 600_000;
 // Realtime is not working; this is the only thing keeping the page current, so
 // it is the one case worth paying for often.
@@ -52,10 +40,9 @@ const POLL_FALLBACK = 30_000;
 /**
  * Keeps every volunteer's view current.
  *
- * Realtime is the fast path, but it can fail quietly — the table may not be in
- * the publication, a corporate network may block websockets, or the socket may
- * drop on a phone. So a visibility-triggered and interval refresh backs it up:
- * worst case updates are seconds late, never "until you reload".
+ * Realtime is the fast path but can fail — a blocked websocket, a dropped
+ * socket. A visibility-triggered and interval refresh backs it up, so the
+ * worst case is seconds late rather than "until you reload".
  */
 export function useRealtimeReceipts(delay = 400) {
   const router = useRouter();
@@ -79,28 +66,20 @@ export function useRealtimeReceipts(delay = 400) {
     };
 
     void (async () => {
-      // Imported here rather than at module scope so @supabase/supabase-js —
-      // 65 KB gzipped — stays out of the dashboard layout's entry chunk, and
-      // therefore off the critical path of every dashboard route. Nothing on
-      // screen needs it to paint: the status dot starts at "connecting", which
-      // is exactly what it should read while this loads.
+      // Imported here so @supabase/supabase-js — 65 KB gzipped — stays off
+      // the critical path of every dashboard route. Nothing on screen needs it
+      // to paint: the dot starts at "connecting", which is what it should read.
       const { createClient } = await import("@/lib/supabase/client");
       if (disposed) return;
       const supabase = createClient();
 
       /*
-       * One channel PER TABLE, not one channel with six bindings.
-       *
-       * This is a resilience fix, not a style preference. realtime-js matches
-       * the client's bindings against the server's by index and unsubscribes
-       * the whole channel with CHANNEL_ERROR on the first mismatch, so with
-       * all six on one channel a single table missing from the publication —
-       * one unrun migration — killed live updates for everything and dropped
-       * every device to a 30-second full-page poll. Split, the five that were
-       * accepted stay live and only the missing one is dead.
-       *
-       * They share the one websocket, so this costs six cheap channel
-       * handshakes rather than six connections.
+       * One channel PER TABLE, not one with six bindings — a resilience fix.
+       * realtime-js matches bindings against the server's BY INDEX and kills
+       * the whole channel with CHANNEL_ERROR on the first mismatch, so one
+       * table missing from the publication took live updates down for all six.
+       * They share the one websocket, so this is six handshakes, not six
+       * connections.
        */
       const channels = TABLES.map((table) =>
         supabase.channel(`pp-${table}`).on(
@@ -141,13 +120,10 @@ export function useRealtimeReceipts(delay = 400) {
       }
 
       /*
-       * Per-channel, so a rejected table is reported BY NAME.
-       *
-       * Status stays "live" only while every table is subscribed. That is not
-       * pessimism: the interval is the backstop for whatever is not arriving
-       * over the socket, so one dead binding genuinely does need the faster
-       * poll — the difference from before is that the other five now deliver
-       * instantly instead of everything falling back together.
+       * Per-channel, so a rejected table is reported BY NAME. Status stays
+       * "live" only while all six are subscribed — one dead binding does need
+       * the faster poll, the difference being that the other five still
+       * deliver instantly.
        */
       const failed = new Set<string>();
       const subscribed = new Set<string>();
@@ -175,17 +151,10 @@ export function useRealtimeReceipts(delay = 400) {
             // Once per table, or a channel that retries logs on every attempt.
             if (!failed.has(table)) {
               failed.add(table);
-              /*
-               * `err` is passed on because it is the only thing here that
-               * names the cause — for a rejected binding the server says why.
-               * This callback used to take only the state and drop it.
-               *
-               * The message used to name 03-realtime.sql alone, which was
-               * actively misleading: with 11 unrun you would check 03, find it
-               * correct, and be no wiser. Now that each table has its own
-               * channel it can say which one, so the message points at the
-               * table and at the one migration that fixes all of them.
-               */
+              // `err` is the only thing that names the cause — for a rejected
+              // binding the server says why. And the message names the TABLE:
+              // pointing at one migration when another was unrun sent a real
+              // diagnosis the wrong way.
               console.warn(
                 `[realtime] ${state} on "${table}" — that table's changes ` +
                   "will arrive by periodic refresh instead. If this persists, " +
@@ -222,11 +191,9 @@ export function useRealtimeReceipts(delay = 400) {
   // Interval safety net, paused while the tab is hidden so a phone in a pocket
   // is not refreshing all evening.
   //
-  // One interval, re-armed by `status` changing. The previous version drove
-  // this from a second `retune` interval that cleared and recreated the first
-  // one every POLL_FALLBACK — which meant a POLL_LIVE interval was always
-  // destroyed before its longer period could ever elapse, so once realtime
-  // reported healthy the safety net silently stopped firing altogether.
+  // ONE interval, re-armed by `status`. An earlier version drove it from a
+  // second interval that recreated this one every POLL_FALLBACK, so a
+  // POLL_LIVE period could never elapse and the net silently stopped firing.
   React.useEffect(() => {
     const interval = setInterval(
       () => {

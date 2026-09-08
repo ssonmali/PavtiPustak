@@ -1,14 +1,13 @@
 /**
  * The geometry of a fixed crop frame with a pannable, zoomable image behind it.
  *
- * The frame never moves or resizes — the image moves under it. So every
- * question here is "which rectangle of the source pixels is currently showing
- * through the hole", and the answer has to hold for any zoom and any pan, or
- * the saved crop is not the one the volunteer framed.
+ * The frame never moves; the image moves under it. So every question here is
+ * "which rectangle of source pixels is showing through the hole", and the
+ * answer has to hold at any zoom and pan or the saved crop is not the one that
+ * was framed.
  *
- * Pure, and tested, because the failure is invisible: an off-by-one in the
- * clamp shows as a hairline of empty background down one edge of a wallpaper,
- * which nobody reports and everybody sees.
+ * Pure and tested because the failure is invisible: an off-by-one in the clamp
+ * is a hairline of empty background down one edge of a wallpaper.
  */
 
 export type Size = { width: number; height: number };
@@ -28,12 +27,10 @@ export function coverScale(image: Size, frame: Size): number {
 /**
  * Pan, clamped so the image still covers the frame at this zoom.
  *
- * The allowed range is negative: x = 0 puts the image's left edge at the
- * frame's left edge, and the image is wider than the frame, so it may only
- * move left. Where a dimension does not overflow at all the range collapses to
- * a single point, which is why min is compared against 0 rather than assumed
- * to be below it — at zoom 1 exactly one axis has slack and the other has
- * none, and letting that one drift is the hairline gap.
+ * The range is negative — x = 0 is the image's left edge at the frame's — and
+ * collapses to a point on an axis with no overflow, which is why min is
+ * compared against 0 rather than assumed below it. At zoom 1 exactly one axis
+ * has slack, and letting the other drift is the hairline gap.
  */
 export function clampPan(pan: Pan, image: Size, frame: Size, zoom: number): Pan {
   const scale = coverScale(image, frame) * zoom;

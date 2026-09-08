@@ -1,15 +1,13 @@
 import type { PaymentMethod, PaymentStatus, Receipt } from "./types";
 
 /**
- * The editable content of a receipt, normalised.
+ * The editable content of a receipt, normalised — the identity columns are
+ * pinned by the database and not here.
  *
- * Exactly the fields the form can change — the identity columns (id, number,
- * who collected it) are pinned by the database and are not here. One shape,
- * produced two ways: from the form as it stands, and from the stored row. That
- * is the point of the module. Comparing a form against a row only tells the
- * truth if both went through the same normalisation, or an untouched phone
- * number stored as "+919876543210" reads as an edit against the "9876543210"
- * the form would submit.
+ * One shape produced two ways, from the form and from the stored row, which is
+ * the point of the module: comparing them only tells the truth if both went
+ * through the same normalisation, or a stored "+919876543210" reads as an edit
+ * against the "9876543210" the form submits.
  */
 export type ReceiptFields = {
   donor_name: string;
@@ -81,13 +79,10 @@ export function receiptBaseline(receipt: Receipt): ReceiptFields {
 }
 
 /**
- * Whether two versions of a receipt say the same thing.
- *
- * Used to keep Save disabled until something has actually changed. Opening a
- * receipt, changing nothing and saving used to write the row anyway, which
- * bumped updated_at and put a meaningless entry in the activity log — the log
- * is how the mandal reviews who touched what, so noise in it costs real
- * trust.
+ * Whether two versions of a receipt say the same thing — what keeps Save
+ * disabled until something changed. Saving an untouched receipt used to write
+ * the row anyway, bumping updated_at and putting a meaningless entry in the
+ * activity log, which is how the mandal reviews who touched what.
  */
 export function sameReceiptFields(a: ReceiptFields, b: ReceiptFields): boolean {
   return (

@@ -21,19 +21,7 @@ import {
   WALLPAPER_SIZES,
 } from "@/components/custom-background";
 
-/**
- * The crop this device needs, and only that one.
- *
- * A phone's background hole is roughly 9:16 and a desktop's roughly 16:9, and
- * globals.css already keeps a separate default for each. So a volunteer only
- * ever has to frame the shape they are actually looking at: cropping for the
- * form factor they are not holding is work whose result they cannot see, and
- * on a phone it also meant framing a wide photo through a 158px-wide window.
- *
- * The other orientation keeps its default photo rather than getting a guessed
- * crop of this one — which is the honest outcome, because the two defaults are
- * different photographs framed for their own shapes, not two crops of one.
- */
+/** The crop each form factor needs. See the component docblock. */
 const TARGETS: Record<
   "portrait" | "landscape",
   { ratio: number; labelKey: MessageKey }
@@ -62,38 +50,24 @@ const FRAME_MAX = 280;
 /**
  * Pick a photo for the Devasthan background and crop it, once.
  *
- * ONE CROP, FOR THIS DEVICE. A phone's background hole is roughly 9:16 and a
- * desktop's roughly 16:9, and globals.css keeps a separate default for each —
- * so a volunteer frames only the shape they are actually looking at. This
- * started as two passes from one upload, which was worse in both directions:
- * on a phone it asked someone to frame a wide photo through a 158px-wide
- * window, and in either case one of the two crops was work whose result the
- * person doing it could not see.
+ * ONE CROP, FOR THIS DEVICE: a phone's hole is ~9:16 and a desktop's ~16:9,
+ * and globals.css keeps a default for each, so a volunteer frames only the
+ * shape they are looking at. The other orientation keeps its default photo
+ * rather than a guessed crop — the defaults are two different photographs
+ * framed for their own shapes, not two crops of one.
  *
- * The other orientation keeps its default photograph rather than getting a
- * guessed crop of this one. That is the honest outcome, because the defaults
- * are two different photographs each framed for its own shape, not two crops
- * of one.
+ * THE FRAME IS FIXED; the photo pans and zooms under it. So the saved aspect
+ * ratio is a property of the frame and cannot be wrong.
  *
- * THE FRAME IS FIXED. It never moves or resizes — the photo pans and zooms
- * underneath it, and what shows through is what gets saved. That is the shape
- * of every crop tool people already know, and it means the saved aspect ratio
- * cannot be wrong: it is a property of the frame, not of anything the
- * volunteer did.
- *
- * PER DEVICE. Nothing is uploaded and nothing is shared — this writes to
- * IndexedDB on this device, survives sign-out (see STORE_WALLPAPER), and is
- * lost if site data is cleared. That contract is stated in the UI, not only
- * here.
+ * PER DEVICE. Nothing is uploaded or shared: IndexedDB on this device,
+ * surviving sign-out (see STORE_WALLPAPER) and lost if site data is cleared.
+ * That contract is stated in the UI, not only here.
  */
 export function BackgroundCropper({
   /**
-   * Called once the crop is written, or the photo is removed.
-   *
-   * Optional because the settings PAGE wants the panel to stay put, while the
-   * dialog in the header should close itself — the volunteer went in to change
-   * the background, and leaving them looking at the picker afterwards hides
-   * the very thing they came to see.
+   * Called once the crop is written, or the photo removed. Optional: the
+   * settings page keeps its panel open, while the header dialog closes itself
+   * rather than hiding the thing the volunteer came to see.
    */
   onDone,
   /** The dialog supplies its own heading, so the panel drops its own. */
@@ -104,10 +78,8 @@ export function BackgroundCropper({
 } = {}) {
   const { t } = useI18n();
   const [image, setImage] = React.useState<HTMLImageElement | null>(null);
-  /**
-   * Which crop is being made. Read at pick time rather than on mount, so a
-   * tablet rotated before choosing a photo crops for the shape it is now.
-   */
+  // Read at pick time, not on mount, so a tablet rotated before choosing a
+  // photo crops for the shape it is now.
   const [target, setTarget] = React.useState<"portrait" | "landscape">(
     "portrait",
   );
@@ -174,19 +146,14 @@ export function BackgroundCropper({
     }
 
     /*
-     * The URL has to outlive the decode.
+     * The URL has to outlive the decode. Revoking it in onload is tempting —
+     * the Image holds the decoded bitmap and drawImage works from it — but the
+     * PREVIEW is a second <img> on the same URL, and a revoked URL cannot
+     * load. That gave an invisible photo while the saved file came out
+     * correct, so nothing in the output said the input was broken.
      *
-     * Revoking it in onload is tempting — the Image element holds the decoded
-     * bitmap from that point, drawImage works from it, and a live blob URL
-     * pins the whole file in memory, tens of megabytes for a phone photo.
-     * That was the first version and it was wrong: the PREVIEW is a second
-     * <img> in the DOM pointing at the same URL, and a revoked URL cannot
-     * load. The result was a crop tool with an invisible photo while the saved
-     * file came out correct — the worst possible split, because nothing about
-     * the output says the input was broken.
-     *
-     * Released instead when the photo is replaced, cancelled, saved, or the
-     * component goes away. release() is the only place that happens.
+     * Released when the photo is replaced, cancelled, saved, or unmounted;
+     * release() is the only place that happens.
      */
     release();
     const url = URL.createObjectURL(file);
@@ -335,13 +302,11 @@ export function BackgroundCropper({
               src={image.src}
               alt=""
               draggable={false}
-              /* max-w-none is load-bearing. Tailwind's preflight sets
-                 `img { max-width: 100% }`, which capped this element's
-                 declared 1200px to the frame's 158px while the inline height
-                 stayed at 800 — so the photo previewed squeezed to a quarter
-                 of its width, and the crop the volunteer framed was not the
-                 crop that got saved. Measured 55x280 before this, 420x280
-                 after, against a coverScale of 0.35. */
+              /* max-w-none is load-bearing: Tailwind's preflight sets
+                 `img { max-width: 100% }`, which capped a declared 1200px to
+                 the frame's 158px while the inline height stayed at 800 — so
+                 the crop framed was not the crop saved. Measured 55x280
+                 before, 420x280 after. */
               className="absolute max-w-none origin-top-left"
               style={{
                 width: natural.width,

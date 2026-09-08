@@ -10,18 +10,13 @@ import { shouldAdoptTerm } from "./search-draft";
 /**
  * The receipts search box, and the draft term it is typing.
  *
- * Its own component for one reason, and it is a performance one: this state
- * changes on every keystroke, and React re-renders the component that owns it.
- * While it lived in ReceiptsTable, every character re-rendered the whole
- * ledger — and that list renders each receipt TWICE, once as a table row and
- * once as a card, with only CSS hiding the half you are not looking at. Fifty
- * receipts meant a hundred row subtrees reconciled per letter, on a phone,
- * with no memoisation anywhere in that file. That is why typing stuttered even
- * on a good handset.
+ * Its own component for a performance reason: this state changes per keystroke,
+ * and while it lived in ReceiptsTable every character re-rendered the whole
+ * ledger — which renders each receipt twice, as a row and as a card, with CSS
+ * hiding the half you are not looking at. Fifty receipts meant a hundred row
+ * subtrees per letter, unmemoised, on a phone.
  *
- * Moved down here, a keystroke re-renders this input and nothing else. The
- * ledger re-renders when the term is actually committed — once per pause in
- * typing, not once per letter.
+ * Here, a keystroke re-renders this input and nothing else.
  */
 export function ReceiptsSearch({
   q,
@@ -37,33 +32,19 @@ export function ReceiptsSearch({
 }) {
   const { t } = useI18n();
 
-  /**
-   * What is being typed, which is deliberately NOT the search term.
-   *
-   * The term lives in the URL and every change to it is a database query, so
-   * the field keeps its own draft and pushes it debounced. Binding the input
-   * straight to the URL would issue a request per keystroke and make typing
-   * feel like it is fighting back.
-   */
+  // What is being typed, deliberately NOT the search term: the term lives in
+  // the URL and every change to it is a database query, so the field keeps a
+  // draft and pushes it debounced.
   const [draft, setDraft] = React.useState(q);
 
   /*
-   * Re-sync when the term changes from somewhere else — the back button, or
-   * another control rewriting the query.
+   * Re-sync when the term changes elsewhere — the back button, or another
+   * control rewriting the query. Adjusted during render rather than in an
+   * effect, which would schedule a second render on every URL change.
    *
-   * Adjusted during render against the previous value rather than in an
-   * effect. Setting state in an effect for this schedules a second render
-   * every time the URL changes, and React flags it as cascading; comparing
-   * here re-renders once, before anything is painted.
-   *
-   * shouldAdoptTerm is what makes that safe, and it is not a refinement —
-   * without it this clobbered live typing while a debounced push was in
-   * flight. See that module for the failure it prevents; it is pure and
-   * tested because the naive version reads as obviously correct.
-   *
-   * Deliberately not a ref holding the last-sent term: reading a ref during
-   * render is not allowed, and the lint rule saying so is right — this has to
-   * be part of the render snapshot to stay correct if a render is replayed.
+   * shouldAdoptTerm is what makes it safe: without it this clobbered live
+   * typing while a debounced push was in flight. Not a ref, because reading
+   * one during render is not allowed and this has to be part of the snapshot.
    */
   const [syncedQ, setSyncedQ] = React.useState(q);
   if (q !== syncedQ) {
