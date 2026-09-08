@@ -133,13 +133,9 @@ export function displayName(
 }
 
 /**
- * A readable volunteer name from a login email.
- *
- * Accounts are created by hand in the Supabase dashboard, so there is no
- * profile record to read a real name from — the local part of the address is
- * the only name the app has. `sanket.sonmali@…` reads as "Sanket Sonmali".
- * Addresses that are not name-shaped are left recognisable rather than
- * mangled: `ganesh123@…` becomes "Ganesh 123".
+ * A readable volunteer name from a login email. Accounts are created by hand,
+ * so the local part is the only name the app has: `sanket.sonmali@…` reads as
+ * "Sanket Sonmali", and `ganesh123@…` as "Ganesh 123" rather than mangled.
  */
 export function volunteerName(email: string | null | undefined) {
   if (!email) return null;
@@ -160,18 +156,16 @@ export function volunteerName(email: string | null | undefined) {
 
 
 /**
- * The two rules for what a row is worth. Everything that shows money must go
- * through these — a total that sums `amount` directly is wrong the moment a
- * row is part-paid, and it is wrong silently.
+ * The two rules for what a row is worth. Everything showing money goes through
+ * these: a total summing `amount` directly is wrong the moment a row is
+ * part-paid, and wrong silently.
  *
- * A row carries the agreed figure in `amount` and how much of it has actually
- * changed hands in `paid_amount`. `payment_status` stays the record of whether
- * it is settled, which keeps every pre-existing row correct: a Paid row has
- * moved its whole amount, and an untouched one has moved nothing.
+ * `amount` is agreed, `paid_amount` is what changed hands, `payment_status`
+ * records settlement — which keeps pre-existing rows correct, a Paid row having
+ * moved its whole amount.
  *
- * Structural rather than `Pick<Receipt, …>` on purpose: contributions coming in
- * and bills going out follow the identical rule, so both ledgers share these
- * four functions instead of each growing its own near-copy.
+ * Structural rather than `Pick<Receipt, …>`: money in and money out follow the
+ * identical rule, so both ledgers share these instead of near-copies.
  */
 export type Money = {
   amount: number;
@@ -280,13 +274,10 @@ export function pledgeReminderUrl(receipt: Receipt, mandalName: string) {
 }
 
 /**
- * Capitalises each word of a Latin-script name as it is typed: "ramesh patil"
- * becomes "Ramesh Patil". Applied on every keystroke, which is safe because it
- * never changes the length of the string and so never moves the caret.
- *
- * Only the first letter is touched — the rest is left exactly as typed, so
- * "McPatil" and an all-caps "PATIL" both survive. Devanagari has no case, so a
- * name typed in Marathi passes through unchanged on its own.
+ * Capitalises each word of a Latin-script name as it is typed. Safe on every
+ * keystroke because it never changes the string's length, so the caret cannot
+ * move. Only first letters are touched, so "McPatil" and "PATIL" survive;
+ * Devanagari has no case and passes through unchanged.
  */
 export function capitalizeName(name: string) {
   return name.replace(/(^|[\s'-])(\p{Ll})/gu, (_, sep, ch) => sep + ch.toUpperCase());

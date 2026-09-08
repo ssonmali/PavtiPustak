@@ -9,42 +9,30 @@ import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 /**
- * The filter controls for one tab, collapsed behind a single button on phones.
+ * The filter controls for one tab, collapsed behind one button on phones.
  *
- * Phones only — `sm:hidden` on the trigger, and the tabs keep rendering their
- * chip rows inline from `sm` up. That is not laziness about one shared
- * component: a chip row is strictly better than a sheet when there is room for
- * it, because it shows the whole filter state and takes one tap to change.
- * The sheet exists because on a 360px screen that same row wraps to three
- * lines and pushes the ledger below the fold.
+ * Phones only. A chip row is strictly better than a sheet when there is room
+ * for it — it shows the whole filter state and changes it in one tap — so the
+ * tabs keep rendering theirs from `sm` up. The sheet exists because on a 360px
+ * screen that row wraps to three lines and pushes the ledger below the fold.
  *
- * TWO CONTRACTS, both of which exist because a sheet hides what it holds:
+ * TWO CONTRACTS, both because a sheet hides what it holds:
  *
- *  1. The trigger carries the APPLIED state — the count and the names. Hiding
- *     filters hides the fact that a filter is on, and this is a ledger: a
- *     volunteer reading a total under "Today + Unpaid" as the all-time figure
- *     has been misled by the UI, not by their own carelessness.
- *  2. Changes are STAGED and committed on Done, not applied per tap. On the
- *     receipts and report tabs every control writes the URL, so applying
- *     immediately meant a navigation and a database query per tap — picking a
- *     period, a status and a sort was three round trips on a phone connection
- *     to reach one list. Now it is one. Dismissing without Done discards,
- *     which is the standard bargain for a sheet with an explicit commit.
+ *  1. The trigger carries the APPLIED state, count and names. Hiding filters
+ *     hides that a filter is on, and a volunteer reading a "Today + Unpaid"
+ *     total as the all-time figure has been misled by the UI.
+ *  2. Changes are STAGED and committed on Done. Every control here writes the
+ *     URL, so applying per tap meant a navigation and a query per tap — three
+ *     round trips to reach one list. Dismissing discards, the standard bargain.
+ *     "Clear all" is the deliberate exception; see the note on it.
  *
- *     "Clear all" is the deliberate exception and applies on the tap; see the
- *     note on it below.
+ * Generic over the tab's filter shape. One `summarise` rather than two keeps
+ * the trigger and the sheet from describing the same state differently.
  *
- * Generic over the tab's filter shape: `value` is what is applied, the render
- * prop gets the draft and a patcher, and `summarise` turns either into names.
- * One summariser rather than two keeps the trigger and the sheet from ever
- * describing the same state differently.
- *
- * Built on base-ui's dialog directly rather than on ui/dialog.tsx, which is a
- * vendored shadcn file whose DialogContent is centred on the visual viewport —
- * the wrong geometry for a sheet, and not worth forking a file that
- * `shadcn add` would overwrite. It still carries data-slot="dialog-content" so
- * every rule already written for overlays finds it: the Devasthan glass and
- * gold rim, the text halo, and `display: none` under @media print.
+ * Built on base-ui's dialog rather than ui/dialog.tsx, whose DialogContent is
+ * centred on the visual viewport — wrong geometry for a sheet, and not worth
+ * forking a file `shadcn add` would overwrite. It keeps
+ * data-slot="dialog-content" so the overlay rules still find it.
  */
 export function FilterSheet<T>({
   value,
@@ -68,15 +56,9 @@ export function FilterSheet<T>({
   const { t } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<T>(value);
-  /**
-   * What the commit button said at the moment the sheet started closing.
-   *
-   * On the tabs that hold their filters in local state, onApply lands before
-   * the exit animation has played, so `dirty` flips false and the button
-   * relabelled itself from Apply to Done mid-fade — a small but real flicker,
-   * and one of two causes of it. Latched here so nothing inside the sheet
-   * changes after the volunteer has dismissed it.
-   */
+  // What the commit button said as the sheet started closing. Where filters
+  // are local state, onApply lands before the exit animation plays, so `dirty`
+  // flipped and the button relabelled itself mid-fade.
   const [closingDirty, setClosingDirty] = React.useState(false);
 
   const patch = React.useCallback(
@@ -85,13 +67,9 @@ export function FilterSheet<T>({
   );
 
   /**
-   * The draft is seeded on every open rather than kept in step with `value`.
-   *
-   * It has to be re-seeded and not merely initialised: `value` can move while
-   * the sheet is shut — the desktop chip rows are live at the same width the
-   * sheet exists at during a rotate, and the receipts tab reads its filters
-   * from the URL, so a back button changes them. Without this, reopening
-   * would show, and Done would re-apply, a stale selection.
+   * Seeded on every open, not merely initialised: `value` can move while the
+   * sheet is shut (a rotate, or the back button changing the URL), and without
+   * re-seeding, reopening would show — and Done re-apply — a stale selection.
    */
   function onOpenChange(next: boolean) {
     if (next) setDraft(value);
@@ -103,15 +81,9 @@ export function FilterSheet<T>({
   const staged = summarise(draft);
   const active = applied.length > 0;
 
-  /*
-   * Whether Done has anything to commit.
-   *
-   * Compared as JSON, which is sound only because every draft is built by
-   * patching one object of a fixed shape — so the keys keep their order and
-   * the values are the plain data the URL round-trips anyway. It would not
-   * survive a Date, a Set, or an undefined-vs-absent distinction being added
-   * to a tab's filter type.
-   */
+  // Whether Done has anything to commit. JSON comparison is sound only because
+  // every draft is one object of fixed shape holding URL-round-trippable data;
+  // it would not survive a Date, a Set, or undefined-vs-absent.
   const dirty = JSON.stringify(draft) !== JSON.stringify(value);
 
   // The names when they fit, the count when they do not. Three filters spelled
@@ -164,27 +136,17 @@ export function FilterSheet<T>({
           className={cn(
             "fixed z-50 flex flex-col gap-4 rounded-t-2xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none",
             /*
-             * Positioned with insets and NOT with a transform, which is the
-             * whole reason this reads differently from ui/dialog.tsx.
+             * Positioned with insets and NOT a transform — the whole reason
+             * this differs from ui/dialog.tsx. The slide keyframes set the
+             * WHOLE transform property rather than adding to it, so a layout
+             * transform here gets clobbered: one frame per close with the
+             * sheet 100% lower and un-centred. Insets leave that channel free.
              *
-             * The slide keyframes animate `transform`, and they set the whole
-             * property — translate3d(...) scale3d(...) — rather than adding to
-             * it. So a layout transform here does not compose with the
-             * animation, it gets clobbered by it: the first and last frame of
-             * every close put the sheet 100% lower and un-centred for one
-             * frame, which is exactly the flicker on dismiss. Insets leave the
-             * transform channel free for the animation to own.
-             *
-             * inset-x-0 also drops the horizontal centring: the sheet is full
-             * width, so there was nothing to centre.
-             *
-             * The bottom edge tracks the VISUAL viewport, not the layout one —
-             * MobileKeyboard publishes --visual-top/--visual-height, and
-             * without them a focused date field would leave the on-screen
-             * keyboard covering the sheet, the one thing a bottom sheet must
-             * never do. Measured from the layout viewport's bottom, that gap
-             * is 100dvh minus the visual viewport's own bottom edge; with the
-             * fallbacks it collapses to 0, which is what desktop gets.
+             * The bottom edge tracks the VISUAL viewport (MobileKeyboard
+             * publishes --visual-top/--visual-height), or a focused date field
+             * would leave the keyboard covering the sheet — the one thing a
+             * bottom sheet must never do. The fallbacks collapse to 0, which
+             * is what desktop gets.
              */
             "inset-x-0 bottom-[calc(100dvh-var(--visual-top,0px)-var(--visual-height,100dvh))]",
             // Capped so a long filter set scrolls rather than covering the
