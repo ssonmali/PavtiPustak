@@ -1008,9 +1008,19 @@
      * NEXT_PUBLIC_MANDAP_PHOTO, then the shipped photo. Any link missing falls
      * through, so a device that cannot read IndexedDB looks as it did before.
      */
+    /* image-set, not url: WebP is 27% smaller than the JPEG here (395K vs
+       545K) and every browser that supports image-set also supports WebP.
+       The type() branches are tried in order, so a browser that somehow has
+       image-set without WebP still gets the JPEG rather than no photo. */
     background: var(
         --mandap-photo-landscape,
-        var(--mandap-photo, url("/idol-desktop.jpg"))
+        var(
+          --mandap-photo,
+          image-set(
+            url("/idol-desktop.webp") type("image/webp"),
+            url("/idol-desktop.jpg") type("image/jpeg")
+          )
+        )
       )
       center / cover no-repeat;
     filter: var(--mandap-filter);
@@ -1066,7 +1076,13 @@
          for and a phone would throw away. */
       background-image: var(
         --mandap-photo-portrait,
-        var(--mandap-photo, url("/idol.jpg"))
+        var(
+          --mandap-photo,
+          image-set(
+            url("/idol.webp") type("image/webp"),
+            url("/idol.jpg") type("image/jpeg")
+          )
+        )
       );
     }
   }

@@ -53,9 +53,17 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  if (!user && pathname.startsWith("/dashboard")) {
+  /*
+   * "/" is handled here rather than only in app/page.tsx, which redirects to
+   * /dashboard unconditionally. A logged-out visitor to "/" would then pay
+   * "/" -> /dashboard -> /login: two redirects before the first byte of the
+   * page they were always going to get. Measured at 765ms on throttled
+   * mobile, the single largest entry in Lighthouse's opportunities. The proxy
+   * already knows the auth state, so it can send them straight there.
+   */
+  if (!user && (pathname === "/" || pathname.startsWith("/dashboard"))) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
+    if (pathname !== "/") loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
