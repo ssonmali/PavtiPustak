@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon, Loader2, Save, TriangleAlert, User } from "lucide-react";
+import { Loader2, Save, TriangleAlert, User } from "lucide-react";
 import { toast } from "sonner";
 import {
   createReceipt,
@@ -23,9 +23,9 @@ import {
   sameReceiptFields,
 } from "@/lib/receipt-fields";
 import { useI18n } from "@/lib/i18n/client";
+import { DateField } from "@/components/date-field";
 import { useDialogSubmit } from "@/lib/use-dialog-submit";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar-lazy";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,7 +46,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -512,42 +511,14 @@ function ReceiptDialogBody({
               <input type="hidden" name="payment_method" value={method} />
             )}
 
-            <div className="flex flex-col gap-2">
-              <Label>{t("form.date")}</Label>
-              <input
-                type="hidden"
-                name="collection_date"
-                value={date ? toDateValue(date) : ""}
-              />
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full justify-start font-normal"
-                    >
-                      <CalendarIcon />
-                      {date
-                        ? formatDate(toDateValue(date), locale)
-                        : t("form.pickDate")}
-                    </Button>
-                  }
-                />
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    defaultMonth={date}
-                    captionLayout="dropdown"
-                    // Backdating is the point; only the future is off-limits.
-                    disabled={{ after: new Date() }}
-                    autoFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            {/* Backdating is the point; only the future is off-limits. */}
+            <DateField
+              name="collection_date"
+              label={t("form.date")}
+              value={date}
+              onChange={setDate}
+              disabled={{ after: new Date() }}
+            />
           </div>
 
           {/* Received or promised. A pledge is recorded so it can be chased,
@@ -591,42 +562,21 @@ function ReceiptDialogBody({
                   {t("form.paidSoFarHint")}
                 </p>
 
-                <Label>{t("form.dueOn")}</Label>
-                <input
-                  type="hidden"
+                {/* The opposite of the collection date: a promise is about the
+                    future, so the past is off-limits — except back to an
+                    existing overdue date. See earliestDue.
+
+                    `contents` because this field shares its parent's column
+                    with the paid-so-far input above and the hint below; its
+                    own wrapper would break that single flow. */}
+                <DateField
                   name="due_on"
-                  value={dueDate ? toDateValue(dueDate) : ""}
+                  label={t("form.dueOn")}
+                  value={dueDate}
+                  onChange={setDueDate}
+                  disabled={{ before: earliestDue }}
+                  className="contents"
                 />
-                <Popover>
-                  <PopoverTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full justify-start font-normal"
-                      >
-                        <CalendarIcon />
-                        {dueDate
-                          ? formatDate(toDateValue(dueDate), locale)
-                          : t("form.pickDate")}
-                      </Button>
-                    }
-                  />
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      defaultMonth={dueDate}
-                      captionLayout="dropdown"
-                      // The opposite of the collection date: a promise is about
-                      // the future, so the past is off-limits — except back to
-                      // an existing overdue date. See earliestDue.
-                      disabled={{ before: earliestDue }}
-                      autoFocus
-                    />
-                  </PopoverContent>
-                </Popover>
                 <p className="text-xs text-muted-foreground">
                   {t("form.dueHint")}
                 </p>

@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon, Loader2, User } from "lucide-react";
+import { Loader2, User } from "lucide-react";
 import { createDonation, updateDonation } from "@/app/actions/donations";
 import { searchDonors } from "@/app/actions/receipts";
 import { useI18n } from "@/lib/i18n/client";
+import { DateField } from "@/components/date-field";
 import { useDialogSubmit } from "@/lib/use-dialog-submit";
-import { capitalizeName, formatDate, toDateValue } from "@/lib/receipt-utils";
+import { capitalizeName, formatDate } from "@/lib/receipt-utils";
 import type { Donation, Donor } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar-lazy";
 import {
   DialogContent,
   DialogDescription,
@@ -20,9 +20,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 
 /** Parses `YYYY-MM-DD` on the local calendar; `new Date(iso)` shifts in IST. */
@@ -206,42 +203,14 @@ export function DonationDialog({
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label>{t("donation.date")}</Label>
-            <input
-              type="hidden"
-              name="donation_date"
-              value={date ? toDateValue(date) : ""}
-            />
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start font-normal"
-                  >
-                    <CalendarIcon />
-                    {date
-                      ? formatDate(toDateValue(date), locale)
-                      : t("form.pickDate")}
-                  </Button>
-                }
-              />
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  defaultMonth={date}
-                  captionLayout="dropdown"
-                  // Backdating is the point; only the future is off-limits.
-                  disabled={{ after: new Date() }}
-                  autoFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+          {/* Backdating is the point; only the future is off-limits. */}
+          <DateField
+            name="donation_date"
+            label={t("donation.date")}
+            value={date}
+            onChange={setDate}
+            disabled={{ after: new Date() }}
+          />
         </div>
 
         <DialogFooter className="mt-2 [&>*]:flex-1 sm:[&>*]:flex-none">

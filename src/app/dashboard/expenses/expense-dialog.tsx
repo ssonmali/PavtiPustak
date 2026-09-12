@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { createExpense, updateExpense } from "@/app/actions/expenses";
 import { useI18n } from "@/lib/i18n/client";
+import { DateField } from "@/components/date-field";
 import { useDialogSubmit } from "@/lib/use-dialog-submit";
-import { formatDate, toDateValue } from "@/lib/receipt-utils";
 import {
   EXPENSE_CATEGORIES,
   PAYMENT_METHODS,
@@ -14,7 +14,6 @@ import {
   type ExpenseCategory,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar-lazy";
 import {
   DialogContent,
   DialogDescription,
@@ -25,9 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import {
   Select,
@@ -63,7 +59,7 @@ export function ExpenseDialog({
   expense?: Expense;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const isEdit = Boolean(expense);
 
   const { pending, submit } = useDialogSubmit({
@@ -205,42 +201,14 @@ export function ExpenseDialog({
             </Select>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label>{t("expenses.date")}</Label>
-            <input
-              type="hidden"
-              name="spent_on"
-              value={date ? toDateValue(date) : ""}
-            />
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start font-normal"
-                  >
-                    <CalendarIcon />
-                    {date
-                      ? formatDate(toDateValue(date), locale)
-                      : t("form.pickDate")}
-                  </Button>
-                }
-              />
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  defaultMonth={date}
-                  captionLayout="dropdown"
-                  // Backdating is the point; only the future is off-limits.
-                  disabled={{ after: new Date() }}
-                  autoFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+          {/* Backdating is the point; only the future is off-limits. */}
+          <DateField
+            name="spent_on"
+            label={t("expenses.date")}
+            value={date}
+            onChange={setDate}
+            disabled={{ after: new Date() }}
+          />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -298,42 +266,18 @@ export function ExpenseDialog({
                 {t("expenses.advanceHint")}
               </p>
 
-              <Label>{t("expenses.dueOn")}</Label>
-              <input
-                type="hidden"
+              {/* The opposite of the spend date: a bill still to be paid is
+                  about the future, so the past is off-limits — except back to
+                  an existing overdue date. See earliestDue. `contents`
+                  because this shares its parent's column with the hint. */}
+              <DateField
                 name="due_on"
-                value={dueDate ? toDateValue(dueDate) : ""}
+                label={t("expenses.dueOn")}
+                value={dueDate}
+                onChange={setDueDate}
+                disabled={{ before: earliestDue }}
+                className="contents"
               />
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full justify-start font-normal"
-                    >
-                      <CalendarIcon />
-                      {dueDate
-                        ? formatDate(toDateValue(dueDate), locale)
-                        : t("form.pickDate")}
-                    </Button>
-                  }
-                />
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
-                    defaultMonth={dueDate}
-                    captionLayout="dropdown"
-                    // The opposite of the spend date: a bill still to be paid
-                    // is about the future, so the past is off-limits — except
-                    // back to an existing overdue date. See earliestDue.
-                    disabled={{ before: earliestDue }}
-                    autoFocus
-                  />
-                </PopoverContent>
-              </Popover>
             </div>
           ) : null}
         </div>
