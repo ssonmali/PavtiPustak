@@ -738,6 +738,46 @@
   }
 
   /*
+   * A toast needs the blur its own background colour assumes.
+   *
+   * ui/sonner.tsx points --normal-bg at --popover, which the Devasthan themes
+   * declare translucent (0.55 alpha) — safe for dialogs and selects because
+   * those carry a backdrop-filter that destroys what is behind them. A toast
+   * carries none: it portals to <body>, matching neither [data-slot="card"]
+   * nor the dialog slots the blur is scoped to. So the idol photo showed
+   * straight through the panel and the toast read as floating text.
+   *
+   * Gated on @supports for the same reason the panes are: without the blur a
+   * 55%-alpha panel over a photograph is worse than no glass at all, so that
+   * branch goes solid instead.
+   */
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .devasthan-day [data-sonner-toast],
+    .devasthan-night [data-sonner-toast] {
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.05);
+      backdrop-filter: blur(var(--glass-blur)) saturate(1.05);
+    }
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .devasthan-day [data-sonner-toast],
+    .devasthan-night [data-sonner-toast] {
+      background: var(--card-solid);
+    }
+  }
+
+  /* The blur costs a composited layer, and this preference is often set on
+     the phones least able to afford one — so take the solid panel instead. */
+  @media (prefers-reduced-transparency: reduce) {
+    .devasthan-day [data-sonner-toast],
+    .devasthan-night [data-sonner-toast] {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background: var(--card-solid);
+    }
+  }
+
+  /*
    * The Undo on a toast is a real button, not a footnote: sonner's default is
    * 24px tall, under half a thumb, and it is the only way back from a delete.
    *
