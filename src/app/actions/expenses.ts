@@ -54,7 +54,9 @@ export async function createExpense(
 
   if (error) return { ok: false, error: error.message };
 
-  refresh();
+  // No refresh() — it re-renders the route inside this response, so Save kept
+  // spinning after the row was written. The dialog refreshes once it closes.
+  // See the note in actions/receipts.ts createReceipt.
   return { ok: true };
 }
 
@@ -83,7 +85,7 @@ export async function updateExpense(
   // Zero rows means the guard matched nothing: someone edited it first.
   if (!data || data.length === 0) return { ok: false, conflict: true };
 
-  refresh();
+  // No refresh() — see the note in createExpense.
   return { ok: true };
 }
 

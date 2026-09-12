@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { CalendarIcon, Loader2, User } from "lucide-react";
-import { toast } from "sonner";
 import { createDonation, updateDonation } from "@/app/actions/donations";
 import { searchDonors } from "@/app/actions/receipts";
 import { useI18n } from "@/lib/i18n/client";
+import { useDialogSubmit } from "@/lib/use-dialog-submit";
 import { capitalizeName, formatDate, toDateValue } from "@/lib/receipt-utils";
 import type { Donation, Donor } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,11 @@ export function DonationDialog({
   const { t, locale } = useI18n();
   const isEdit = Boolean(donation);
 
-  const [pending, setPending] = React.useState(false);
+  const { pending, submit } = useDialogSubmit({
+    success: "donation.saved",
+    conflict: "donation.conflict",
+    close: () => onOpenChange(false),
+  });
   const [date, setDate] = React.useState<Date | undefined>(
     donation ? fromDateValue(donation.donation_date) : new Date(),
   );
@@ -88,32 +92,11 @@ export function DonationDialog({
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-
-    setPending(true);
-    let result;
-    try {
-      result = donation
-        ? await updateDonation(donation.id, formData)
-        : await createDonation(formData);
-    } catch {
-      setPending(false);
-      toast.error(t("error.body"));
-      return;
-    }
-    setPending(false);
-
-    if (result.ok) {
-      toast.success(t("donation.saved"));
-      onOpenChange(false);
-      return;
-    }
-    if ("conflict" in result) {
-      toast.error(t("donation.conflict"));
-      onOpenChange(false);
-      return;
-    }
-    toast.error(result.error);
+    await submit(new FormData(event.currentTarget), (formData) =>
+      donation
+        ? updateDonation(donation.id, formData)
+        : createDonation(formData),
+    );
   }
 
   return (

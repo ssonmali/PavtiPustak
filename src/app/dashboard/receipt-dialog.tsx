@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { CalendarIcon, Loader2, Save, TriangleAlert, User } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -24,6 +23,7 @@ import {
   sameReceiptFields,
 } from "@/lib/receipt-fields";
 import { useI18n } from "@/lib/i18n/client";
+import { useDialogSubmit } from "@/lib/use-dialog-submit";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar-lazy";
 import {
@@ -110,9 +110,7 @@ function ReceiptDialogBody({
   queue,
 }: Omit<Props, "open">) {
   const { t, locale } = useI18n();
-  const router = useRouter();
   const isEdit = Boolean(receipt);
-  const [pending, setPending] = React.useState(false);
   const [date, setDate] = React.useState<Date | undefined>(() =>
     receipt ? parseDateValue(receipt.collection_date) : new Date(),
   );
@@ -317,52 +315,31 @@ function ReceiptDialogBody({
     }
   }
 
+  const { pending, submit: run } = useDialogSubmit({
+    success: () => t(isEdit ? "toast.updated" : "toast.saved"),
+    conflict: "toast.conflict",
+    close: () => onOpenChange(false),
+    online,
+    queueLocally,
+    /*
+     * The one arm the shared hook does not model. A duplicate is not a failure
+     * to report and close on: it is a question, so the dialog stays open with
+     * the FormData held for the "save anyway" path.
+     */
+    onOther: (result, formData) => {
+      if (!("duplicate" in result)) return false;
+      setDup({
+        ...(result.duplicate as { amount: number; date: string; who: string | null }),
+        formData,
+      });
+      return true;
+    },
+  });
+
   async function submit(formData: FormData) {
-    // Known offline: do not even attempt the request.
-    if (!online && (await queueLocally(formData))) return;
-
-    setPending(true);
-    let result;
-    try {
-      result = receipt
-        ? await updateReceipt(receipt.id, formData)
-        : await createReceipt(formData);
-    } catch {
-      // navigator.onLine lies — a captive portal or a dropped connection looks
-      // online right up until the request fails. Falling back here is what
-      // makes saving reliable, rather than the flag being correct.
-      setPending(false);
-      if (await queueLocally(formData)) return;
-      toast.error(t("error.body"));
-      return;
-    }
-    setPending(false);
-
-    if (result.ok) {
-      toast.success(isEdit ? t("toast.updated") : t("toast.saved"));
-      onOpenChange(false);
-      /*
-       * After closing, not awaited: the write has landed, so the volunteer is
-       * done and the spinner has no business outliving it. The actions used to
-       * call refresh() themselves, which re-rendered the route inside the
-       * action's own response and kept Save spinning through the dashboard's
-       * eight aggregate queries. Refreshing here leaves that work off the
-       * button's critical path, and keeps this device in step whether or not
-       * its own realtime event arrives first.
-       */
-      router.refresh();
-      return;
-    }
-    if ("duplicate" in result) {
-      setDup({ ...result.duplicate, formData });
-      return;
-    }
-    if ("conflict" in result) {
-      toast.error(t("toast.conflict"));
-      onOpenChange(false);
-      return;
-    }
-    toast.error(result.error);
+    await run(formData, (fd) =>
+      receipt ? updateReceipt(receipt.id, fd) : createReceipt(fd),
+    );
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {

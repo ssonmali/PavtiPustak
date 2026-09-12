@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { createExpense, updateExpense } from "@/app/actions/expenses";
 import { useI18n } from "@/lib/i18n/client";
+import { useDialogSubmit } from "@/lib/use-dialog-submit";
 import { formatDate, toDateValue } from "@/lib/receipt-utils";
 import {
   EXPENSE_CATEGORIES,
@@ -66,7 +66,11 @@ export function ExpenseDialog({
   const { t, locale } = useI18n();
   const isEdit = Boolean(expense);
 
-  const [pending, setPending] = React.useState(false);
+  const { pending, submit } = useDialogSubmit({
+    success: "expenses.saved",
+    conflict: "expenses.conflict",
+    close: () => onOpenChange(false),
+  });
   const [category, setCategory] = React.useState<string>(
     expense?.category ?? "Other",
   );
@@ -103,30 +107,9 @@ export function ExpenseDialog({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
-    setPending(true);
-    let result;
-    try {
-      result = expense
-        ? await updateExpense(expense.id, formData)
-        : await createExpense(formData);
-    } catch {
-      setPending(false);
-      toast.error(t("error.body"));
-      return;
-    }
-    setPending(false);
-
-    if (result.ok) {
-      toast.success(t("expenses.saved"));
-      onOpenChange(false);
-      return;
-    }
-    if ("conflict" in result) {
-      toast.error(t("expenses.conflict"));
-      onOpenChange(false);
-      return;
-    }
-    toast.error(result.error);
+    await submit(formData, (fd) =>
+      expense ? updateExpense(expense.id, fd) : createExpense(fd),
+    );
   }
 
   return (
