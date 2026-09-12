@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { CalendarIcon, Loader2, Save, TriangleAlert, User } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -109,6 +110,7 @@ function ReceiptDialogBody({
   queue,
 }: Omit<Props, "open">) {
   const { t, locale } = useI18n();
+  const router = useRouter();
   const isEdit = Boolean(receipt);
   const [pending, setPending] = React.useState(false);
   const [date, setDate] = React.useState<Date | undefined>(() =>
@@ -339,6 +341,16 @@ function ReceiptDialogBody({
     if (result.ok) {
       toast.success(isEdit ? t("toast.updated") : t("toast.saved"));
       onOpenChange(false);
+      /*
+       * After closing, not awaited: the write has landed, so the volunteer is
+       * done and the spinner has no business outliving it. The actions used to
+       * call refresh() themselves, which re-rendered the route inside the
+       * action's own response and kept Save spinning through the dashboard's
+       * eight aggregate queries. Refreshing here leaves that work off the
+       * button's critical path, and keeps this device in step whether or not
+       * its own realtime event arrives first.
+       */
+      router.refresh();
       return;
     }
     if ("duplicate" in result) {

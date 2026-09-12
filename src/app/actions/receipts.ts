@@ -88,7 +88,14 @@ export async function createReceipt(formData: FormData): Promise<ActionResult> {
 
   if (error) return { ok: false, error: error.message };
 
-  refresh();
+  /*
+   * No refresh() here, deliberately. It re-renders the route INSIDE this
+   * response (see next/dist/docs 01-app/02-guides/server-actions.md), so the
+   * dialog's await did not resolve until the dashboard's eight aggregate
+   * queries had re-run — the row was already written, but Save kept spinning
+   * for the render. The caller refreshes after it closes instead, and the
+   * realtime subscription refreshes every other device anyway.
+   */
   return { ok: true };
 }
 
@@ -117,7 +124,7 @@ export async function updateReceipt(
   // Zero rows means the guard matched nothing: someone edited it first.
   if (!data || data.length === 0) return { ok: false, conflict: true };
 
-  refresh();
+  // No refresh() — see the note in createReceipt.
   return { ok: true };
 }
 
