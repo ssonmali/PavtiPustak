@@ -279,7 +279,25 @@ export type Database = {
     Tables: {
       receipts: {
         Row: Receipt;
-        Insert: ReceiptInput & { user_id: string };
+        /*
+         * The identity columns are optional, not absent.
+         *
+         * Every ordinary create omits them: id, receipt_number and created_at
+         * have database defaults, and created_by_email is set by a trigger —
+         * so leaving them out of the type is what stops a form supplying them.
+         *
+         * A restore is the one write that must supply them. Putting a deleted
+         * receipt back under a new number would leave it not matching the slip
+         * in the donor's hand, so restoreReceipt writes the snapshot's own
+         * identity back. Optional keeps the guard for every other caller.
+         */
+        Insert: ReceiptInput & {
+          user_id: string;
+          id?: string;
+          receipt_number?: number;
+          created_at?: string;
+          created_by_email?: string | null;
+        };
         Update: Partial<ReceiptInput>;
         Relationships: [];
       };

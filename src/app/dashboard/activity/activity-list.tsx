@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { FilePlus2, Gift, Pencil, Trash2, User, Wallet } from "lucide-react";
+import {
+  FilePlus2,
+  Gift,
+  Loader2,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  User,
+  Wallet,
+} from "lucide-react";
 import type {
   ActivityEntity,
   ActivityEntry,
@@ -17,6 +26,9 @@ import {
   formatTime,
   displayName,
 } from "@/lib/receipt-utils";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { restoreReceipt } from "@/app/actions/receipts";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -563,6 +575,16 @@ export function ActivityList({
                               who: displayName(entry.actor_email, names) ?? "—",
                             })}
                           </p>
+
+                          {/* Only receipts, and only deletions. The audit row
+                              carries the whole receipt in `before`, so this is
+                              the one place a delete can be taken back after
+                              the undo toast has gone. */}
+                          {entry.entity === "receipt" &&
+                          entry.action === "deleted" &&
+                          entry.before ? (
+                            <RestoreButton auditId={entry.id} />
+                          ) : null}
                         </div>
                       </div>
                     </li>
@@ -574,5 +596,78 @@ export function ActivityList({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Puts a deleted receipt back.
+ *
+ * Its own component so the pending state is per-row: the activity page can
+ * show hundreds of entries, and one shared flag would spin every restore
+ * button at once.
+ *
+ * Deliberately not behind a confirmation. Restoring is the SAFE direction —
+ * the worst case is a receipt that exists again and can be deleted once more,
+ * whereas the delete this undoes is the destructive act. A dialog here would
+ * only slow down the recovery.
+ */
+function RestoreButton({ auditId }: { auditId: number }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const [pending, setPending] = React.useState(false);
+
+  async function onRestore() {
+    setPending(true);
+    let result;
+    try {
+      result = await restoreReceipt(auditId);
+    } catch {
+      setPending(false);
+      toast.error(t("error.body"));
+      return;
+    }
+    setPending(false);
+
+    if (result.ok) {
+      toast.success(t("restore.done"));
+      router.refresh();
+      return;
+    }
+    // The number has been taken since the delete — by a renumber, which is
+    // exactly how #101 was recovered by hand. Name the receipt in the way so
+    // the volunteer knows what to do about it.
+    if ("numberTaken" in result) {
+      toast.error(
+        t("restore.numberTaken", {
+          number: result.numberTaken.number,
+          who: result.numberTaken.who,
+        }),
+      );
+      return;
+    }
+    // Narrowed explicitly: ActionResult also carries `duplicate` and
+    // `conflict` arms, which a restore never returns but the type allows.
+    const message = "error" in result ? result.error : "";
+    toast.error(
+      message === "already-exists"
+        ? t("restore.alreadyExists")
+        : message === "not-restorable"
+          ? t("restore.notRestorable")
+          : message || t("error.body"),
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="glass-pill mt-2 rounded-full"
+      onClick={onRestore}
+      disabled={pending}
+    >
+      {pending ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+      {t("restore.action")}
+    </Button>
   );
 }

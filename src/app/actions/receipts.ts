@@ -6,6 +6,7 @@ import { receiptSchema } from "@/lib/schemas";
 import type { PaymentMethod, Receipt } from "@/lib/types";
 import { displayName } from "@/lib/receipt-utils";
 import { getVolunteerNames } from "@/lib/volunteer-names";
+import { planRestore } from "@/lib/restore-receipt";
 import {
   applyReceiptQuery,
   clampPage,
@@ -18,6 +19,15 @@ export type ActionResult =
   | { ok: false; duplicate: { amount: number; date: string; who: string | null } }
   /** The row changed underneath us; the caller must reload before retrying. */
   | { ok: false; conflict: true }
+  /**
+   * A restore cannot go ahead because another receipt now holds the number.
+   * Carries who holds it, so the volunteer is told which one rather than just
+   * being refused.
+   */
+  | {
+      ok: false;
+      numberTaken: { number: number; who: string; date: string };
+    }
   | { ok: false; error: string };
 
 /**
@@ -168,6 +178,79 @@ export async function deleteReceipt(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: error.message };
 
   refresh();
+  return { ok: true };
+}
+
+/**
+ * Puts a deleted receipt back, from the snapshot the audit trigger saved.
+ *
+ * A delete is the one action in this app with no undo beyond the three-second
+ * toast, and the row it removes is a record a donor holds a paper copy of.
+ * receipt_audit already stores the whole row in `before` (02-audit-and-shared-
+ * editing.sql), and receipt_id is deliberately not a foreign key so the entry
+ * survives the deletion — so the data to undo one has always been there, it
+ * just had no way back into the ledger short of hand-written SQL.
+ *
+ * The row is restored with its ORIGINAL identity: same id, same number, same
+ * author, same dates. A receipt that came back renumbered would no longer
+ * match the slip in the donor's hand, which would defeat the point.
+ *
+ * `pin_receipt_identity` (16-write-integrity.sql) pins those columns on UPDATE
+ * only, so this INSERT is allowed to set them.
+ */
+export async function restoreReceipt(auditId: number): Promise<ActionResult> {
+  const { supabase } = await requireUser();
+
+  const { data: audit, error: auditError } = await supabase
+    .from("receipt_audit")
+    .select("action, before")
+    .eq("id", auditId)
+    .maybeSingle();
+
+  if (auditError) return { ok: false, error: auditError.message };
+
+  // Read the snapshot first so a malformed entry is reported as such, then ask
+  // whether the row is already back — a volunteer double-tapping should hear
+  // "already restored", not a constraint violation.
+  const probe = planRestore(audit, false);
+  if (!probe.ok) return { ok: false, error: probe.reason };
+
+  const { data: existing } = await supabase
+    .from("receipts")
+    .select("id")
+    .eq("id", probe.fields.id)
+    .maybeSingle();
+
+  const plan = planRestore(audit, Boolean(existing));
+  if (!plan.ok) return { ok: false, error: plan.reason };
+
+  /*
+   * The number, checked before the insert rather than left to the unique index.
+   * Another receipt can have taken it since — by being renumbered by hand, which
+   * is exactly what happened to #101 — and a raw constraint error would tell the
+   * volunteer nothing about which receipt is in the way.
+   */
+  const { data: clash } = await supabase
+    .from("receipts")
+    .select("receipt_number, donor_name, collection_date")
+    .eq("receipt_number", plan.fields.receipt_number)
+    .maybeSingle();
+
+  if (clash) {
+    return {
+      ok: false,
+      numberTaken: {
+        number: clash.receipt_number,
+        who: clash.donor_name,
+        date: clash.collection_date,
+      },
+    };
+  }
+
+  const { error } = await supabase.from("receipts").insert(plan.fields);
+  if (error) return { ok: false, error: error.message };
+
+  // No refresh() — see the note in createReceipt.
   return { ok: true };
 }
 
