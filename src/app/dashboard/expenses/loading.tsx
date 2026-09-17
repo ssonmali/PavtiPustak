@@ -35,12 +35,9 @@ export default function Loading() {
           <Skeleton className="h-9 w-24 shrink-0 rounded-md" />
         </div>
 
-        {/* The status chips inline from sm, one filter button below it. */}
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-28 rounded-full" />
-          <Skeleton className="hidden h-9 w-28 rounded-full sm:block" />
-          <Skeleton className="hidden h-9 w-28 rounded-full sm:block" />
-        </div>
+        {/* The period presets, desktop only — below `sm` they live in the
+            sheet beside the search box further down. */}
+        <Skeleton className="hidden h-9 w-72 rounded-lg sm:block" />
       </div>
 
       {/* What the money went on: a titled card with one bar per category. */}
@@ -57,6 +54,14 @@ export default function Loading() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Search, the filter button and sort on ONE row, as expenses-view
+          renders them — not the separate rows this file used to reserve. */}
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-9 min-w-0 flex-1 sm:max-w-xs" />
+        <Skeleton className="h-9 w-28 shrink-0 rounded-full sm:hidden" />
+        <Skeleton className="hidden h-9 w-24 shrink-0 rounded-full sm:block" />
+      </div>
 
       <div className="flex flex-col gap-2">
         {Array.from({ length: 6 }, (_, i) => (

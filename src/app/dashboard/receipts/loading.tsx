@@ -27,15 +27,21 @@ export default function Loading() {
           <Skeleton className="h-9 w-24 shrink-0 rounded-md" />
         </div>
 
-        {/* Search. */}
-        <Skeleton className="h-9 w-full" />
+        {/* The period presets, desktop only — below `sm` they are in the
+            sheet that sits beside the search box. */}
+        <Skeleton className="hidden h-9 w-72 rounded-lg sm:block" />
+      </div>
 
-        {/* The status chips inline from sm, one filter button below it. */}
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-28 rounded-full" />
-          <Skeleton className="hidden h-9 w-28 rounded-full sm:block" />
-          <Skeleton className="hidden h-9 w-28 rounded-full sm:block" />
-        </div>
+      {/* The status chips, desktop only for the same reason. */}
+      <Skeleton className="hidden h-9 w-64 rounded-lg sm:block" />
+
+      {/* Search, the filter button and sort share ONE row — receipts-table.tsx
+          renders them together, so a phone sees a single 36px line here and
+          not the two the earlier version of this file reserved. */}
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-9 min-w-0 flex-1" />
+        <Skeleton className="h-9 w-28 shrink-0 rounded-full sm:hidden" />
+        <Skeleton className="hidden h-9 w-24 shrink-0 rounded-full sm:block" />
       </div>
 
       <div className="flex flex-col gap-2">
