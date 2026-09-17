@@ -32,7 +32,39 @@ export default async function ActivityPage() {
     );
   }
 
+  const entries = (data ?? []) as ActivityEntry[];
+
+  /*
+   * Which deleted receipts are back already.
+   *
+   * The audit log is append-only, so a deletion stays in the feed forever —
+   * including after someone restores it. Without this the Restore button sat
+   * there on an entry that had nothing left to restore: tapping it was
+   * harmless (the action answers "already-exists") but the button was still
+   * claiming an action that was no longer available.
+   *
+   * One query, and only for the deletions in the page of entries just
+   * fetched, so it stays a couple of dozen ids at most.
+   */
+  const deletedIds = [
+    ...new Set(
+      entries
+        .filter((e) => e.entity === "receipt" && e.action === "deleted")
+        .map((e) => e.row_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  let liveIds: string[] = [];
+  if (deletedIds.length > 0) {
+    const { data: live } = await supabase
+      .from("receipts")
+      .select("id")
+      .in("id", deletedIds);
+    liveIds = (live ?? []).map((r) => r.id);
+  }
+
   return (
-    <ActivityList entries={(data ?? []) as ActivityEntry[]} names={names} />
+    <ActivityList entries={entries} names={names} liveIds={liveIds} />
   );
 }

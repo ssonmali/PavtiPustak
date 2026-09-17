@@ -165,6 +165,7 @@ const en = {
   "activity.changed": "{field}: {from} → {to}",
   "activity.by": "by {who}",
   "restore.action": "Restore",
+  "restore.restored": "Restored",
   "restore.done": "Receipt restored",
   "restore.numberTaken":
     "Receipt #{number} now belongs to {who}. Renumber that one first, then restore this.",
@@ -564,6 +565,7 @@ const mr: Record<MessageKey, string> = {
   "activity.changed": "{field}: {from} → {to}",
   "activity.by": "{who} यांनी",
   "restore.action": "पुन्हा आणा",
+  "restore.restored": "पुन्हा आणली",
   "restore.done": "पावती पुन्हा आणली",
   "restore.numberTaken":
     "पावती क्र. {number} आता {who} यांची आहे. आधी तिचा क्रमांक बदला, मग ही पुन्हा आणा.",

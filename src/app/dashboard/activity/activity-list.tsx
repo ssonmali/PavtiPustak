@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  Check,
   FilePlus2,
   Gift,
   Loader2,
@@ -116,15 +117,25 @@ const TRACKED: Record<ActivityEntity, readonly string[]> = {
 export function ActivityList({
   entries,
   names,
+  liveIds = [],
 }: {
   entries: ActivityEntry[];
   names: NameMap;
+  /**
+   * Ids of deleted receipts that are back in the ledger. The audit log is
+   * append-only, so a deletion stays in this feed after it has been undone —
+   * these are what turn its Restore button into a spent "Restored".
+   */
+  liveIds?: string[];
 }) {
   const { t, locale } = useI18n();
   const [ledger, setLedger] = React.useState<"all" | ActivityEntity>("all");
   const [action, setAction] = React.useState<"all" | AuditAction>("all");
   const [actor, setActor] = React.useState<string>("all");
   const [period, setPeriod] = React.useState<Period>(ALL_TIME);
+
+  /** O(1) lookup for the Restore button's spent state. */
+  const live = React.useMemo(() => new Set(liveIds), [liveIds]);
 
   const volunteers = React.useMemo(
     () =>
@@ -583,7 +594,12 @@ export function ActivityList({
                           {entry.entity === "receipt" &&
                           entry.action === "deleted" &&
                           entry.before ? (
-                            <RestoreButton auditId={entry.id} />
+                            <RestoreButton
+                              auditId={entry.id}
+                              restored={
+                                entry.row_id ? live.has(entry.row_id) : false
+                              }
+                            />
                           ) : null}
                         </div>
                       </div>
@@ -611,10 +627,24 @@ export function ActivityList({
  * whereas the delete this undoes is the destructive act. A dialog here would
  * only slow down the recovery.
  */
-function RestoreButton({ auditId }: { auditId: number }) {
+function RestoreButton({
+  auditId,
+  restored,
+}: {
+  auditId: number;
+  /** The receipt is already back, so this entry has nothing left to undo. */
+  restored: boolean;
+}) {
   const { t } = useI18n();
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
+  /*
+   * Latched locally as well as read from the server, so the button settles the
+   * moment the write lands rather than waiting for router.refresh() to bring
+   * the new liveIds back. Either source being true is enough.
+   */
+  const [justRestored, setJustRestored] = React.useState(false);
+  const done = restored || justRestored;
 
   async function onRestore() {
     setPending(true);
@@ -629,6 +659,7 @@ function RestoreButton({ auditId }: { auditId: number }) {
     setPending(false);
 
     if (result.ok) {
+      setJustRestored(true);
       toast.success(t("restore.done"));
       router.refresh();
       return;
@@ -648,6 +679,9 @@ function RestoreButton({ auditId }: { auditId: number }) {
     // Narrowed explicitly: ActionResult also carries `duplicate` and
     // `conflict` arms, which a restore never returns but the type allows.
     const message = "error" in result ? result.error : "";
+    // "already-exists" is not really a failure: the receipt is in the ledger,
+    // which is what the volunteer wanted. Settle the button to match.
+    if (message === "already-exists") setJustRestored(true);
     toast.error(
       message === "already-exists"
         ? t("restore.alreadyExists")
@@ -664,10 +698,16 @@ function RestoreButton({ auditId }: { auditId: number }) {
       size="sm"
       className="glass-pill mt-2 rounded-full"
       onClick={onRestore}
-      disabled={pending}
+      disabled={pending || done}
     >
-      {pending ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-      {t("restore.action")}
+      {pending ? (
+        <Loader2 className="animate-spin" />
+      ) : done ? (
+        <Check />
+      ) : (
+        <RotateCcw />
+      )}
+      {done ? t("restore.restored") : t("restore.action")}
     </Button>
   );
 }
