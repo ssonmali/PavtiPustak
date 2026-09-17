@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/skeleton";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 /**
  * Stands in for the expenses ledger while its query runs.
@@ -12,9 +13,14 @@ import { Skeleton } from "@/components/skeleton";
  * rows in a Card — much shorter than the real page, so everything below the
  * fold moved on arrival.
  *
- * NOT mirrored: CategoryBreakdown. It renders null with no rows
- * (category-breakdown.tsx), so reserving its height would trade one shift for
- * another on a mandal that has not recorded a spend yet.
+ * The category breakdown IS reserved, unlike DuePanel on the overview. It
+ * renders null only when the period holds no expenses at all
+ * (category-breakdown.tsx) — and in that case the list beneath it is empty
+ * too, so the skeleton is over-reserved either way. Every other time, which
+ * is the normal one, the card is there and the whole ledger below would drop
+ * by its height. Four bars rather than eight: a mandal spends across a handful
+ * of categories, and under-reserving by one row shifts less than over-reserving
+ * by four.
  */
 export default function Loading() {
   return (
@@ -36,6 +42,21 @@ export default function Loading() {
           <Skeleton className="hidden h-9 w-28 rounded-full sm:block" />
         </div>
       </div>
+
+      {/* What the money went on: a titled card with one bar per category. */}
+      <Card className="card-elevated">
+        <CardHeader className="gap-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-56" />
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-10 w-full rounded-lg" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex flex-col gap-2">
         {Array.from({ length: 6 }, (_, i) => (
